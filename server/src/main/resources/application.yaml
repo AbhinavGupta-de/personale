@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: personale-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/personale
+    username: ${DB_USERNAME:personale}
+    password: ${DB_PASSWORD:personale}
+  sql:
+    init:
+      mode: always
+
+server:
+  port: 8080

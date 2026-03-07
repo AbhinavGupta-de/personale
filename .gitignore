@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode
+personal/build/
+personal/DerivedData/
+personal/*.xcodeproj/xcuserdata/
+personal/*.xcodeproj/project.xcworkspace/xcuserdata/
+personal/*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Gradle
+server/.gradle/
+server/build/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Environment
+.env
