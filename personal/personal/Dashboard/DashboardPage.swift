@@ -1,16 +1,6 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - Feature Flags
-
-/// Flip these to true as backend endpoints come online
-enum DashboardFeatures {
-    static let showBreakTimer = false      // M5
-    static let showWorkblocks = false      // M3/M4
-    static let showScores = false          // M4
-    static let showProjects = false        // deferred
-}
-
 // MARK: - Dashboard Page
 
 struct DashboardPage: View {
