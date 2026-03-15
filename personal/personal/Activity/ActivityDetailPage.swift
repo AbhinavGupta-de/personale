@@ -27,36 +27,41 @@ struct ActivityDetailPage: View {
                         VStack(spacing: AppMetrics.cardGap) {
                             SessionTimelineCard(
                                 sessions: viewModel.sessions,
-                                selectedSession: viewModel.selectedSession,
+                                selectedSession: nil,
                                 categoryColor: viewModel.categoryColor,
                                 parseTime: viewModel.parseTimeToHour
                             ) { session in
-                                viewModel.selectedSession = session
+                                viewModel.selectSession(session)
                             }
 
                             SessionListCard(
                                 sessions: viewModel.sessions,
-                                selectedSession: viewModel.selectedSession,
+                                selectedSession: nil,
                                 categoryColor: viewModel.categoryColor
                             ) { session in
-                                viewModel.selectedSession = session
+                                viewModel.selectSession(session)
                             }
                         }
                         .frame(maxWidth: .infinity)
 
-                        // Right: Session detail panel
-                        if let session = viewModel.selectedSession {
-                            SessionDetailCard(
-                                session: session,
-                                categoryColor: viewModel.categoryColor,
-                                formatDuration: viewModel.formatDuration
-                            )
+                        // Right: Daily Summary
+                        DailySummaryCard(viewModel: viewModel)
                             .frame(width: 360)
-                        }
                     }
                 }
             }
             .padding(AppMetrics.contentPadding)
+        }
+        .overlay {
+            if viewModel.showSessionDetail, let session = viewModel.selectedSession {
+                SessionDetailOverlay(
+                    session: session,
+                    categoryColor: viewModel.categoryColor,
+                    formatDuration: viewModel.formatDuration
+                ) {
+                    viewModel.showSessionDetail = false
+                }
+            }
         }
         .onAppear { viewModel.load() }
     }
@@ -86,9 +91,19 @@ struct SessionTimelineCard: View {
 
     @Environment(\.theme) private var theme
 
-    private let startHour: Int = 6
-    private let endHour: Int = 22
     private let hourHeight: CGFloat = 44
+
+    private var startHour: Int {
+        guard !sessions.isEmpty else { return 0 }
+        let earliest = sessions.compactMap { parseTime($0.startTime) }.min() ?? 0
+        return max(0, Int(floor(earliest)))
+    }
+
+    private var endHour: Int {
+        guard !sessions.isEmpty else { return 24 }
+        let latest = sessions.compactMap { parseTime($0.endTime) }.max() ?? 24
+        return min(24, Int(ceil(latest)) + 1)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -134,7 +149,7 @@ struct SessionTimelineCard: View {
                 }
                 .frame(height: CGFloat(endHour - startHour) * hourHeight)
             }
-            .frame(height: 420)
+            .frame(height: min(CGFloat(endHour - startHour) * hourHeight, 520))
             .padding(.horizontal, 8)
             .padding(.bottom, 14)
         }
@@ -399,6 +414,163 @@ struct SessionDetailCard: View {
             Text(value)
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(theme.foreground)
+        }
+    }
+}
+
+// MARK: - Daily Summary Card
+
+struct DailySummaryCard: View {
+    @ObservedObject var viewModel: ActivityViewModel
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            Text("Daily Summary")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(theme.foreground)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+            Divider().opacity(0.3).padding(.horizontal, 16)
+
+            // Focus headline
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text("Focus")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(theme.foreground)
+                    Spacer()
+                    Text(viewModel.totalFocusDuration)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(theme.foreground)
+                }
+                Text("Automatically created based on your activity.")
+                    .font(.system(size: 9))
+                    .foregroundStyle(theme.mutedForeground)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
+            // Percent of Target
+            HStack {
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("Percent of Target")
+                        .font(.system(size: 9))
+                        .foregroundStyle(theme.mutedForeground)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(String(format: "%.0f%%", viewModel.percentOfTarget))
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(theme.foreground)
+                        Text("of 8 hr 0 min")
+                            .font(.system(size: 10))
+                            .foregroundStyle(theme.mutedForeground)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
+
+            Divider().opacity(0.3).padding(.horizontal, 16)
+
+            // Stats grid
+            HStack(spacing: 24) {
+                summaryStatItem(label: "Focus Time", value: viewModel.totalFocusDuration)
+                summaryStatItem(label: "Sessions", value: "\(viewModel.sessionCount)")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
+            Divider().opacity(0.3).padding(.horizontal, 16)
+
+            // Categories
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Categories")
+                    .font(.system(size: 9, weight: .semibold))
+                    .tracking(0.5)
+                    .foregroundStyle(theme.mutedForeground)
+                    .padding(.bottom, 2)
+
+                ForEach(Array(viewModel.categoryBreakdown.enumerated()), id: \.offset) { _, cat in
+                    HStack(spacing: 8) {
+                        Text("\(cat.percent)%")
+                            .font(.system(size: 11).monospacedDigit())
+                            .foregroundStyle(theme.mutedForeground)
+                            .frame(width: 28, alignment: .trailing)
+
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(CategoryColors.color(for: cat.category))
+                            .frame(width: 10, height: 10)
+
+                        Text(cat.category)
+                            .font(.system(size: 11))
+                            .foregroundStyle(theme.foreground)
+
+                        Spacer()
+
+                        Text(viewModel.formatDuration(cat.totalSeconds))
+                            .font(.system(size: 11).monospacedDigit())
+                            .foregroundStyle(theme.mutedForeground)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 14)
+        }
+        .dashboardCard()
+    }
+
+    private func summaryStatItem(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .tracking(0.5)
+                .foregroundStyle(theme.mutedForeground)
+            Text(value)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(theme.foreground)
+        }
+    }
+}
+
+// MARK: - Session Detail Overlay
+
+struct SessionDetailOverlay: View {
+    let session: FocusSessionResponse
+    let categoryColor: (String) -> Color
+    let formatDuration: (Int) -> String
+    let onDismiss: () -> Void
+
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        ZStack {
+            // Dimmed backdrop — click to dismiss
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            // Modal card
+            ScrollView {
+                SessionDetailCard(
+                    session: session,
+                    categoryColor: categoryColor,
+                    formatDuration: formatDuration
+                )
+            }
+            .frame(maxHeight: 560)
+            .frame(width: 420)
+            .background(theme.background)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.5), radius: 20)
+        }
+        .onKeyPress(.escape) {
+            onDismiss()
+            return .handled
         }
     }
 }

@@ -9,6 +9,9 @@ class ActivityViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var sessions: [FocusSessionResponse] = []
     @Published var selectedSession: FocusSessionResponse?
+    @Published var showSessionDetail = false
+    @Published var dayStats: DailyStatsResponse?
+    @Published var categoryBreakdown: [CategoryBreakdownResponse] = []
 
     private let api = APIClient.shared
     private var cache: [String: [FocusSessionResponse]] = [:]
@@ -42,6 +45,7 @@ class ActivityViewModel: ObservableObject {
     func goToPreviousDay() {
         selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
         selectedSession = nil
+        showSessionDetail = false
         navigateToCurrentDate()
     }
 
@@ -50,6 +54,7 @@ class ActivityViewModel: ObservableObject {
         if tomorrow <= Date() {
             selectedDate = tomorrow
             selectedSession = nil
+            showSessionDetail = false
             navigateToCurrentDate()
         }
     }
@@ -57,6 +62,7 @@ class ActivityViewModel: ObservableObject {
     func goToToday() {
         selectedDate = Date()
         selectedSession = nil
+        showSessionDetail = false
         navigateToCurrentDate()
     }
 
@@ -72,6 +78,11 @@ class ActivityViewModel: ObservableObject {
         fetchSessions()
     }
 
+    func selectSession(_ session: FocusSessionResponse) {
+        selectedSession = session
+        showSessionDetail = true
+    }
+
     private func fetchSessions() {
         let date = dateString
         activeFetchDate = date
@@ -84,10 +95,20 @@ class ActivityViewModel: ObservableObject {
             self.sessions = result
             self.cache[date] = result
             self.isLoading = false
-            // Auto-select first session if none selected
-            if self.selectedSession == nil, let first = result.first {
-                self.selectedSession = first
-            }
+        }
+
+        // Fetch day-level data for Daily Summary
+        Task {
+            guard let stats = try? await api.fetchDayStats(date: date),
+                activeFetchDate == date
+            else { return }
+            self.dayStats = stats
+        }
+        Task {
+            guard let cats = try? await api.fetchCategories(date: date),
+                activeFetchDate == date
+            else { return }
+            self.categoryBreakdown = cats
         }
 
         // Prefetch adjacent
@@ -103,6 +124,23 @@ class ActivityViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - Daily Summary computed data
+
+    var totalFocusSeconds: Int {
+        sessions.reduce(0) { $0 + $1.durationSeconds }
+    }
+
+    var totalFocusDuration: String {
+        formatDuration(totalFocusSeconds)
+    }
+
+    var sessionCount: Int { sessions.count }
+
+    var percentOfTarget: Double {
+        let targetSecs = 8 * 3600
+        return targetSecs > 0 ? Double(totalFocusSeconds) / Double(targetSecs) * 100 : 0
     }
 
     // MARK: - Helpers
