@@ -17,8 +17,10 @@ public class StatsService {
     private final AppSessionRepository repository;
     private final CategoryMappingRepository categoryRepo;
 
-    // In-memory cache of bundle_id → category loaded at construction
+    // In-memory cache of bundle_id → category with TTL-based refresh
     private Map<String, String> categoryCache;
+    private Instant lastCacheLoad;
+    private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
     public StatsService(AppSessionRepository repository, CategoryMappingRepository categoryRepo) {
         this.repository = repository;
@@ -26,9 +28,11 @@ public class StatsService {
     }
 
     private Map<String, String> getCategoryCache() {
-        if (categoryCache == null) {
+        if (categoryCache == null || lastCacheLoad == null
+                || Instant.now().isAfter(lastCacheLoad.plus(CACHE_TTL))) {
             categoryCache = new HashMap<>();
             categoryRepo.findAll().forEach(m -> categoryCache.put(m.getBundleId(), m.getCategory()));
+            lastCacheLoad = Instant.now();
         }
         return categoryCache;
     }

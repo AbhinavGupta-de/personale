@@ -16,9 +16,9 @@ enum SidebarFeatures {
 // MARK: - Dashboard Feature Flags
 
 enum DashboardFeatures {
-    static let showBreakTimer = true      // M5 (showing with mock data)
-    static let showWorkblocks = true      // M3/M4 (showing with mock data)
-    static let showScores = true          // M4 (showing with mock data)
+    static let showBreakTimer = false     // M5 (no backend yet)
+    static let showWorkblocks = true      // M3 (wired to real data)
+    static let showScores = false         // M4 (no backend yet)
     static let showProjects = false       // deferred (no product logic yet)
 }
 #endif

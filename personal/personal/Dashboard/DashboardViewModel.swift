@@ -83,7 +83,7 @@ class DashboardViewModel: ObservableObject {
         let pct = targetSecs > 0 ? Double(totalSecs) / Double(targetSecs) * 100 : 0
         return MockData.WorkHours(
             totalWorked: totalStr,
-            percentOfDay: min(pct, 100),
+            percentOfDay: pct,
             targetHours: "8 hr 0 min",
             trackingOn: true,
             trackingHours: "8:00 - 18:00"
@@ -121,17 +121,6 @@ class DashboardViewModel: ObservableObject {
         guard let categories = categoryBreakdown, !categories.isEmpty else {
             return []
         }
-        let categoryColors: [String: UInt] = [
-            "Code": 0x7C5CFC,
-            "Browsing": 0xF5A623,
-            "Communication": 0xD64D8A,
-            "Design": 0x00CCBF,
-            "Writing": 0x35A882,
-            "Media": 0x9B85F5,
-            "Utilities": 0x6B7280,
-            "Reading": 0x3B82F6,
-            "Other": 0x3D4451,
-        ]
         return categories.map { cat in
             let secs = cat.totalSeconds
             let hours = secs / 3600
@@ -141,7 +130,7 @@ class DashboardViewModel: ObservableObject {
                 category: cat.category,
                 percent: cat.percent,
                 time: timeStr,
-                colorHex: categoryColors[cat.category] ?? 0x3D4451
+                colorHex: CategoryColors.map[cat.category] ?? CategoryColors.fallback
             )
         }
     }
