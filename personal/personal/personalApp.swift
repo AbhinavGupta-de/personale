@@ -20,7 +20,7 @@ struct personalApp: App {
             AppShell()
                 .environmentObject(appTracker)
             #else
-            ContentView()
+            Text("Personale")
             #endif
         }
 
