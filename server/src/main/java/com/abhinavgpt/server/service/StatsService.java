@@ -62,6 +62,11 @@ public class StatsService {
 
         long total = apps.stream().mapToLong(AppTimeEntry::totalSeconds).sum();
 
-        return new DailyStatsResponse(today.toString(), apps, total);
+        // Count sessions that were closed by idle/sleep (duration = 0, i.e. ended_at == started_at)
+        long idleCount = sessions.stream()
+            .filter(s -> s.getEndedAt() != null && !s.getEndedAt().isAfter(s.getStartedAt()))
+            .count();
+
+        return new DailyStatsResponse(today.toString(), apps, total, idleCount);
     }
 }

@@ -20,3 +20,10 @@ server/build/
 
 # Environment
 .env
+
+# Internal planning docs
+plans/
+personal/plan/
+
+# Reference repos
+dashboard-designs/

@@ -13,8 +13,14 @@ class AppTracker: ObservableObject {
     private let eventClient: EventClient
     private var idleTimer: Timer?
 
-    private static let idleThreshold: TimeInterval = 30
+    private static let idleThreshold: TimeInterval = 120
     private static let pollInterval: TimeInterval = 5
+
+    // System apps that indicate the user is away — close session, don't track
+    private static let blockedBundleIDs: Set<String> = [
+        "com.apple.loginwindow",
+        "com.apple.ScreenSaver.Engine",
+    ]
 
     private let dateFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -69,16 +75,18 @@ class AppTracker: ObservableObject {
     }
 
     private func checkIdleState() {
-        let idleSeconds = CGEventSource.secondsSinceLastCombinedInput(.combinedSessionState)
+        let idleSeconds = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .mouseMoved)
+        let idleKeyboard = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .keyDown)
+        let idle = min(idleSeconds, idleKeyboard)
 
-        if idleSeconds >= Self.idleThreshold && !isIdle {
+        if idle >= Self.idleThreshold && !isIdle {
             // User just went idle — close session at the time they stopped interacting
             isIdle = true
-            let lastInputTime = Date().addingTimeInterval(-idleSeconds)
+            let lastInputTime = Date().addingTimeInterval(-idle)
             let timestamp = dateFormatter.string(from: lastInputTime)
-            print("[\(dateFormatter.string(from: Date()))] User idle for \(Int(idleSeconds))s — closing session (last input at \(timestamp))")
+            print("[\(dateFormatter.string(from: Date()))] User idle for \(Int(idle))s — closing session (last input at \(timestamp))")
             eventClient.sendSessionClose(timestamp: timestamp)
-        } else if idleSeconds < Self.idleThreshold && isIdle {
+        } else if idle < Self.idleThreshold && isIdle {
             // User returned from idle — re-register frontmost app
             isIdle = false
             let timestamp = dateFormatter.string(from: Date())
@@ -92,10 +100,19 @@ class AppTracker: ObservableObject {
     // MARK: - App Switch
 
     private func handleAppSwitch(_ app: NSRunningApplication) {
+        isIdle = false  // clear idle so the poll's resume branch won't double-fire
         let name = app.localizedName ?? "Unknown"
         let bundleID = app.bundleIdentifier
         let now = Date()
         let timestamp = dateFormatter.string(from: now)
+
+        // Lock screen / screensaver — treat as away, close session
+        if let bid = bundleID, Self.blockedBundleIDs.contains(bid) {
+            print("[\(timestamp)] \(name) activated — closing active session (blocked app)")
+            eventClient.sendSessionClose(timestamp: timestamp)
+            isIdle = true
+            return
+        }
 
         print("[\(timestamp)] Switched to: \(name) (\(bundleID ?? "nil"))")
 

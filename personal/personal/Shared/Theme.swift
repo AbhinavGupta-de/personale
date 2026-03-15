@@ -1,0 +1,212 @@
+#if os(macOS)
+import SwiftUI
+
+// MARK: - Theme Protocol
+
+protocol AppTheme {
+    // Core
+    var background: Color { get }
+    var foreground: Color { get }
+    var card: Color { get }
+    var cardForeground: Color { get }
+
+    // Surfaces
+    var secondary: Color { get }
+    var muted: Color { get }
+    var mutedForeground: Color { get }
+
+    // Accents
+    var primary: Color { get }
+    var primaryForeground: Color { get }
+    var accent: Color { get }
+
+    // Semantic
+    var success: Color { get }
+    var warning: Color { get }
+    var destructive: Color { get }
+
+    // Borders
+    var border: Color { get }
+
+    // Chart
+    var chartPurple: Color { get }
+    var chartPurpleLight: Color { get }
+    var chartCyan: Color { get }
+    var chartTeal: Color { get }
+    var chartPink: Color { get }
+    var chartAmber: Color { get }
+    var chartBlue: Color { get }
+    var chartGray: Color { get }
+    var chartGrayLight: Color { get }
+}
+
+// MARK: - Activity color lookup (shared across themes)
+
+extension AppTheme {
+    func activityColor(for type: String) -> Color {
+        switch type {
+        case "coding": chartPurple
+        case "meeting": chartPink
+        case "break": chartTeal
+        case "writing": Color(hue: 270/360, saturation: 0.45, brightness: 0.55)
+        case "design": accent
+        case "email", "browsing": chartAmber
+        case "focus": accent
+        default: chartGray
+        }
+    }
+}
+
+// MARK: - Dark Theme (default — matches dashboard-designs CSS tokens)
+
+struct DarkTheme: AppTheme {
+    let background = Color(hue: 240/360, saturation: 0.12, brightness: 0.07)
+    let foreground = Color(white: 0.88)
+    let card = Color(hue: 240/360, saturation: 0.10, brightness: 0.10)
+    let cardForeground = Color(white: 0.88)
+
+    let secondary = Color(hue: 240/360, saturation: 0.08, brightness: 0.15)
+    let muted = Color(hue: 240/360, saturation: 0.06, brightness: 0.13)
+    let mutedForeground = Color(white: 0.48)
+
+    let primary = Color(hue: 258/360, saturation: 0.58, brightness: 0.58)
+    let primaryForeground = Color(white: 0.98)
+    let accent = Color(hue: 174/360, saturation: 1.0, brightness: 0.40)
+
+    let success = Color(hue: 158/360, saturation: 0.60, brightness: 0.42)
+    let warning = Color(hue: 38/360, saturation: 0.92, brightness: 0.50)
+    let destructive = Color(hue: 0, saturation: 0.72, brightness: 0.51)
+
+    let border = Color(hue: 240/360, saturation: 0.06, brightness: 0.18)
+
+    let chartPurple = Color(hex: 0x7C5CFC)
+    let chartPurpleLight = Color(hex: 0x9B85F5)
+    let chartCyan = Color(hex: 0x00CCBF)
+    let chartTeal = Color(hex: 0x35A882)
+    let chartPink = Color(hex: 0xD64D8A)
+    let chartAmber = Color(hex: 0xF5A623)
+    let chartBlue = Color(hex: 0x3B82F6)
+    let chartGray = Color(hex: 0x3D4451)
+    let chartGrayLight = Color(hex: 0x6B7280)
+}
+
+// MARK: - Environment key for theme injection
+
+private struct ThemeKey: EnvironmentKey {
+    static let defaultValue: AppTheme = DarkTheme()
+}
+
+extension EnvironmentValues {
+    var theme: AppTheme {
+        get { self[ThemeKey.self] }
+        set { self[ThemeKey.self] = newValue }
+    }
+}
+
+// MARK: - Feature Flags (flip to true as features come online)
+
+enum SidebarFeatures {
+    static let showActivity = false       // M3
+    static let showFocus = false          // M4
+    static let showGoals = false          // deferred
+    static let showCalendar = false       // deferred
+    static let showTasks = false          // deferred
+    static let showHabits = false         // deferred
+    static let showProductivity = false   // M4
+    static let showTeam = false           // M9
+}
+
+// MARK: - AppMetrics Constants (theme-independent)
+
+enum AppMetrics {
+    static let sidebarWidth: CGFloat = 52
+    static let topHeaderHeight: CGFloat = 42
+    static let bottomBarHeight: CGFloat = 50
+    static let cardCornerRadius: CGFloat = 8
+    static let contentPadding: CGFloat = 20
+    static let cardGap: CGFloat = 14
+}
+
+// MARK: - Color hex extension
+
+extension Color {
+    init(hex: UInt, opacity: Double = 1.0) {
+        self.init(
+            .sRGB,
+            red: Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8) & 0xFF) / 255,
+            blue: Double(hex & 0xFF) / 255,
+            opacity: opacity
+        )
+    }
+}
+
+// MARK: - Card Modifier
+
+struct DashboardCardModifier: ViewModifier {
+    @Environment(\.theme) private var theme
+
+    func body(content: Content) -> some View {
+        content
+            .background(theme.card)
+            .clipShape(RoundedRectangle(cornerRadius: AppMetrics.cardCornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppMetrics.cardCornerRadius)
+                    .stroke(theme.border.opacity(0.5), lineWidth: 1)
+            )
+    }
+}
+
+extension View {
+    func dashboardCard() -> some View {
+        modifier(DashboardCardModifier())
+    }
+}
+
+// MARK: - Section Title
+
+struct SectionTitle: View {
+    let text: String
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: 10, weight: .semibold))
+            .tracking(0.8)
+            .foregroundStyle(theme.mutedForeground)
+    }
+}
+
+// MARK: - Circular Progress
+
+struct CircularProgress: View {
+    let value: Double  // 0-100
+    let size: CGFloat
+    let strokeWidth: CGFloat
+    let color: Color
+    @Environment(\.theme) private var theme
+
+    init(value: Double, size: CGFloat = 52, strokeWidth: CGFloat = 4, color: Color) {
+        self.value = value
+        self.size = size
+        self.strokeWidth = strokeWidth
+        self.color = color
+    }
+
+    private var radius: CGFloat { (size - strokeWidth) / 2 }
+    private var circumference: CGFloat { 2 * .pi * radius }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(theme.border, lineWidth: strokeWidth)
+            Circle()
+                .trim(from: 0, to: value / 100)
+                .stroke(color, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.8), value: value)
+        }
+        .frame(width: size, height: size)
+    }
+}
+#endif

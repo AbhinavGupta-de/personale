@@ -37,7 +37,8 @@ class StatsControllerTest {
                 new AppTimeEntry("Safari", "com.apple.Safari", 3600),
                 new AppTimeEntry("Terminal", "com.apple.Terminal", 1800)
             ),
-            5400
+            5400,
+            0
         );
         when(statsService.getTimePerAppToday(any(), any())).thenReturn(response);
 
@@ -54,7 +55,7 @@ class StatsControllerTest {
 
     @Test
     void getToday_noData_returnsEmptyList() throws Exception {
-        DailyStatsResponse response = new DailyStatsResponse("2026-03-07", List.of(), 0);
+        DailyStatsResponse response = new DailyStatsResponse("2026-03-07", List.of(), 0, 0);
         when(statsService.getTimePerAppToday(any(), any())).thenReturn(response);
 
         mockMvc.perform(get("/api/stats/today"))

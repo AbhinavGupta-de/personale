@@ -26,6 +26,16 @@ struct MenuBarView: View {
                 }
             }
 
+            HStack(spacing: 8) {
+                Text(appTracker.isIdle ? "Idle" : "Tracking")
+                    .font(.caption.bold())
+                    .foregroundStyle(appTracker.isIdle ? .orange : .green)
+                Spacer()
+                Text("Idle sessions: \(stats?.idleSessionCount ?? 0)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+
             if let stats = stats, !stats.apps.isEmpty {
                 Divider()
 
@@ -104,6 +114,7 @@ private struct DailyStats: Decodable {
     let date: String
     let apps: [AppTime]
     let totalTrackedSeconds: Int
+    let idleSessionCount: Int?
 }
 
 private struct AppTime: Decodable {

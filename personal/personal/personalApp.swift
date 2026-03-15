@@ -16,10 +16,12 @@ struct personalApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                #if os(macOS)
+            #if os(macOS)
+            AppShell()
                 .environmentObject(appTracker)
-                #endif
+            #else
+            ContentView()
+            #endif
         }
 
         #if os(macOS)
