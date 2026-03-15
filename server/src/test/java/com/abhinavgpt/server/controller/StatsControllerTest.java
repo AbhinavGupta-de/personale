@@ -1,8 +1,7 @@
 package com.abhinavgpt.server.controller;
 
 import com.abhinavgpt.server.config.SecurityConfig;
-import com.abhinavgpt.server.dto.AppTimeEntry;
-import com.abhinavgpt.server.dto.DailyStatsResponse;
+import com.abhinavgpt.server.dto.*;
 import com.abhinavgpt.server.service.StatsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,5 +61,124 @@ class StatsControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.apps").isEmpty())
             .andExpect(jsonPath("$.totalTrackedSeconds").value(0));
+    }
+
+    // ── /api/stats/day ──
+
+    @Test
+    void getDay_returns200WithStats() throws Exception {
+        DailyStatsResponse response = new DailyStatsResponse(
+            "2026-03-10",
+            List.of(new AppTimeEntry("Xcode", "com.apple.dt.Xcode", 7200)),
+            7200, 2
+        );
+        when(statsService.getTimePerApp(any(), any(), any())).thenReturn(response);
+
+        mockMvc.perform(get("/api/stats/day").param("date", "2026-03-10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.date").value("2026-03-10"))
+            .andExpect(jsonPath("$.apps[0].appName").value("Xcode"))
+            .andExpect(jsonPath("$.idleSessionCount").value(2));
+    }
+
+    // ── /api/stats/timeline ──
+
+    @Test
+    void getTimeline_returns200WithBlocks() throws Exception {
+        when(statsService.getTimeline(any(), any(), any())).thenReturn(List.of(
+            new TimelineEntry("09:00", "10:00", "Xcode", "com.apple.dt.Xcode", "Code"),
+            new TimelineEntry("10:00", "10:30", "Safari", "com.apple.Safari", "Browsing")
+        ));
+
+        mockMvc.perform(get("/api/stats/timeline").param("date", "2026-03-07"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].startTime").value("09:00"))
+            .andExpect(jsonPath("$[0].endTime").value("10:00"))
+            .andExpect(jsonPath("$[0].appName").value("Xcode"))
+            .andExpect(jsonPath("$[0].category").value("Code"))
+            .andExpect(jsonPath("$[1].category").value("Browsing"));
+    }
+
+    // ── /api/stats/activity ──
+
+    @Test
+    void getActivity_returns200WithLog() throws Exception {
+        when(statsService.getActivityLog(any(), any(), any())).thenReturn(List.of(
+            new ActivityLogEntry("09:00:00", "Terminal", "com.apple.Terminal", "zsh", 1800),
+            new ActivityLogEntry("09:30:00", "Safari", "com.apple.Safari", "GitHub", 1800)
+        ));
+
+        mockMvc.perform(get("/api/stats/activity").param("date", "2026-03-07"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].time").value("09:00:00"))
+            .andExpect(jsonPath("$[0].appName").value("Terminal"))
+            .andExpect(jsonPath("$[0].detail").value("zsh"))
+            .andExpect(jsonPath("$[0].durationSeconds").value(1800));
+    }
+
+    // ── /api/stats/categories ──
+
+    @Test
+    void getCategories_returns200WithBreakdown() throws Exception {
+        when(statsService.getCategoryBreakdown(any(), any(), any())).thenReturn(List.of(
+            new CategoryBreakdownEntry("Code", 5400, 75),
+            new CategoryBreakdownEntry("Browsing", 1800, 25)
+        ));
+
+        mockMvc.perform(get("/api/stats/categories").param("date", "2026-03-07"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].category").value("Code"))
+            .andExpect(jsonPath("$[0].totalSeconds").value(5400))
+            .andExpect(jsonPath("$[0].percent").value(75))
+            .andExpect(jsonPath("$[1].category").value("Browsing"));
+    }
+
+    // ── /api/stats/workblocks ──
+
+    @Test
+    void getWorkblocks_returns200WithBlocks() throws Exception {
+        when(statsService.getWorkblocks(any(), any(), any())).thenReturn(List.of(
+            new WorkblockEntry("9:00", "Code", "1 hr 30 min", 5400),
+            new WorkblockEntry("10:30", "Browsing", "30 min", 1800)
+        ));
+
+        mockMvc.perform(get("/api/stats/workblocks").param("date", "2026-03-07"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].time").value("9:00"))
+            .andExpect(jsonPath("$[0].task").value("Code"))
+            .andExpect(jsonPath("$[0].duration").value("1 hr 30 min"))
+            .andExpect(jsonPath("$[0].durationSeconds").value(5400));
+    }
+
+    // ── /api/stats/sessions ──
+
+    @Test
+    void getSessions_returns200WithFocusSessions() throws Exception {
+        when(statsService.getFocusSessions(any(), any(), any())).thenReturn(List.of(
+            new FocusSessionEntry("Code", "09:00", "10:30", 5400, "1 hr 30 min",
+                List.of(
+                    new SessionAppBreakdown("Xcode", "com.apple.dt.Xcode", "Code", 3600, 67),
+                    new SessionAppBreakdown("Terminal", "com.apple.Terminal", "Code", 1800, 33)
+                ),
+                List.of(new CategoryBreakdownEntry("Code", 5400, 100))
+            )
+        ));
+
+        mockMvc.perform(get("/api/stats/sessions").param("date", "2026-03-07"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].name").value("Code"))
+            .andExpect(jsonPath("$[0].startTime").value("09:00"))
+            .andExpect(jsonPath("$[0].endTime").value("10:30"))
+            .andExpect(jsonPath("$[0].durationSeconds").value(5400))
+            .andExpect(jsonPath("$[0].apps.length()").value(2))
+            .andExpect(jsonPath("$[0].apps[0].appName").value("Xcode"))
+            .andExpect(jsonPath("$[0].apps[0].totalSeconds").value(3600))
+            .andExpect(jsonPath("$[0].apps[0].percent").value(67))
+            .andExpect(jsonPath("$[0].categories[0].category").value("Code"));
     }
 }

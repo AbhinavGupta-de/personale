@@ -40,6 +40,28 @@ protocol AppTheme {
     var chartGrayLight: Color { get }
 }
 
+// MARK: - Shared category→hex color map (single source of truth)
+
+enum CategoryColors {
+    static let map: [String: UInt] = [
+        "Code": 0x7C5CFC,
+        "Browsing": 0xF5A623,
+        "Communication": 0xD64D8A,
+        "Design": 0x00CCBF,
+        "Writing": 0x35A882,
+        "Media": 0x9B85F5,
+        "Utilities": 0x6B7280,
+        "Reading": 0x3B82F6,
+        "Other": 0x3D4451,
+    ]
+
+    static let fallback: UInt = 0x3D4451
+
+    static func color(for category: String) -> Color {
+        Color(hex: map[category] ?? fallback)
+    }
+}
+
 // MARK: - Activity color lookup (shared across themes)
 
 extension AppTheme {
@@ -60,24 +82,25 @@ extension AppTheme {
 // MARK: - Dark Theme (default — matches dashboard-designs CSS tokens)
 
 struct DarkTheme: AppTheme {
-    let background = Color(hue: 240/360, saturation: 0.12, brightness: 0.07)
+    // Converted from CSS HSL tokens in dashboard-designs/frontend/src/index.css
+    let background = Color(hex: 0x101014)
     let foreground = Color(white: 0.88)
-    let card = Color(hue: 240/360, saturation: 0.10, brightness: 0.10)
+    let card = Color(hex: 0x17171C)
     let cardForeground = Color(white: 0.88)
 
-    let secondary = Color(hue: 240/360, saturation: 0.08, brightness: 0.15)
-    let muted = Color(hue: 240/360, saturation: 0.06, brightness: 0.13)
+    let secondary = Color(hex: 0x232329)
+    let muted = Color(hex: 0x1F1F23)
     let mutedForeground = Color(white: 0.48)
 
-    let primary = Color(hue: 258/360, saturation: 0.58, brightness: 0.58)
+    let primary = Color(hex: 0x7B56D2)
     let primaryForeground = Color(white: 0.98)
-    let accent = Color(hue: 174/360, saturation: 1.0, brightness: 0.40)
+    let accent = Color(hex: 0x00CCB8)
 
-    let success = Color(hue: 158/360, saturation: 0.60, brightness: 0.42)
-    let warning = Color(hue: 38/360, saturation: 0.92, brightness: 0.50)
-    let destructive = Color(hue: 0, saturation: 0.72, brightness: 0.51)
+    let success = Color(hex: 0x2BAB7C)
+    let warning = Color(hex: 0xF59F0A)
+    let destructive = Color(hex: 0xDC2828)
 
-    let border = Color(hue: 240/360, saturation: 0.06, brightness: 0.18)
+    let border = Color(hex: 0x2B2B31)
 
     let chartPurple = Color(hex: 0x7C5CFC)
     let chartPurpleLight = Color(hex: 0x9B85F5)
@@ -101,19 +124,6 @@ extension EnvironmentValues {
         get { self[ThemeKey.self] }
         set { self[ThemeKey.self] = newValue }
     }
-}
-
-// MARK: - Feature Flags (flip to true as features come online)
-
-enum SidebarFeatures {
-    static let showActivity = false       // M3
-    static let showFocus = false          // M4
-    static let showGoals = false          // deferred
-    static let showCalendar = false       // deferred
-    static let showTasks = false          // deferred
-    static let showHabits = false         // deferred
-    static let showProductivity = false   // M4
-    static let showTeam = false           // M9
 }
 
 // MARK: - AppMetrics Constants (theme-independent)

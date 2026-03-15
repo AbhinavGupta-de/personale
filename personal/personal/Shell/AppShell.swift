@@ -6,15 +6,23 @@ import SwiftUI
 
 struct AppShell: View {
     @Environment(\.theme) private var theme
+    @State private var activePage = "dashboard"
 
     var body: some View {
         ZStack(alignment: .bottom) {
             HStack(spacing: 0) {
-                Sidebar()
+                Sidebar(activePage: $activePage)
                 VStack(spacing: 0) {
                     TopHeader()
-                    DashboardPage()
-                        .padding(.bottom, AppMetrics.bottomBarHeight)
+                    Group {
+                        switch activePage {
+                        case "activity":
+                            ActivityDetailPage()
+                        default:
+                            DashboardPage()
+                        }
+                    }
+                    .padding(.bottom, AppMetrics.bottomBarHeight)
                 }
             }
             BottomBar()
@@ -29,7 +37,7 @@ struct AppShell: View {
 
 struct Sidebar: View {
     @Environment(\.theme) private var theme
-    @State private var activeItem = "dashboard"
+    @Binding var activePage: String
 
     private var topItems: [(id: String, icon: String, label: String)] {
         var items: [(id: String, icon: String, label: String)] = [
@@ -99,10 +107,10 @@ struct Sidebar: View {
 
     @ViewBuilder
     private func sidebarButton(item: (id: String, icon: String, label: String)) -> some View {
-        let isActive = activeItem == item.id
+        let isActive = activePage == item.id
 
         Button {
-            activeItem = item.id
+            activePage = item.id
         } label: {
             Image(systemName: item.icon)
                 .font(.system(size: 14, weight: .regular))
@@ -314,20 +322,40 @@ struct BottomBar: View {
 struct DateNavigator: View {
     let dateText: String
     let views: [String]
+    var isToday: Bool
+    var isLoading: Bool
+    var onPrevious: (() -> Void)?
+    var onNext: (() -> Void)?
+    var onToday: (() -> Void)?
     @State private var activeView: String
     @Environment(\.theme) private var theme
 
-    init(dateText: String, views: [String] = ["Day", "Week"], defaultView: String = "Day") {
+    init(dateText: String, views: [String] = ["Day", "Week"], defaultView: String = "Day",
+         isToday: Bool = true, isLoading: Bool = false,
+         onPrevious: (() -> Void)? = nil, onNext: (() -> Void)? = nil, onToday: (() -> Void)? = nil) {
         self.dateText = dateText
         self.views = views
+        self.isToday = isToday
+        self.isLoading = isLoading
+        self.onPrevious = onPrevious
+        self.onNext = onNext
+        self.onToday = onToday
         self._activeView = State(initialValue: defaultView)
     }
 
     var body: some View {
         HStack {
-            Text(dateText)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(theme.foreground)
+            HStack(spacing: 8) {
+                Text(dateText)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(theme.foreground)
+
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.7)
+                }
+            }
 
             Spacer()
 
@@ -357,21 +385,35 @@ struct DateNavigator: View {
                 .background(theme.secondary.opacity(0.8))
                 .clipShape(RoundedRectangle(cornerRadius: 7))
 
-                // Calendar
-                headerIconButton(icon: "calendar")
+                // Calendar icon (future: date picker)
+                headerIconButton(icon: "calendar", action: nil)
+
+                // Today button — only shown when viewing a past date
+                if !isToday {
+                    Button { onToday?() } label: {
+                        Text("Today")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(theme.primary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(theme.primary.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 // Prev/Next
                 HStack(spacing: 0) {
-                    headerIconButton(icon: "chevron.left")
-                    headerIconButton(icon: "chevron.right")
+                    headerIconButton(icon: "chevron.left", action: onPrevious)
+                    headerIconButton(icon: "chevron.right", action: onNext)
                 }
             }
         }
     }
 
     @ViewBuilder
-    private func headerIconButton(icon: String) -> some View {
-        Button {} label: {
+    private func headerIconButton(icon: String, action: (() -> Void)? = nil) -> some View {
+        Button { action?() } label: {
             Image(systemName: icon)
                 .font(.system(size: 10))
                 .foregroundStyle(theme.mutedForeground)
