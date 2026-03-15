@@ -1,74 +1,74 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - Feature Flags
-
-/// Flip these to true as backend endpoints come online
-enum DashboardFeatures {
-    static let showBreakTimer = false      // M5
-    static let showWorkblocks = false      // M3/M4
-    static let showScores = false          // M4
-    static let showProjects = false        // deferred
-}
-
 // MARK: - Dashboard Page
 
 struct DashboardPage: View {
     @Environment(\.theme) private var theme
+    @StateObject private var viewModel = DashboardViewModel()
 
     var body: some View {
         ScrollView {
             VStack(spacing: AppMetrics.cardGap) {
-                DateNavigator(dateText: MockData.date)
+                DateNavigator(
+                    dateText: viewModel.displayDate,
+                    isToday: viewModel.isToday,
+                    isLoading: viewModel.isLoading,
+                    onPrevious: { viewModel.goToPreviousDay() },
+                    onNext: { viewModel.goToNextDay() },
+                    onToday: { viewModel.goToToday() }
+                )
 
-                // Row 1: Timeline + Work Hours
-                HStack(spacing: AppMetrics.cardGap) {
-                    TimelineCard(data: MockData.timeline)
-                        .frame(maxWidth: .infinity)
-                    WorkHoursCard(data: MockData.workHours)
-                        .frame(maxWidth: .infinity)
-                        .frame(width: 380)
-                }
+                // 2-column layout: main content left, right sidebar column
+                HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+                    // ── Left main area ──
+                    VStack(spacing: AppMetrics.cardGap) {
+                        // Timeline (full width of main area)
+                        TimelineCard(data: viewModel.timeline)
 
-                // Row 2: conditional layout based on what's enabled
-                if DashboardFeatures.showBreakTimer || DashboardFeatures.showWorkblocks || DashboardFeatures.showScores {
-                    HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                        if DashboardFeatures.showBreakTimer {
-                            BreakTimerCard(data: MockData.breakTimer)
-                                .frame(width: 260)
+                        // Break Timer + Workblocks row
+                        if DashboardFeatures.showBreakTimer || DashboardFeatures.showWorkblocks {
+                            HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+                                if DashboardFeatures.showBreakTimer {
+                                    BreakTimerCard(data: MockData.breakTimer)
+                                        .frame(width: 260)
+                                }
+                                if DashboardFeatures.showWorkblocks {
+                                    WorkblocksCard(data: viewModel.workblocks)
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
                         }
 
-                        if DashboardFeatures.showWorkblocks {
-                            WorkblocksCard(data: MockData.workblocks)
+                        // Activity + Projects row
+                        HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+                            ActivityLogCard(data: viewModel.activityLog)
                                 .frame(maxWidth: .infinity)
+                            if DashboardFeatures.showProjects {
+                                ProjectsCard(data: MockData.projects)
+                                    .frame(maxWidth: .infinity)
+                            }
                         }
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    // ── Right column (consistent width, spans all rows) ──
+                    VStack(spacing: AppMetrics.cardGap) {
+                        WorkHoursCard(data: viewModel.workHours)
 
                         if DashboardFeatures.showScores {
-                            VStack(spacing: AppMetrics.cardGap) {
-                                ScoresCard(data: MockData.scores)
-                                TimeBreakdownCard(data: MockData.timeBreakdown)
-                            }
-                            .frame(width: 320)
+                            ScoresCard(data: MockData.scores)
                         }
-                    }
-                }
 
-                // Row 3: Activity Log + Time Breakdown (or Projects)
-                HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                    ActivityLogCard(data: MockData.activityLog)
-                        .frame(maxWidth: .infinity)
-
-                    if DashboardFeatures.showProjects {
-                        ProjectsCard(data: MockData.projects)
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        TimeBreakdownCard(data: MockData.timeBreakdown)
-                            .frame(width: 360)
+                        TimeBreakdownCard(data: viewModel.timeBreakdown)
                     }
+                    .frame(width: 320)
                 }
             }
             .padding(AppMetrics.contentPadding)
         }
+        .onAppear { viewModel.startRefreshing() }
+        .onDisappear { viewModel.stopRefreshing() }
     }
 }
 
@@ -78,8 +78,30 @@ struct TimelineCard: View {
     let data: [MockData.TimelineBlock]
     @Environment(\.theme) private var theme
 
-    private let startHour: Double = 6
-    private let totalHours: Double = 14
+    private var startHour: Double {
+        guard !data.isEmpty else { return 6 }
+        let minStart = data.map(\.start).min() ?? 6
+        return max(0, floor(minStart) - 1)
+    }
+
+    private var endHour: Double {
+        guard !data.isEmpty else { return 20 }
+        let maxEnd = data.map(\.end).max() ?? 20
+        return min(24, ceil(maxEnd) + 1)
+    }
+
+    private var totalHours: Double {
+        endHour - startHour
+    }
+
+    private var hourLabels: [Int] {
+        let start = Int(startHour)
+        let end = Int(endHour)
+        // Choose a step that keeps labels readable (every 2 hours)
+        let step = 2
+        let alignedStart = start % step == 0 ? start : start + (step - start % step)
+        return stride(from: alignedStart, through: end, by: step).map { $0 }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -111,11 +133,11 @@ struct TimelineCard: View {
 
             // Hour labels
             HStack {
-                ForEach([6, 8, 10, 12, 14, 16, 18, 20], id: \.self) { hour in
-                    Text(hour > 12 ? "\(hour - 12):00" : "\(hour):00")
+                ForEach(hourLabels, id: \.self) { hour in
+                    Text(hourLabelText(hour))
                         .font(.system(size: 9).monospacedDigit())
                         .foregroundStyle(theme.mutedForeground)
-                    if hour != 20 { Spacer() }
+                    if hour != hourLabels.last { Spacer() }
                 }
             }
             .padding(.horizontal, 16)
@@ -123,6 +145,12 @@ struct TimelineCard: View {
             .padding(.bottom, 14)
         }
         .dashboardCard()
+    }
+
+    private func hourLabelText(_ hour: Int) -> String {
+        if hour == 0 { return "12:00" }
+        if hour == 24 { return "12:00" }
+        return hour > 12 ? "\(hour - 12):00" : "\(hour):00"
     }
 }
 

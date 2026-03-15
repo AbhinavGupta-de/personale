@@ -3,7 +3,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @EnvironmentObject var appTracker: AppTracker
-    @State private var stats: DailyStats?
+    @State private var stats: DailyStatsResponse?
     @State private var refreshTimer: Timer?
 
     var body: some View {
@@ -87,12 +87,12 @@ struct MenuBarView: View {
     }
 
     private func fetchStats() {
-        guard let url = URL(string: "http://localhost:8080/api/stats/today") else { return }
+        let url = APIClient.shared.baseURL.appendingPathComponent("api/stats/today")
         URLSession.shared.dataTask(with: url) { data, response, error in
             guard let data = data,
                   let http = response as? HTTPURLResponse,
                   http.statusCode == 200 else { return }
-            if let decoded = try? JSONDecoder().decode(DailyStats.self, from: data) {
+            if let decoded = try? JSONDecoder().decode(DailyStatsResponse.self, from: data) {
                 DispatchQueue.main.async {
                     self.stats = decoded
                 }
@@ -108,18 +108,5 @@ struct MenuBarView: View {
         }
         return "\(minutes)m"
     }
-}
-
-private struct DailyStats: Decodable {
-    let date: String
-    let apps: [AppTime]
-    let totalTrackedSeconds: Int
-    let idleSessionCount: Int?
-}
-
-private struct AppTime: Decodable {
-    let appName: String
-    let bundleId: String?
-    let totalSeconds: Int
 }
 #endif
