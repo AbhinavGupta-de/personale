@@ -30,8 +30,11 @@ struct DashboardPage: View {
                         if DashboardFeatures.showBreakTimer || DashboardFeatures.showWorkblocks {
                             HStack(alignment: .top, spacing: AppMetrics.cardGap) {
                                 if DashboardFeatures.showBreakTimer {
-                                    BreakTimerCard(data: MockData.breakTimer)
-                                        .frame(width: 260)
+                                    BreakTimerCard(
+                                        timeSinceBreak: viewModel.breakTimerText,
+                                        breakToWorkRatio: viewModel.breakToWorkRatio
+                                    )
+                                    .frame(width: 260)
                                 }
                                 if DashboardFeatures.showWorkblocks {
                                     WorkblocksCard(data: viewModel.workblocks)
@@ -193,8 +196,6 @@ struct WorkHoursCard: View {
             }
             .padding(.horizontal, 16)
 
-            Spacer(minLength: 0)
-
             // Bottom status row
             HStack {
                 HStack(spacing: 20) {
@@ -254,7 +255,8 @@ struct WorkHoursCard: View {
 // MARK: - Break Timer Card
 
 struct BreakTimerCard: View {
-    let data: MockData.BreakTimer
+    let timeSinceBreak: String
+    let breakToWorkRatio: String
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -270,7 +272,7 @@ struct BreakTimerCard: View {
                         .font(.system(size: 9, weight: .medium))
                         .tracking(0.5)
                         .foregroundStyle(theme.mutedForeground)
-                    Text(data.timeSinceBreak)
+                    Text(timeSinceBreak)
                         .font(.system(size: 28, weight: .bold).monospacedDigit())
                         .foregroundStyle(theme.foreground)
                 }
@@ -279,7 +281,7 @@ struct BreakTimerCard: View {
                         .font(.system(size: 9, weight: .medium))
                         .tracking(0.5)
                         .foregroundStyle(theme.mutedForeground)
-                    Text(data.breakToWorkRatio)
+                    Text(breakToWorkRatio)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(theme.foreground)
                         .padding(.top, 4)
@@ -287,12 +289,27 @@ struct BreakTimerCard: View {
             }
             .padding(.horizontal, 16)
 
-            Spacer(minLength: 12)
+            Spacer(minLength: 8)
 
-            HStack {
-                HStack(spacing: 16) {
-                    inlineLabel("Notifications:", value: data.notificationsOn ? "On" : "Off")
-                    inlineLabel("Notifications threshold:", value: data.threshold)
+            // Bottom row — compact layout to avoid label wrapping
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 3) {
+                        Text("Notifications:")
+                            .font(.system(size: 9))
+                            .foregroundStyle(theme.mutedForeground)
+                        Text("On")
+                            .font(.system(size: 11))
+                            .foregroundStyle(theme.foreground)
+                    }
+                    HStack(spacing: 3) {
+                        Text("Threshold:")
+                            .font(.system(size: 9))
+                            .foregroundStyle(theme.mutedForeground)
+                        Text("40 min")
+                            .font(.system(size: 11))
+                            .foregroundStyle(theme.foreground)
+                    }
                 }
                 Spacer()
                 Button {} label: {
@@ -311,17 +328,6 @@ struct BreakTimerCard: View {
         }
         .dashboardCard()
     }
-
-    private func inlineLabel(_ label: String, value: String) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .font(.system(size: 9))
-                .foregroundStyle(theme.mutedForeground)
-            Text(value)
-                .font(.system(size: 11))
-                .foregroundStyle(theme.foreground)
-        }
-    }
 }
 
 // MARK: - Workblocks Card
@@ -331,14 +337,7 @@ struct WorkblocksCard: View {
     @Environment(\.theme) private var theme
 
     private func borderColor(for task: String) -> Color {
-        switch task {
-        case "Code": theme.chartPurple
-        case "Daily Stand-Up": theme.chartPink
-        case "Documentation": theme.chartTeal
-        case "Design": theme.accent
-        case "Investor Meeting": Color(hue: 270/360, saturation: 0.45, brightness: 0.55)
-        default: theme.mutedForeground
-        }
+        CategoryColors.color(for: task)
     }
 
     var body: some View {

@@ -66,16 +66,16 @@ enum CategoryColors {
 
 extension AppTheme {
     func activityColor(for type: String) -> Color {
-        switch type {
-        case "coding": chartPurple
-        case "meeting": chartPink
-        case "break": chartTeal
-        case "writing": Color(hue: 270/360, saturation: 0.45, brightness: 0.55)
-        case "design": accent
-        case "email", "browsing": chartAmber
-        case "focus": accent
-        default: chartGray
+        // Try exact match from CategoryColors first (real API data: "Code", "Browsing", etc.)
+        if CategoryColors.map[type] != nil {
+            return CategoryColors.color(for: type)
         }
+        // Fallback: capitalize first letter for lowercased input ("code" → "Code")
+        let capitalized = type.prefix(1).uppercased() + type.dropFirst()
+        if CategoryColors.map[capitalized] != nil {
+            return CategoryColors.color(for: capitalized)
+        }
+        return CategoryColors.color(for: type)
     }
 }
 
