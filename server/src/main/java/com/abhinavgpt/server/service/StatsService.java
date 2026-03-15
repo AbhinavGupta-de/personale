@@ -196,8 +196,9 @@ public class StatsService {
                     Instant mergedEnd = neighbor.end.isAfter(block.end) ? neighbor.end : block.end;
                     var combined = new ArrayList<>(neighbor.constituents);
                     combined.addAll(block.constituents);
+                    String dominant = dominantCategory(combined);
                     result.set(target, new MergedBlock(
-                        neighbor.category, mergedStart, mergedEnd,
+                        dominant, mergedStart, mergedEnd,
                         neighbor.seconds + block.seconds, neighbor.label, combined
                     ));
                     result.remove(i);
@@ -207,6 +208,17 @@ public class StatsService {
             }
         }
         return result;
+    }
+
+    private String dominantCategory(List<Constituent> constituents) {
+        Map<String, Long> timeByCategory = new LinkedHashMap<>();
+        for (Constituent c : constituents) {
+            timeByCategory.merge(c.category(), c.seconds(), Long::sum);
+        }
+        return timeByCategory.entrySet().stream()
+            .max(Map.Entry.comparingByValue())
+            .map(Map.Entry::getKey)
+            .orElse("Other");
     }
 
     // ── Timeline: merged focus session blocks for the day ──
