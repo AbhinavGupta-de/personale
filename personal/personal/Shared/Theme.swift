@@ -40,6 +40,28 @@ protocol AppTheme {
     var chartGrayLight: Color { get }
 }
 
+// MARK: - Shared category→hex color map (single source of truth)
+
+enum CategoryColors {
+    static let map: [String: UInt] = [
+        "Code": 0x7C5CFC,
+        "Browsing": 0xF5A623,
+        "Communication": 0xD64D8A,
+        "Design": 0x00CCBF,
+        "Writing": 0x35A882,
+        "Media": 0x9B85F5,
+        "Utilities": 0x6B7280,
+        "Reading": 0x3B82F6,
+        "Other": 0x3D4451,
+    ]
+
+    static let fallback: UInt = 0x3D4451
+
+    static func color(for category: String) -> Color {
+        Color(hex: map[category] ?? fallback)
+    }
+}
+
 // MARK: - Activity color lookup (shared across themes)
 
 extension AppTheme {

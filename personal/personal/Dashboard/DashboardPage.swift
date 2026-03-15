@@ -78,8 +78,30 @@ struct TimelineCard: View {
     let data: [MockData.TimelineBlock]
     @Environment(\.theme) private var theme
 
-    private let startHour: Double = 6
-    private let totalHours: Double = 14
+    private var startHour: Double {
+        guard !data.isEmpty else { return 6 }
+        let minStart = data.map(\.start).min() ?? 6
+        return max(0, floor(minStart) - 1)
+    }
+
+    private var endHour: Double {
+        guard !data.isEmpty else { return 20 }
+        let maxEnd = data.map(\.end).max() ?? 20
+        return min(24, ceil(maxEnd) + 1)
+    }
+
+    private var totalHours: Double {
+        endHour - startHour
+    }
+
+    private var hourLabels: [Int] {
+        let start = Int(startHour)
+        let end = Int(endHour)
+        // Choose a step that keeps labels readable (every 2 hours)
+        let step = 2
+        let alignedStart = start % step == 0 ? start : start + (step - start % step)
+        return stride(from: alignedStart, through: end, by: step).map { $0 }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -111,11 +133,11 @@ struct TimelineCard: View {
 
             // Hour labels
             HStack {
-                ForEach([6, 8, 10, 12, 14, 16, 18, 20], id: \.self) { hour in
-                    Text(hour > 12 ? "\(hour - 12):00" : "\(hour):00")
+                ForEach(hourLabels, id: \.self) { hour in
+                    Text(hourLabelText(hour))
                         .font(.system(size: 9).monospacedDigit())
                         .foregroundStyle(theme.mutedForeground)
-                    if hour != 20 { Spacer() }
+                    if hour != hourLabels.last { Spacer() }
                 }
             }
             .padding(.horizontal, 16)
@@ -123,6 +145,12 @@ struct TimelineCard: View {
             .padding(.bottom, 14)
         }
         .dashboardCard()
+    }
+
+    private func hourLabelText(_ hour: Int) -> String {
+        if hour == 0 { return "12:00" }
+        if hour == 24 { return "12:00" }
+        return hour > 12 ? "\(hour - 12):00" : "\(hour):00"
     }
 }
 

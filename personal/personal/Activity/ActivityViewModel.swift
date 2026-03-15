@@ -108,18 +108,7 @@ class ActivityViewModel: ObservableObject {
     // MARK: - Helpers
 
     func categoryColor(for category: String) -> Color {
-        let colors: [String: UInt] = [
-            "Code": 0x7C5CFC,
-            "Browsing": 0xF5A623,
-            "Communication": 0xD64D8A,
-            "Design": 0x00CCBF,
-            "Writing": 0x35A882,
-            "Media": 0x9B85F5,
-            "Utilities": 0x6B7280,
-            "Reading": 0x3B82F6,
-            "Other": 0x3D4451,
-        ]
-        return Color(hex: colors[category] ?? 0x3D4451)
+        CategoryColors.color(for: category)
     }
 
     func formatDuration(_ seconds: Int) -> String {
