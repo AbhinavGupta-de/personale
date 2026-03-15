@@ -5,60 +5,70 @@ import SwiftUI
 
 struct DashboardPage: View {
     @Environment(\.theme) private var theme
+    @StateObject private var viewModel = DashboardViewModel()
 
     var body: some View {
         ScrollView {
             VStack(spacing: AppMetrics.cardGap) {
-                DateNavigator(dateText: MockData.date)
+                DateNavigator(
+                    dateText: viewModel.displayDate,
+                    isToday: viewModel.isToday,
+                    isLoading: viewModel.isLoading,
+                    onPrevious: { viewModel.goToPreviousDay() },
+                    onNext: { viewModel.goToNextDay() },
+                    onToday: { viewModel.goToToday() }
+                )
 
-                // Row 1: Timeline + Work Hours
-                HStack(spacing: AppMetrics.cardGap) {
-                    TimelineCard(data: MockData.timeline)
-                        .frame(maxWidth: .infinity)
-                    WorkHoursCard(data: MockData.workHours)
-                        .frame(maxWidth: .infinity)
-                        .frame(width: 380)
-                }
+                // 2-column layout: main content left, right sidebar column
+                HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+                    // ── Left main area ──
+                    VStack(spacing: AppMetrics.cardGap) {
+                        // Timeline (full width of main area)
+                        TimelineCard(data: viewModel.timeline)
 
-                // Row 2: conditional layout based on what's enabled
-                if DashboardFeatures.showBreakTimer || DashboardFeatures.showWorkblocks || DashboardFeatures.showScores {
-                    HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                        if DashboardFeatures.showBreakTimer {
-                            BreakTimerCard(data: MockData.breakTimer)
-                                .frame(width: 260)
+                        // Break Timer + Workblocks row
+                        if DashboardFeatures.showBreakTimer || DashboardFeatures.showWorkblocks {
+                            HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+                                if DashboardFeatures.showBreakTimer {
+                                    BreakTimerCard(data: MockData.breakTimer)
+                                        .frame(width: 260)
+                                }
+                                if DashboardFeatures.showWorkblocks {
+                                    WorkblocksCard(data: viewModel.workblocks)
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
                         }
 
-                        if DashboardFeatures.showWorkblocks {
-                            WorkblocksCard(data: MockData.workblocks)
+                        // Activity + Projects row
+                        HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+                            ActivityLogCard(data: viewModel.activityLog)
                                 .frame(maxWidth: .infinity)
+                            if DashboardFeatures.showProjects {
+                                ProjectsCard(data: MockData.projects)
+                                    .frame(maxWidth: .infinity)
+                            }
                         }
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    // ── Right column (consistent width, spans all rows) ──
+                    VStack(spacing: AppMetrics.cardGap) {
+                        WorkHoursCard(data: viewModel.workHours)
 
                         if DashboardFeatures.showScores {
-                            VStack(spacing: AppMetrics.cardGap) {
-                                ScoresCard(data: MockData.scores)
-                                TimeBreakdownCard(data: MockData.timeBreakdown)
-                            }
-                            .frame(width: 320)
+                            ScoresCard(data: MockData.scores)
                         }
-                    }
-                }
 
-                // Row 3: Activity Log + Time Breakdown (or Projects)
-                HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                    ActivityLogCard(data: MockData.activityLog)
-                        .frame(maxWidth: .infinity)
-
-                    if DashboardFeatures.showProjects {
-                        ProjectsCard(data: MockData.projects)
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        TimeBreakdownCard(data: MockData.timeBreakdown)
-                            .frame(width: 360)
+                        TimeBreakdownCard(data: viewModel.timeBreakdown)
                     }
+                    .frame(width: 320)
                 }
             }
             .padding(AppMetrics.contentPadding)
         }
+        .onAppear { viewModel.startRefreshing() }
+        .onDisappear { viewModel.stopRefreshing() }
     }
 }
 

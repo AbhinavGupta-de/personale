@@ -3,7 +3,7 @@
 // MARK: - Sidebar Feature Flags
 
 enum SidebarFeatures {
-    static let showActivity = false       // M3
+    static let showActivity = true        // M3
     static let showFocus = false          // M4
     static let showGoals = false          // deferred
     static let showCalendar = false       // deferred
