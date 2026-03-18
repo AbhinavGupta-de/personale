@@ -18,7 +18,7 @@ class DashboardViewModel: ObservableObject {
     // Break timer — ticks every second, computed client-side from existing data
     @Published var secondsSinceLastBreak: Int = 0
 
-    private let api = APIClient.shared
+    private let stats = StatsEngine.shared
     private var refreshTimer: Timer?
     private var breakTickTimer: Timer?
     private var lastBreakEnd: Date?
@@ -234,13 +234,13 @@ class DashboardViewModel: ObservableObject {
     // MARK: - Navigation
 
     func startRefreshing() {
-        fetchAllIncremental()
+        fetchAll()
         refreshTimer?.invalidate()
         if isToday {
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) {
                 [weak self] _ in
                 Task { @MainActor in
-                    self?.fetchAllIncremental()
+                    self?.fetchAll()
                 }
             }
             startBreakTick()
@@ -296,9 +296,9 @@ class DashboardViewModel: ObservableObject {
         startRefreshing()
     }
 
-    // MARK: - Incremental fetching
+    // MARK: - Data fetching (direct from SQLite)
 
-    private func fetchAllIncremental() {
+    private func fetchAll() {
         let date = dateString
         activeFetchDate = date
 
@@ -306,89 +306,27 @@ class DashboardViewModel: ObservableObject {
             isLoading = true
         }
 
-        // Fire each endpoint independently — UI updates as each arrives
-        Task {
-            guard let s = try? await api.fetchDayStats(date: date),
-                activeFetchDate == date
-            else { return }
-            self.dayStats = s
-            self.cache[date, default: DayCache()].dayStats = s
-            self.isLoading = false
-        }
-        Task {
-            guard let t = try? await api.fetchTimeline(date: date),
-                activeFetchDate == date
-            else { return }
-            self.timelineEntries = t
-            self.cache[date, default: DayCache()].timelineEntries = t
-            self.isLoading = false
-            self.computeLastBreakEnd()
-        }
-        Task {
-            guard let a = try? await api.fetchActivity(date: date),
-                activeFetchDate == date
-            else { return }
-            self.activityEntries = a
-            self.cache[date, default: DayCache()].activityEntries = a
-            self.isLoading = false
-        }
-        Task {
-            guard let c = try? await api.fetchCategories(date: date),
-                activeFetchDate == date
-            else { return }
-            self.categoryBreakdown = c
-            self.cache[date, default: DayCache()].categoryBreakdown = c
-            self.isLoading = false
-        }
-        Task {
-            guard let w = try? await api.fetchWorkblocks(date: date),
-                activeFetchDate == date
-            else { return }
-            self.workblockEntries = w
-            self.cache[date, default: DayCache()].workblockEntries = w
-            self.isLoading = false
-        }
+        // All queries are fast (local SQLite), run directly
+        let s = stats.getTimePerApp(date: date)
+        let t = stats.getTimeline(date: date)
+        let a = stats.getActivityLog(date: date)
+        let c = stats.getCategoryBreakdown(date: date)
+        let w = stats.getWorkblocks(date: date)
 
-        // Prefetch adjacent days in background
-        prefetchAdjacent()
-    }
+        guard activeFetchDate == date else { return }
 
-    private func prefetchAdjacent() {
-        let prev = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate)!
-        let next = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate)!
+        self.dayStats = s
+        self.timelineEntries = t
+        self.activityEntries = a
+        self.categoryBreakdown = c
+        self.workblockEntries = w
 
-        for date in [prev, next] {
-            guard date <= Date() else { continue }
-            let dateStr = Self.dateFmt.string(from: date)
-            guard cache[dateStr] == nil else { continue }
-
-            // Prefetch all endpoints for adjacent days
-            Task {
-                if let s = try? await api.fetchDayStats(date: dateStr) {
-                    self.cache[dateStr, default: DayCache()].dayStats = s
-                }
-            }
-            Task {
-                if let t = try? await api.fetchTimeline(date: dateStr) {
-                    self.cache[dateStr, default: DayCache()].timelineEntries = t
-                }
-            }
-            Task {
-                if let c = try? await api.fetchCategories(date: dateStr) {
-                    self.cache[dateStr, default: DayCache()].categoryBreakdown = c
-                }
-            }
-            Task {
-                if let w = try? await api.fetchWorkblocks(date: dateStr) {
-                    self.cache[dateStr, default: DayCache()].workblockEntries = w
-                }
-            }
-            Task {
-                if let a = try? await api.fetchActivity(date: dateStr) {
-                    self.cache[dateStr, default: DayCache()].activityEntries = a
-                }
-            }
-        }
+        self.cache[date, default: DayCache()] = DayCache(
+            dayStats: s, timelineEntries: t, activityEntries: a,
+            categoryBreakdown: c, workblockEntries: w
+        )
+        self.isLoading = false
+        self.computeLastBreakEnd()
     }
 
     // MARK: - Helpers
