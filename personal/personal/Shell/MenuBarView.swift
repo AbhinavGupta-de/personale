@@ -6,6 +6,8 @@ struct MenuBarView: View {
     @State private var stats: DailyStatsResponse?
     @State private var refreshTimer: Timer?
 
+    private let statsEngine = StatsEngine.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Personale")
@@ -87,17 +89,13 @@ struct MenuBarView: View {
     }
 
     private func fetchStats() {
-        let url = APIClient.shared.baseURL.appendingPathComponent("api/stats/today")
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data,
-                  let http = response as? HTTPURLResponse,
-                  http.statusCode == 200 else { return }
-            if let decoded = try? JSONDecoder().decode(DailyStatsResponse.self, from: data) {
-                DispatchQueue.main.async {
-                    self.stats = decoded
-                }
-            }
-        }.resume()
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        let today = fmt.string(from: Date())
+        let result = statsEngine.getTimePerApp(date: today)
+        DispatchQueue.main.async {
+            self.stats = result
+        }
     }
 
     private func formatDuration(_ totalSeconds: Int) -> String {

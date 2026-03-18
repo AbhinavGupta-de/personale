@@ -13,7 +13,7 @@ class ActivityViewModel: ObservableObject {
     @Published var dayStats: DailyStatsResponse?
     @Published var categoryBreakdown: [CategoryBreakdownResponse] = []
 
-    private let api = APIClient.shared
+    private let stats = StatsEngine.shared
     private var cache: [String: [FocusSessionResponse]] = [:]
     private var activeFetchDate: String?
 
@@ -88,42 +88,15 @@ class ActivityViewModel: ObservableObject {
         activeFetchDate = date
         if cache[date] == nil { isLoading = true }
 
-        Task {
-            guard let result = try? await api.fetchSessions(date: date),
-                activeFetchDate == date
-            else { return }
-            self.sessions = result
-            self.cache[date] = result
-            self.isLoading = false
-        }
+        // All queries are fast (local SQLite), run directly
+        let result = stats.getFocusSessions(date: date)
+        guard activeFetchDate == date else { return }
+        self.sessions = result
+        self.cache[date] = result
+        self.isLoading = false
 
-        // Fetch day-level data for Daily Summary
-        Task {
-            guard let stats = try? await api.fetchDayStats(date: date),
-                activeFetchDate == date
-            else { return }
-            self.dayStats = stats
-        }
-        Task {
-            guard let cats = try? await api.fetchCategories(date: date),
-                activeFetchDate == date
-            else { return }
-            self.categoryBreakdown = cats
-        }
-
-        // Prefetch adjacent
-        for offset in [-1, 1] {
-            guard let adjDate = Calendar.current.date(byAdding: .day, value: offset, to: selectedDate),
-                adjDate <= Date()
-            else { continue }
-            let adjStr = Self.dateFmt.string(from: adjDate)
-            guard cache[adjStr] == nil else { continue }
-            Task {
-                if let r = try? await api.fetchSessions(date: adjStr) {
-                    self.cache[adjStr] = r
-                }
-            }
-        }
+        self.dayStats = stats.getTimePerApp(date: date)
+        self.categoryBreakdown = stats.getCategoryBreakdown(date: date)
     }
 
     // MARK: - Daily Summary computed data

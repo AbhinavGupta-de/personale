@@ -10,7 +10,7 @@ class AppTracker: ObservableObject {
     @Published var isIdle: Bool = false
 
     private var cancellables = Set<AnyCancellable>()
-    private let eventClient: EventClient
+    private let sessionStore: SessionStore
     private var idleTimer: Timer?
 
     private static let idleThreshold: TimeInterval = 120
@@ -28,8 +28,8 @@ class AppTracker: ObservableObject {
         return f
     }()
 
-    init(eventClient: EventClient = EventClient()) {
-        self.eventClient = eventClient
+    init(sessionStore: SessionStore = SessionStore.shared) {
+        self.sessionStore = sessionStore
 
         let nc = NSWorkspace.shared.notificationCenter
 
@@ -58,7 +58,7 @@ class AppTracker: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Capture initial state and send to backend
+        // Capture initial state and save to database
         if let app = NSWorkspace.shared.frontmostApplication {
             handleAppSwitch(app)
         }
@@ -85,7 +85,7 @@ class AppTracker: ObservableObject {
             let lastInputTime = Date().addingTimeInterval(-idle)
             let timestamp = dateFormatter.string(from: lastInputTime)
             print("[\(dateFormatter.string(from: Date()))] User idle for \(Int(idle))s — closing session (last input at \(timestamp))")
-            eventClient.sendSessionClose(timestamp: timestamp)
+            sessionStore.closeActiveSession(timestamp: timestamp)
         } else if idle < Self.idleThreshold && isIdle {
             // User returned from idle — re-register frontmost app
             isIdle = false
@@ -109,15 +109,15 @@ class AppTracker: ObservableObject {
         // Lock screen / screensaver — treat as away, close session
         if let bid = bundleID, Self.blockedBundleIDs.contains(bid) {
             print("[\(timestamp)] \(name) activated — closing active session (blocked app)")
-            eventClient.sendSessionClose(timestamp: timestamp)
+            sessionStore.closeActiveSession(timestamp: timestamp)
             isIdle = true
             return
         }
 
         print("[\(timestamp)] Switched to: \(name) (\(bundleID ?? "nil"))")
 
-        // POST to backend
-        eventClient.sendAppSwitch(
+        // Save to SQLite
+        sessionStore.saveAppSwitch(
             appName: name,
             bundleId: bundleID,
             windowTitle: nil,
@@ -136,7 +136,7 @@ class AppTracker: ObservableObject {
         isIdle = true  // prevent idle poll from sending a duplicate close
         let timestamp = dateFormatter.string(from: Date())
         print("[\(timestamp)] Mac going to sleep — closing active session")
-        eventClient.sendSessionClose(timestamp: timestamp)
+        sessionStore.closeActiveSession(timestamp: timestamp)
     }
 
     private func handleWake() {

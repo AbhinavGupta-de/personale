@@ -196,60 +196,11 @@ struct WorkHoursCard: View {
             }
             .padding(.horizontal, 16)
 
-            // Bottom status row
-            HStack {
-                HStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("TRACKING")
-                            .font(.system(size: 9, weight: .medium))
-                            .tracking(0.5)
-                            .foregroundStyle(theme.mutedForeground)
-                        Text(data.trackingOn ? "On" : "Off")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(theme.foreground)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("TRACKING HOURS")
-                            .font(.system(size: 9, weight: .medium))
-                            .tracking(0.5)
-                            .foregroundStyle(theme.mutedForeground)
-                        Text(data.trackingHours)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(theme.foreground)
-                    }
-                }
-                Spacer()
-                smallButton("Disable Tracking")
-            }
-            .padding(.top, 10)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(theme.border.opacity(0.4))
-                    .frame(height: 1)
-                    .padding(.horizontal, 16)
-            }
+            Spacer(minLength: 14)
         }
         .dashboardCard()
     }
 
-    private func smallButton(_ title: String) -> some View {
-        Button {} label: {
-            Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(theme.foreground)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(theme.secondary)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(theme.border.opacity(0.5), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 // MARK: - Break Timer Card
@@ -289,42 +240,7 @@ struct BreakTimerCard: View {
             }
             .padding(.horizontal, 16)
 
-            Spacer(minLength: 8)
-
-            // Bottom row — compact layout to avoid label wrapping
-            HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 3) {
-                        Text("Notifications:")
-                            .font(.system(size: 9))
-                            .foregroundStyle(theme.mutedForeground)
-                        Text("On")
-                            .font(.system(size: 11))
-                            .foregroundStyle(theme.foreground)
-                    }
-                    HStack(spacing: 3) {
-                        Text("Threshold:")
-                            .font(.system(size: 9))
-                            .foregroundStyle(theme.mutedForeground)
-                        Text("40 min")
-                            .font(.system(size: 11))
-                            .foregroundStyle(theme.foreground)
-                    }
-                }
-                Spacer()
-                Button {} label: {
-                    Text("Start Break")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(theme.primaryForeground)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 5)
-                        .background(theme.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
+            Spacer(minLength: 14)
         }
         .dashboardCard()
     }
@@ -405,13 +321,7 @@ struct ActivityLogCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                SectionTitle(text: "Activity")
-                Spacer()
-                Text("Desktop application: Ok")
-                    .font(.system(size: 9))
-                    .foregroundStyle(theme.mutedForeground)
-            }
+            SectionTitle(text: "Activity")
             .padding(.horizontal, 16)
             .padding(.top, 14)
             .padding(.bottom, 10)

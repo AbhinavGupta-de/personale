@@ -14,6 +14,14 @@ struct personalApp: App {
     @StateObject private var appTracker = AppTracker()
     #endif
 
+    init() {
+        #if os(macOS)
+        // Touch singletons to initialize database and session store on launch
+        _ = DatabaseManager.shared
+        _ = SessionStore.shared
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             #if os(macOS)
