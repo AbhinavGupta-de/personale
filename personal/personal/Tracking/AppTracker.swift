@@ -86,40 +86,42 @@ class AppTracker: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Load category map from backend
-        fetchCategoryMap()
-
-        // Capture initial state
-        if let app = NSWorkspace.shared.frontmostApplication {
-            handleAppSwitch(app)
+        // Load category map from backend, then capture initial state
+        fetchCategoryMap {
+            if let app = NSWorkspace.shared.frontmostApplication {
+                self.handleAppSwitch(app)
+            }
         }
 
         startIdlePolling()
+        startCategoryRefreshTimer()
     }
 
     // MARK: - Category Map
 
-    private func fetchCategoryMap() {
+    private func fetchCategoryMap(completion: (() -> Void)? = nil) {
         let url = eventClient.baseURL.appendingPathComponent("/api/settings/categories")
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let mappings = json["mappings"] as? [String: String]
-            else { return }
+            else {
+                DispatchQueue.main.async { completion?() }
+                return
+            }
             DispatchQueue.main.async {
                 self?.categoryMap = mappings
                 self?.lastCategoryFetch = Date()
+                completion?()
             }
         }.resume()
     }
 
-    private func refreshCategoryMapIfNeeded() {
-        guard let last = lastCategoryFetch else {
-            fetchCategoryMap()
-            return
-        }
-        if Date().timeIntervalSince(last) > Self.categoryRefreshInterval {
-            fetchCategoryMap()
+    private var categoryRefreshTimer: Timer?
+
+    private func startCategoryRefreshTimer() {
+        categoryRefreshTimer = Timer.scheduledTimer(withTimeInterval: Self.categoryRefreshInterval, repeats: true) { [weak self] _ in
+            self?.fetchCategoryMap()
         }
     }
 
@@ -240,7 +242,7 @@ class AppTracker: ObservableObject {
         isIdle = false
         let timestamp = dateFormatter.string(from: Date())
         print("[\(timestamp)] Mac woke up — re-registering frontmost app")
-        refreshCategoryMapIfNeeded()
+        fetchCategoryMap()
         if let app = NSWorkspace.shared.frontmostApplication {
             handleAppSwitch(app)
         }
@@ -248,6 +250,7 @@ class AppTracker: ObservableObject {
 
     deinit {
         idleTimer?.invalidate()
+        categoryRefreshTimer?.invalidate()
     }
 }
 #endif
