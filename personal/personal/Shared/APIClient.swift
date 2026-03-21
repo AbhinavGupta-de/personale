@@ -67,6 +67,35 @@ struct SessionAppBreakdownResponse: Decodable, Identifiable {
     var id: String { appName }
 }
 
+// MARK: - Range Response Models
+
+struct RangeDayBreakdownResponse: Decodable {
+    let date: String
+    let totalTrackedSeconds: Int
+    let categories: [RangeCategorySeconds]
+}
+
+struct RangeCategorySeconds: Decodable {
+    let category: String
+    let seconds: Int
+}
+
+struct RangeResponse: Decodable {
+    let from: String
+    let to: String
+    let days: [RangeDayBreakdownResponse]
+}
+
+struct RangeSummaryResponse: Decodable {
+    let from: String
+    let to: String
+    let totalTrackedSeconds: Int
+    let daysWithData: Int
+    let avgSecondsPerDay: Int
+    let avgSecondsPerWeek: Int
+    let categoryBreakdown: [CategoryBreakdownResponse]
+}
+
 // MARK: - API Client
 
 class APIClient {
@@ -106,6 +135,14 @@ class APIClient {
 
     func fetchSessions(date: String) async throws -> [FocusSessionResponse] {
         try await get("/api/stats/sessions", params: ["date": date])
+    }
+
+    func fetchRange(from: String, to: String) async throws -> RangeResponse {
+        try await get("/api/stats/range", params: ["from": from, "to": to])
+    }
+
+    func fetchRangeSummary(from: String, to: String) async throws -> RangeSummaryResponse {
+        try await get("/api/stats/range/summary", params: ["from": from, "to": to])
     }
 
     private func get<T: Decodable>(_ path: String, params: [String: String] = [:]) async throws -> T {

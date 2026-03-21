@@ -60,7 +60,7 @@ struct DashboardPage: View {
                         WorkHoursCard(data: viewModel.workHours)
 
                         if DashboardFeatures.showScores {
-                            ScoresCard(data: MockData.scores)
+                            ScoresCard(data: viewModel.scores)
                         }
 
                         TimeBreakdownCard(data: viewModel.timeBreakdown)

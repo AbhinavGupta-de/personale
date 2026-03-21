@@ -18,6 +18,8 @@ struct AppShell: View {
                         switch activePage {
                         case "activity":
                             ActivityDetailPage()
+                        case "productivity":
+                            ProductivityPage()
                         default:
                             DashboardPage()
                         }
