@@ -673,4 +673,95 @@ class StatsServiceTest {
 
         assertThat(sessions).isEmpty();
     }
+
+    // ── Range aggregation tests ──
+
+    @Test
+    void getRange_multiDayRange_returnsPerDayBreakdown() {
+        Instant now = Instant.parse("2026-03-09T12:00:00Z");
+        LocalDate from = LocalDate.of(2026, 3, 7);
+        LocalDate to = LocalDate.of(2026, 3, 8);
+
+        // Day 1: Xcode 1h
+        AppSession xcode = new AppSession("Xcode", "com.apple.dt.Xcode", null,
+            Instant.parse("2026-03-07T09:00:00Z"));
+        xcode.setEndedAt(Instant.parse("2026-03-07T10:00:00Z"));
+
+        // Day 2: Safari 30m
+        AppSession safari = new AppSession("Safari", "com.apple.Safari", null,
+            Instant.parse("2026-03-08T14:00:00Z"));
+        safari.setEndedAt(Instant.parse("2026-03-08T14:30:00Z"));
+
+        when(repository.findSessionsOverlapping(any(), any()))
+            .thenReturn(List.of(xcode))   // day 1
+            .thenReturn(List.of(safari));  // day 2
+        when(categoryRepo.findAll()).thenReturn(List.of(
+            new CategoryMapping("com.apple.dt.Xcode", "Code"),
+            new CategoryMapping("com.apple.Safari", "Browsing")
+        ));
+
+        RangeResponse response = statsService.getRange(from, to, UTC, now);
+
+        assertThat(response.days()).hasSize(2);
+        assertThat(response.days().get(0).date()).isEqualTo("2026-03-07");
+        assertThat(response.days().get(0).totalTrackedSeconds()).isEqualTo(3600);
+        assertThat(response.days().get(0).categories()).hasSize(1);
+        assertThat(response.days().get(0).categories().get(0).category()).isEqualTo("Code");
+
+        assertThat(response.days().get(1).date()).isEqualTo("2026-03-08");
+        assertThat(response.days().get(1).totalTrackedSeconds()).isEqualTo(1800);
+        assertThat(response.days().get(1).categories().get(0).category()).isEqualTo("Browsing");
+    }
+
+    @Test
+    void getRange_dayWithNoData_returnsZero() {
+        Instant now = Instant.parse("2026-03-10T12:00:00Z");
+        LocalDate from = LocalDate.of(2026, 3, 9);
+        LocalDate to = LocalDate.of(2026, 3, 9);
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
+
+        RangeResponse response = statsService.getRange(from, to, UTC, now);
+
+        assertThat(response.days()).hasSize(1);
+        assertThat(response.days().get(0).totalTrackedSeconds()).isEqualTo(0);
+        assertThat(response.days().get(0).categories()).isEmpty();
+    }
+
+    @Test
+    void getRangeSummary_computesAveragesFromDaysWithData() {
+        Instant now = Instant.parse("2026-03-10T12:00:00Z");
+        LocalDate from = LocalDate.of(2026, 3, 7);
+        LocalDate to = LocalDate.of(2026, 3, 9);  // 3 days, but only 2 have data
+
+        // Day 1: 2h Code
+        AppSession d1 = new AppSession("Xcode", "com.apple.dt.Xcode", null,
+            Instant.parse("2026-03-07T09:00:00Z"));
+        d1.setEndedAt(Instant.parse("2026-03-07T11:00:00Z"));
+
+        // Day 2: empty
+        // Day 3: 1h Browsing
+        AppSession d3 = new AppSession("Safari", "com.apple.Safari", null,
+            Instant.parse("2026-03-09T10:00:00Z"));
+        d3.setEndedAt(Instant.parse("2026-03-09T11:00:00Z"));
+
+        when(repository.findSessionsOverlapping(any(), any()))
+            .thenReturn(List.of(d1))     // day 1
+            .thenReturn(List.of())        // day 2
+            .thenReturn(List.of(d3));     // day 3
+        when(categoryRepo.findAll()).thenReturn(List.of(
+            new CategoryMapping("com.apple.dt.Xcode", "Code"),
+            new CategoryMapping("com.apple.Safari", "Browsing")
+        ));
+
+        RangeSummaryResponse summary = statsService.getRangeSummary(from, to, UTC, now);
+
+        assertThat(summary.totalTrackedSeconds()).isEqualTo(10800); // 3h
+        assertThat(summary.daysWithData()).isEqualTo(2);
+        assertThat(summary.avgSecondsPerDay()).isEqualTo(5400);  // 3h / 2 days
+        assertThat(summary.avgSecondsPerWeek()).isEqualTo(27000); // 5400 * 5
+        assertThat(summary.categoryBreakdown()).hasSize(2);
+        assertThat(summary.categoryBreakdown().get(0).category()).isEqualTo("Code");
+        assertThat(summary.categoryBreakdown().get(0).totalSeconds()).isEqualTo(7200);
+    }
 }
