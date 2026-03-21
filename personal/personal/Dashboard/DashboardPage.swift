@@ -527,11 +527,11 @@ struct ScoresCard: View {
                 scoreItem(label: "Focus", percent: data.focus.percent, time: data.focus.time,
                           color: theme.chartCyan, labelColor: theme.accent)
                 Spacer()
-                scoreItem(label: "Meetings", percent: data.meetings.percent, time: data.meetings.time,
+                scoreItem(label: "Communication", percent: data.meetings.percent, time: data.meetings.time,
                           color: theme.chartPurple, labelColor: theme.primary)
                 Spacer()
-                scoreItem(label: "Breaks", percent: data.breaks.percent, time: data.breaks.time,
-                          color: theme.chartTeal, labelColor: theme.chartTeal)
+                scoreItem(label: "Other", percent: data.breaks.percent, time: data.breaks.time,
+                          color: theme.chartGray, labelColor: theme.mutedForeground)
                 Spacer()
             }
             .padding(.bottom, 14)

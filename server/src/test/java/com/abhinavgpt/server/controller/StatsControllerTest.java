@@ -181,4 +181,47 @@ class StatsControllerTest {
             .andExpect(jsonPath("$[0].apps[0].percent").value(67))
             .andExpect(jsonPath("$[0].categories[0].category").value("Code"));
     }
+
+    // ── /api/stats/range ──
+
+    @Test
+    void getRange_returns200WithDays() throws Exception {
+        when(statsService.getRange(any(), any(), any(), any())).thenReturn(
+            new RangeResponse("2026-03-01", "2026-03-02", List.of(
+                new RangeDayBreakdown("2026-03-01", 3600, List.of(
+                    new RangeDayBreakdown.CategorySeconds("Code", 3600))),
+                new RangeDayBreakdown("2026-03-02", 1800, List.of(
+                    new RangeDayBreakdown.CategorySeconds("Browsing", 1800)))
+            ))
+        );
+
+        mockMvc.perform(get("/api/stats/range")
+                .param("from", "2026-03-01").param("to", "2026-03-02"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.from").value("2026-03-01"))
+            .andExpect(jsonPath("$.to").value("2026-03-02"))
+            .andExpect(jsonPath("$.days.length()").value(2))
+            .andExpect(jsonPath("$.days[0].date").value("2026-03-01"))
+            .andExpect(jsonPath("$.days[0].totalTrackedSeconds").value(3600))
+            .andExpect(jsonPath("$.days[0].categories[0].category").value("Code"));
+    }
+
+    // ── /api/stats/range/summary ──
+
+    @Test
+    void getRangeSummary_returns200WithAggregates() throws Exception {
+        when(statsService.getRangeSummary(any(), any(), any(), any())).thenReturn(
+            new RangeSummaryResponse("2026-03-01", "2026-03-07", 36000, 5, 7200, 36000,
+                List.of(new CategoryBreakdownEntry("Code", 36000, 100)))
+        );
+
+        mockMvc.perform(get("/api/stats/range/summary")
+                .param("from", "2026-03-01").param("to", "2026-03-07"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalTrackedSeconds").value(36000))
+            .andExpect(jsonPath("$.daysWithData").value(5))
+            .andExpect(jsonPath("$.avgSecondsPerDay").value(7200))
+            .andExpect(jsonPath("$.avgSecondsPerWeek").value(36000))
+            .andExpect(jsonPath("$.categoryBreakdown[0].category").value("Code"));
+    }
 }
