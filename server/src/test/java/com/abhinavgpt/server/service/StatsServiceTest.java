@@ -759,7 +759,7 @@ class StatsServiceTest {
         assertThat(summary.totalTrackedSeconds()).isEqualTo(10800); // 3h
         assertThat(summary.daysWithData()).isEqualTo(2);
         assertThat(summary.avgSecondsPerDay()).isEqualTo(5400);  // 3h / 2 days
-        assertThat(summary.avgSecondsPerWeek()).isEqualTo(27000); // 5400 * 5
+        assertThat(summary.avgSecondsPerWeek()).isEqualTo(10800); // 10800 total / 1 week (3 days < 7)
         assertThat(summary.categoryBreakdown()).hasSize(2);
         assertThat(summary.categoryBreakdown().get(0).category()).isEqualTo("Code");
         assertThat(summary.categoryBreakdown().get(0).totalSeconds()).isEqualTo(7200);

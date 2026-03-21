@@ -148,8 +148,8 @@ class DashboardViewModel: ObservableObject {
         else {
             return MockData.ScoreSet(
                 focus: .init(percent: 0, time: "0 min"),
-                meetings: .init(percent: 0, time: "0 min"),
-                breaks: .init(percent: 0, time: "0 min"))
+                communication: .init(percent: 0, time: "0 min"),
+                other: .init(percent: 0, time: "0 min"))
         }
 
         let total = stats.totalTrackedSeconds
@@ -174,8 +174,8 @@ class DashboardViewModel: ObservableObject {
 
         return MockData.ScoreSet(
             focus: .init(percent: pct(focusSecs), time: fmt(focusSecs)),
-            meetings: .init(percent: pct(commSecs), time: fmt(commSecs)),
-            breaks: .init(percent: pct(otherSecs), time: fmt(otherSecs)))
+            communication: .init(percent: pct(commSecs), time: fmt(commSecs)),
+            other: .init(percent: pct(otherSecs), time: fmt(otherSecs)))
     }
 
     // MARK: - Break Timer (client-side, no backend calls)

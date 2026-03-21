@@ -48,8 +48,8 @@ enum MockData {
 
     struct ScoreSet {
         let focus: Score
-        let meetings: Score
-        let breaks: Score
+        let communication: Score
+        let other: Score
     }
 
     struct Score {
@@ -130,8 +130,8 @@ enum MockData {
 
     static let scores = ScoreSet(
         focus: .init(percent: 60, time: "3 hr 43 min"),
-        meetings: .init(percent: 12, time: "55 min"),
-        breaks: .init(percent: 18, time: "1 hr 24 min")
+        communication: .init(percent: 12, time: "55 min"),
+        other: .init(percent: 18, time: "1 hr 24 min")
     )
 
     static let timeBreakdown: [TimeBreakdownEntry] = [
