@@ -431,7 +431,9 @@ public class StatsService {
 
         final long total = totalTracked;
         long avgPerDay = daysWithData > 0 ? total / daysWithData : 0;
-        long avgPerWeek = avgPerDay * 5;
+        int daysInRange = (int) (to.toEpochDay() - from.toEpochDay()) + 1;
+        double weeksInRange = Math.max(1.0, daysInRange / 7.0);
+        long avgPerWeek = Math.round(total / weeksInRange);
 
         List<CategoryBreakdownEntry> breakdown = totalByCategory.entrySet().stream()
             .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
