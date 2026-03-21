@@ -67,4 +67,18 @@ public class StatsController {
         return ResponseEntity.ok(
             statsService.getFocusSessions(day, ZoneId.systemDefault(), Instant.now()));
     }
+
+    @GetMapping("/range")
+    public ResponseEntity<RangeResponse> getRange(@RequestParam String from, @RequestParam String to) {
+        return ResponseEntity.ok(
+            statsService.getRange(LocalDate.parse(from), LocalDate.parse(to),
+                ZoneId.systemDefault(), Instant.now()));
+    }
+
+    @GetMapping("/range/summary")
+    public ResponseEntity<RangeSummaryResponse> getRangeSummary(@RequestParam String from, @RequestParam String to) {
+        return ResponseEntity.ok(
+            statsService.getRangeSummary(LocalDate.parse(from), LocalDate.parse(to),
+                ZoneId.systemDefault(), Instant.now()));
+    }
 }
