@@ -140,6 +140,44 @@ class DashboardViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Scores (client-side from category breakdown)
+
+    var scores: MockData.ScoreSet {
+        guard let categories = categoryBreakdown, !categories.isEmpty,
+              let stats = dayStats, stats.totalTrackedSeconds > 0
+        else {
+            return MockData.ScoreSet(
+                focus: .init(percent: 0, time: "0 min"),
+                communication: .init(percent: 0, time: "0 min"),
+                other: .init(percent: 0, time: "0 min"))
+        }
+
+        let total = stats.totalTrackedSeconds
+        var focusSecs = 0, commSecs = 0, otherSecs = 0
+
+        for cat in categories {
+            switch cat.category {
+            case "Code", "Design", "Writing", "Reading":
+                focusSecs += cat.totalSeconds
+            case "Communication":
+                commSecs += cat.totalSeconds
+            default:
+                otherSecs += cat.totalSeconds
+            }
+        }
+
+        func pct(_ v: Int) -> Int { total > 0 ? Int(round(Double(v) * 100.0 / Double(total))) : 0 }
+        func fmt(_ s: Int) -> String {
+            let h = s / 3600; let m = (s % 3600) / 60
+            return h > 0 ? "\(h) hr \(m) min" : "\(m) min"
+        }
+
+        return MockData.ScoreSet(
+            focus: .init(percent: pct(focusSecs), time: fmt(focusSecs)),
+            communication: .init(percent: pct(commSecs), time: fmt(commSecs)),
+            other: .init(percent: pct(otherSecs), time: fmt(otherSecs)))
+    }
+
     // MARK: - Break Timer (client-side, no backend calls)
 
     /// Finds the end time of the last gap (break) in the timeline.
