@@ -380,4 +380,70 @@ public class StatsService {
             ))
             .toList();
     }
+
+    // ── Range aggregation: per-day breakdown over a date range ──
+
+    public RangeResponse getRange(LocalDate from, LocalDate to, ZoneId zone, Instant now) {
+        List<RangeDayBreakdown> days = new ArrayList<>();
+
+        for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
+            DayContext ctx = dayContext(date, zone, now);
+
+            Map<String, Long> timeByCategory = new LinkedHashMap<>();
+            for (AppSession session : ctx.sessions()) {
+                Instant effStart = effectiveStart(session, ctx.startOfDay());
+                Instant effEnd = effectiveEnd(session, ctx.endOfDay(), now);
+                long seconds = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
+                if (seconds == 0) continue;
+                timeByCategory.merge(resolveCategory(session.getBundleId()), seconds, Long::sum);
+            }
+
+            long dayTotal = timeByCategory.values().stream().mapToLong(Long::longValue).sum();
+            List<RangeDayBreakdown.CategorySeconds> cats = timeByCategory.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .map(e -> new RangeDayBreakdown.CategorySeconds(e.getKey(), e.getValue()))
+                .toList();
+
+            days.add(new RangeDayBreakdown(date.toString(), dayTotal, cats));
+        }
+
+        return new RangeResponse(from.toString(), to.toString(), days);
+    }
+
+    // ── Range summary: aggregate stats across a date range ──
+
+    public RangeSummaryResponse getRangeSummary(LocalDate from, LocalDate to, ZoneId zone, Instant now) {
+        RangeResponse range = getRange(from, to, zone, now);
+
+        long totalTracked = 0;
+        int daysWithData = 0;
+        Map<String, Long> totalByCategory = new LinkedHashMap<>();
+
+        for (RangeDayBreakdown day : range.days()) {
+            if (day.totalTrackedSeconds() > 0) {
+                daysWithData++;
+                totalTracked += day.totalTrackedSeconds();
+                for (RangeDayBreakdown.CategorySeconds cs : day.categories()) {
+                    totalByCategory.merge(cs.category(), cs.seconds(), Long::sum);
+                }
+            }
+        }
+
+        final long total = totalTracked;
+        long avgPerDay = daysWithData > 0 ? total / daysWithData : 0;
+        int daysInRange = (int) (to.toEpochDay() - from.toEpochDay()) + 1;
+        double weeksInRange = Math.max(1.0, daysInRange / 7.0);
+        long avgPerWeek = Math.round(total / weeksInRange);
+
+        List<CategoryBreakdownEntry> breakdown = totalByCategory.entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+            .map(e -> new CategoryBreakdownEntry(
+                e.getKey(), e.getValue(),
+                total > 0 ? (int) Math.round(e.getValue() * 100.0 / total) : 0))
+            .toList();
+
+        return new RangeSummaryResponse(
+            from.toString(), to.toString(),
+            total, daysWithData, avgPerDay, avgPerWeek, breakdown);
+    }
 }

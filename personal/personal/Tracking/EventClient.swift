@@ -2,7 +2,7 @@
 import Foundation
 
 class EventClient {
-    private let baseURL: URL
+    let baseURL: URL
     private let session: URLSession
     private let encoder: JSONEncoder = {
         let e = JSONEncoder()

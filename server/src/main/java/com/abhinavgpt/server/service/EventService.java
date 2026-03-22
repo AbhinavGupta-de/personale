@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 
 @Service
@@ -41,15 +42,31 @@ public class EventService {
         });
     }
 
+    private static final long DEDUPE_WINDOW_SECONDS = 2;
+
     @Transactional
     public AppSession saveEvent(AppSwitchEvent event) {
         Instant eventTime = Instant.parse(event.timestamp());
 
-        // Close the currently active session
-        repository.findActiveSession().ifPresent(active -> {
+        // Idempotency: skip if same bundle and timestamp within 2s of active session
+        var existing = repository.findActiveSession();
+        if (existing.isPresent()) {
+            AppSession active = existing.get();
+            boolean sameBundleId = event.bundleId() != null
+                && event.bundleId().equals(active.getBundleId());
+            boolean tooClose = Math.abs(
+                Duration.between(active.getStartedAt(), eventTime).getSeconds()
+            ) <= DEDUPE_WINDOW_SECONDS;
+            if (sameBundleId && tooClose) {
+                log.debug("Skipping duplicate event: {} at {} (active since {})",
+                    event.appName(), eventTime, active.getStartedAt());
+                return active;
+            }
+
+            // Close the currently active session
             active.setEndedAt(eventTime);
             repository.save(active);
-        });
+        }
 
         // Open a new session
         AppSession session = new AppSession(
