@@ -87,17 +87,17 @@ struct MenuBarView: View {
     }
 
     private func fetchStats() {
-        let url = APIClient.shared.baseURL.appendingPathComponent("api/stats/today")
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data,
-                  let http = response as? HTTPURLResponse,
-                  http.statusCode == 200 else { return }
-            if let decoded = try? JSONDecoder().decode(DailyStatsResponse.self, from: data) {
-                DispatchQueue.main.async {
-                    self.stats = decoded
-                }
+        Task {
+            if let result = try? await APIClient.shared.fetchDayStats(
+                date: {
+                    let fmt = DateFormatter()
+                    fmt.dateFormat = "yyyy-MM-dd"
+                    return fmt.string(from: Date())
+                }()
+            ) {
+                self.stats = result
             }
-        }.resume()
+        }
     }
 
     private func formatDuration(_ totalSeconds: Int) -> String {
