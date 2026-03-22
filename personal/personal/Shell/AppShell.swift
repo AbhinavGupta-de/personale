@@ -2,11 +2,19 @@
 import Combine
 import SwiftUI
 
+// MARK: - Route
+
+enum AppRoute: String, CaseIterable {
+    case dashboard
+    case activity
+    case productivity
+}
+
 // MARK: - Main App Shell
 
 struct AppShell: View {
     @Environment(\.theme) private var theme
-    @State private var activePage = "dashboard"
+    @State private var activePage: AppRoute = .dashboard
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -16,11 +24,11 @@ struct AppShell: View {
                     TopHeader()
                     Group {
                         switch activePage {
-                        case "activity":
+                        case .activity:
                             ActivityDetailPage()
-                        case "productivity":
+                        case .productivity:
                             ProductivityPage()
-                        default:
+                        case .dashboard:
                             DashboardPage()
                         }
                     }
@@ -37,52 +45,43 @@ struct AppShell: View {
 
 // MARK: - Sidebar
 
+private struct SidebarItem: Identifiable {
+    let id: String
+    let icon: String
+    let label: String
+    let route: AppRoute?
+}
+
 struct Sidebar: View {
     @Environment(\.theme) private var theme
-    @Binding var activePage: String
+    @Binding var activePage: AppRoute
 
-    private var topItems: [(id: String, icon: String, label: String)] {
-        var items: [(id: String, icon: String, label: String)] = [
-            ("dashboard", "house", "Dashboard"),
+    private var topItems: [SidebarItem] {
+        var items: [SidebarItem] = [
+            SidebarItem(id: "dashboard", icon: "house", label: "Dashboard", route: .dashboard),
         ]
         if SidebarFeatures.showActivity {
-            items.append(("activity", "timer", "Activity"))
-        }
-        if SidebarFeatures.showFocus {
-            items.append(("focus", "waveform.path.ecg", "Focus"))
-        }
-        if SidebarFeatures.showGoals {
-            items.append(("goals", "target", "Goals"))
-        }
-        if SidebarFeatures.showCalendar {
-            items.append(("calendar", "calendar", "Calendar"))
-        }
-        if SidebarFeatures.showTasks {
-            items.append(("tasks", "list.clipboard", "Tasks"))
-        }
-        if SidebarFeatures.showHabits {
-            items.append(("habits", "checkmark.square", "Habits"))
+            items.append(SidebarItem(id: "activity", icon: "timer", label: "Activity", route: .activity))
         }
         if SidebarFeatures.showProductivity {
-            items.append(("productivity", "chart.bar", "Productivity"))
+            items.append(SidebarItem(id: "productivity", icon: "chart.bar", label: "Productivity", route: .productivity))
         }
         return items
     }
 
-    private var bottomItems: [(id: String, icon: String, label: String)] {
-        var items: [(id: String, icon: String, label: String)] = []
+    private var bottomItems: [SidebarItem] {
+        var items: [SidebarItem] = []
         if SidebarFeatures.showTeam {
-            items.append(("team", "person.2", "Team"))
+            items.append(SidebarItem(id: "team", icon: "person.2", label: "Team", route: nil))
         }
-        items.append(("settings", "gear", "Settings"))
+        items.append(SidebarItem(id: "settings", icon: "gear", label: "Settings", route: nil))
         return items
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top nav
             VStack(spacing: 2) {
-                ForEach(topItems, id: \.id) { item in
+                ForEach(topItems) { item in
                     sidebarButton(item: item)
                 }
             }
@@ -90,9 +89,8 @@ struct Sidebar: View {
 
             Spacer()
 
-            // Bottom nav
             VStack(spacing: 2) {
-                ForEach(bottomItems, id: \.id) { item in
+                ForEach(bottomItems) { item in
                     sidebarButton(item: item)
                 }
             }
@@ -108,11 +106,13 @@ struct Sidebar: View {
     }
 
     @ViewBuilder
-    private func sidebarButton(item: (id: String, icon: String, label: String)) -> some View {
-        let isActive = activePage == item.id
+    private func sidebarButton(item: SidebarItem) -> some View {
+        let isActive = item.route == activePage
 
         Button {
-            activePage = item.id
+            if let route = item.route {
+                activePage = route
+            }
         } label: {
             Image(systemName: item.icon)
                 .font(.system(size: 14, weight: .regular))

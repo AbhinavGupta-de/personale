@@ -99,18 +99,23 @@ class AppTracker: ObservableObject {
 
     // MARK: - Category Map
 
+    private struct CategorySettingsResponse: Decodable {
+        let mappings: [String: String]
+    }
+
     private func fetchCategoryMap(completion: (() -> Void)? = nil) {
         let url = eventClient.baseURL.appendingPathComponent("/api/settings/categories")
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, _ in
             guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let mappings = json["mappings"] as? [String: String]
+                  let http = response as? HTTPURLResponse,
+                  http.statusCode == 200,
+                  let decoded = try? JSONDecoder().decode(CategorySettingsResponse.self, from: data)
             else {
                 DispatchQueue.main.async { completion?() }
                 return
             }
             DispatchQueue.main.async {
-                self?.categoryMap = mappings
+                self?.categoryMap = decoded.mappings
                 self?.lastCategoryFetch = Date()
                 completion?()
             }
