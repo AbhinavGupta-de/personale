@@ -9,7 +9,7 @@ class EventClient {
         return e
     }()
 
-    init(baseURL: URL = URL(string: "http://localhost:8080")!) {
+    init(baseURL: URL = URL(string: "http://localhost:8696")!) {
         self.baseURL = baseURL
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 5
