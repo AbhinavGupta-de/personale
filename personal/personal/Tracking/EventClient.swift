@@ -1,91 +1,51 @@
 #if os(macOS)
+import Combine
 import Foundation
 
-class EventClient {
+class EventClient: ObservableObject {
     let baseURL: URL
-    private let session: URLSession
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        return e
-    }()
+    private let store: LocalEventStore
+    private let flushQueue: FlushQueue
 
-    init(baseURL: URL = URL(string: "http://localhost:8696")!) {
+    @Published var isServerReachable: Bool = true
+
+    init(baseURL: URL = AppSettings.shared.serverBaseURL) {
         self.baseURL = baseURL
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 5
-        self.session = URLSession(configuration: config)
+        self.store = .shared
+        self.flushQueue = FlushQueue(store: .shared, baseURL: baseURL)
+
+        self.flushQueue.onServerReachabilityChanged = { [weak self] reachable in
+            DispatchQueue.main.async {
+                self?.isServerReachable = reachable
+            }
+        }
+
+        // Check server health on launch
+        flushQueue.checkHealth()
+
+        // Flush any events left over from previous session
+        flushQueue.triggerFlush()
+
+        // Run cleanup on launch
+        store.deleteOldSyncedEvents()
     }
 
     func sendAppSwitch(appName: String, bundleId: String?, windowTitle: String?, timestamp: String) {
-        let url = baseURL.appendingPathComponent("api/events")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let payload = AppSwitchPayload(
-            appName: appName,
-            bundleId: bundleId,
-            windowTitle: windowTitle,
-            timestamp: timestamp
-        )
-
-        do {
-            request.httpBody = try encoder.encode(payload)
-        } catch {
-            print("[EventClient] Failed to encode payload: \(error)")
-            return
-        }
-
-        let task = session.dataTask(with: request) { _, response, error in
-            if let error = error {
-                print("[EventClient] POST failed: \(error.localizedDescription)")
-                return
-            }
-            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-                print("[EventClient] Server returned \(http.statusCode)")
-                return
-            }
-        }
-        task.resume()
+        store.insertAppSwitch(appName: appName, bundleId: bundleId, windowTitle: windowTitle, timestamp: timestamp)
+        flushQueue.triggerFlush()
     }
 
-    func sendSessionClose(timestamp: String) {
-        let url = baseURL.appendingPathComponent("api/events/close")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let payload = ClosePayload(timestamp: timestamp)
-
-        do {
-            request.httpBody = try encoder.encode(payload)
-        } catch {
-            print("[EventClient] Failed to encode close payload: \(error)")
-            return
-        }
-
-        let task = session.dataTask(with: request) { _, response, error in
-            if let error = error {
-                print("[EventClient] Close POST failed: \(error.localizedDescription)")
-                return
-            }
-            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-                print("[EventClient] Server returned \(http.statusCode)")
-                return
-            }
-        }
-        task.resume()
+    func sendSessionClose(timestamp: String, bundleId: String? = nil, sessionStartedAt: String? = nil) {
+        store.insertSessionClose(timestamp: timestamp, bundleId: bundleId, sessionStartedAt: sessionStartedAt)
+        flushQueue.triggerFlush()
     }
-}
 
-private struct AppSwitchPayload: Encodable {
-    let appName: String
-    let bundleId: String?
-    let windowTitle: String?
-    let timestamp: String
-}
+    func triggerFlush() {
+        flushQueue.triggerFlush()
+    }
 
-private struct ClosePayload: Encodable {
-    let timestamp: String
+    var pendingCount: Int {
+        store.unsyncedCount()
+    }
 }
 #endif
