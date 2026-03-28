@@ -136,7 +136,7 @@ class EventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         Instant closeTime = Instant.parse("2026-03-07T10:30:00Z");
-        eventService.closeActiveSession(closeTime);
+        eventService.closeActiveSession(closeTime, null, null);
 
         ArgumentCaptor<AppSession> captor = ArgumentCaptor.forClass(AppSession.class);
         verify(repository).save(captor.capture());
@@ -147,7 +147,50 @@ class EventServiceTest {
     void closeActiveSession_noActiveSession_doesNothing() {
         when(repository.findActiveSession()).thenReturn(Optional.empty());
 
-        eventService.closeActiveSession(Instant.parse("2026-03-07T10:00:00Z"));
+        eventService.closeActiveSession(Instant.parse("2026-03-07T10:00:00Z"), null, null);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void closeActiveSession_withMatchingIdentity_closesSession() {
+        Instant startedAt = Instant.parse("2026-03-07T10:00:00Z");
+        AppSession active = new AppSession("Safari", "com.apple.Safari", null, startedAt);
+        active.setId(1L);
+        when(repository.findActiveSession()).thenReturn(Optional.of(active));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Instant closeTime = Instant.parse("2026-03-07T10:30:00Z");
+        eventService.closeActiveSession(closeTime, "com.apple.Safari", startedAt);
+
+        ArgumentCaptor<AppSession> captor = ArgumentCaptor.forClass(AppSession.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getEndedAt()).isEqualTo(closeTime);
+    }
+
+    @Test
+    void closeActiveSession_withMismatchedBundleId_doesNotClose() {
+        Instant startedAt = Instant.parse("2026-03-07T10:00:00Z");
+        AppSession active = new AppSession("Safari", "com.apple.Safari", null, startedAt);
+        active.setId(1L);
+        when(repository.findActiveSession()).thenReturn(Optional.of(active));
+
+        Instant closeTime = Instant.parse("2026-03-07T10:30:00Z");
+        eventService.closeActiveSession(closeTime, "com.apple.Terminal", startedAt);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void closeActiveSession_withMismatchedStartTime_doesNotClose() {
+        Instant startedAt = Instant.parse("2026-03-07T10:00:00Z");
+        AppSession active = new AppSession("Safari", "com.apple.Safari", null, startedAt);
+        active.setId(1L);
+        when(repository.findActiveSession()).thenReturn(Optional.of(active));
+
+        Instant closeTime = Instant.parse("2026-03-07T11:30:00Z");
+        Instant wrongStartedAt = Instant.parse("2026-03-07T09:00:00Z");
+        eventService.closeActiveSession(closeTime, "com.apple.Safari", wrongStartedAt);
 
         verify(repository, never()).save(any());
     }

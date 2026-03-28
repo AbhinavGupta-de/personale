@@ -12,7 +12,7 @@ class AppTracker: ObservableObject {
     @Published var isIdle: Bool = false
 
     private var cancellables = Set<AnyCancellable>()
-    private let eventClient: EventClient
+    let eventClient: EventClient
     private var idleTimer: Timer?
 
     // Bundle→category map fetched from backend
@@ -20,18 +20,6 @@ class AppTracker: ObservableObject {
     private var lastCategoryFetch: Date?
     private static let categoryRefreshInterval: TimeInterval = 30 * 60 // 30 minutes
 
-    // Per-category idle thresholds (seconds) — local config, no backend needed
-    private static let idleThresholds: [String: TimeInterval] = [
-        "Code": 180,
-        "Design": 150,
-        "Writing": 150,
-        "Reading": 180,
-        "Communication": 120,
-        "Browsing": 90,
-        "Media": 60,
-        "Utilities": 60,
-        "Other": 120,
-    ]
     private static let defaultIdleThreshold: TimeInterval = 120
     private static let pollInterval: TimeInterval = 5
 
@@ -56,7 +44,7 @@ class AppTracker: ObservableObject {
     }()
 
     private var currentIdleThreshold: TimeInterval {
-        Self.idleThresholds[currentCategory] ?? Self.defaultIdleThreshold
+        AppSettings.shared.idleThresholds[currentCategory] ?? Self.defaultIdleThreshold
     }
 
     init(eventClient: EventClient = EventClient()) {
@@ -153,7 +141,11 @@ class AppTracker: ObservableObject {
             let lastInputTime = Date().addingTimeInterval(-idle)
             let timestamp = dateFormatter.string(from: lastInputTime)
             print("[\(dateFormatter.string(from: Date()))] User idle for \(Int(idle))s (threshold: \(Int(currentIdleThreshold))s/\(currentCategory)) — closing session")
-            eventClient.sendSessionClose(timestamp: timestamp)
+            eventClient.sendSessionClose(
+                timestamp: timestamp,
+                bundleId: currentBundleID.isEmpty ? nil : currentBundleID,
+                sessionStartedAt: dateFormatter.string(from: lastSwitchTime)
+            )
         } else if idle < currentIdleThreshold && isIdle {
             isIdle = false
             let timestamp = dateFormatter.string(from: Date())
@@ -199,7 +191,11 @@ class AppTracker: ObservableObject {
         // Blocked apps — close session, mark idle
         if Self.blockedBundleIDs.contains(bid) {
             print("[\(timestamp)] \(name) activated — closing active session (blocked app)")
-            eventClient.sendSessionClose(timestamp: timestamp)
+            eventClient.sendSessionClose(
+                timestamp: timestamp,
+                bundleId: currentBundleID.isEmpty ? nil : currentBundleID,
+                sessionStartedAt: dateFormatter.string(from: lastSwitchTime)
+            )
             isIdle = true
             return
         }
@@ -240,13 +236,18 @@ class AppTracker: ObservableObject {
         isIdle = true
         let timestamp = dateFormatter.string(from: Date())
         print("[\(timestamp)] Mac going to sleep — closing active session")
-        eventClient.sendSessionClose(timestamp: timestamp)
+        eventClient.sendSessionClose(
+            timestamp: timestamp,
+            bundleId: currentBundleID.isEmpty ? nil : currentBundleID,
+            sessionStartedAt: dateFormatter.string(from: lastSwitchTime)
+        )
     }
 
     private func handleWake() {
         isIdle = false
         let timestamp = dateFormatter.string(from: Date())
         print("[\(timestamp)] Mac woke up — re-registering frontmost app")
+        eventClient.triggerFlush()
         fetchCategoryMap()
         if let app = NSWorkspace.shared.frontmostApplication {
             handleAppSwitch(app)

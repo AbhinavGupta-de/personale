@@ -35,8 +35,18 @@ public class EventService {
     }
 
     @Transactional
-    public void closeActiveSession(Instant closedAt) {
+    public void closeActiveSession(Instant closedAt, String bundleId, Instant sessionStartedAt) {
         repository.findActiveSession().ifPresent(active -> {
+            // If both identity fields are provided, verify they match the active session
+            if (bundleId != null && sessionStartedAt != null) {
+                boolean bundleMatch = bundleId.equals(active.getBundleId());
+                boolean startMatch = sessionStartedAt.equals(active.getStartedAt());
+                if (!bundleMatch || !startMatch) {
+                    log.info("Rejecting stale close for {} (started {}) — active is {} (started {})",
+                        bundleId, sessionStartedAt, active.getBundleId(), active.getStartedAt());
+                    return;
+                }
+            }
             Instant endTime = closedAt.isBefore(active.getStartedAt())
                 ? active.getStartedAt() : closedAt;
             active.setEndedAt(endTime);
