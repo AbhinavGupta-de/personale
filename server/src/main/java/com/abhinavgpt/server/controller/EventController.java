@@ -38,8 +38,12 @@ public class EventController {
 
     @PostMapping("/events/close")
     public ResponseEntity<Void> closeSession(@RequestBody CloseSessionRequest request) {
-        log.info("[{}] Session close requested (sleep/idle)", request.timestamp());
-        eventService.closeActiveSession(Instant.parse(request.timestamp()));
+        log.info("[{}] Session close requested (sleep/idle) bundleId={} sessionStartedAt={}",
+            request.timestamp(), request.bundleId(), request.sessionStartedAt());
+        Instant closedAt = Instant.parse(request.timestamp());
+        Instant sessionStartedAt = request.sessionStartedAt() != null
+            ? Instant.parse(request.sessionStartedAt()) : null;
+        eventService.closeActiveSession(closedAt, request.bundleId(), sessionStartedAt);
         return ResponseEntity.ok().build();
     }
 

@@ -108,6 +108,21 @@ class EventControllerTest {
                     """))
             .andExpect(status().isOk());
 
-        verify(eventService).closeActiveSession(Instant.parse("2026-03-07T10:30:00Z"));
+        verify(eventService).closeActiveSession(Instant.parse("2026-03-07T10:30:00Z"), null, null);
+    }
+
+    @Test
+    void closeSession_withIdentity_passesFieldsThrough() throws Exception {
+        mockMvc.perform(post("/api/events/close")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"timestamp":"2026-03-07T10:30:00Z","bundleId":"com.apple.Safari","sessionStartedAt":"2026-03-07T10:00:00Z"}
+                    """))
+            .andExpect(status().isOk());
+
+        verify(eventService).closeActiveSession(
+            Instant.parse("2026-03-07T10:30:00Z"),
+            "com.apple.Safari",
+            Instant.parse("2026-03-07T10:00:00Z"));
     }
 }
