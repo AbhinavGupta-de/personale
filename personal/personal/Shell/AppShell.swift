@@ -8,6 +8,7 @@ enum AppRoute: String, CaseIterable {
     case dashboard
     case activity
     case productivity
+    case settings
 }
 
 // MARK: - Main App Shell
@@ -28,6 +29,8 @@ struct AppShell: View {
                             ActivityDetailPage()
                         case .productivity:
                             ProductivityPage()
+                        case .settings:
+                            SettingsPage()
                         case .dashboard:
                             DashboardPage()
                         }
@@ -74,7 +77,7 @@ struct Sidebar: View {
         if SidebarFeatures.showTeam {
             items.append(SidebarItem(id: "team", icon: "person.2", label: "Team", route: nil))
         }
-        items.append(SidebarItem(id: "settings", icon: "gear", label: "Settings", route: nil))
+        items.append(SidebarItem(id: "settings", icon: "gear", label: "Settings", route: .settings))
         return items
     }
 
