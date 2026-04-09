@@ -14,6 +14,7 @@ struct SettingsPage: View {
                     .foregroundStyle(theme.foreground)
 
                 generalSection
+                workDaySection
                 trackingSection
                 dataSection
                 aboutSection
@@ -78,6 +79,54 @@ struct SettingsPage: View {
                     ))
                     .toggleStyle(.switch)
                     .controlSize(.small)
+                }
+            }
+        }
+    }
+
+    // MARK: - Work Day
+
+    private var workDaySection: some View {
+        settingsCard(title: "Work Day") {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Day Start")
+                        .font(.system(size: 12))
+                        .foregroundStyle(theme.foreground)
+                        .frame(width: 120, alignment: .leading)
+                    Picker("", selection: $settings.dayStartHour) {
+                        ForEach(0..<24, id: \.self) { hour in
+                            Text(String(format: "%d:00", hour)).tag(hour)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 80)
+                    Spacer()
+                }
+
+                HStack {
+                    Text("Day End")
+                        .font(.system(size: 12))
+                        .foregroundStyle(theme.foreground)
+                        .frame(width: 120, alignment: .leading)
+                    Picker("", selection: $settings.dayEndHour) {
+                        ForEach(0..<24, id: \.self) { hour in
+                            Text(String(format: "%d:00", hour)).tag(hour)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 80)
+                    Spacer()
+                }
+
+                HStack {
+                    Text("Target Hours")
+                        .font(.system(size: 12))
+                        .foregroundStyle(theme.foreground)
+                        .frame(width: 120, alignment: .leading)
+                    Stepper("\(settings.targetHoursPerDay) hr", value: $settings.targetHoursPerDay, in: 1...24)
+                        .font(.system(size: 12, design: .monospaced))
+                    Spacer()
                 }
             }
         }
