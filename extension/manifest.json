@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Personale Browser Tracker",
+  "version": "1.0.0",
+  "description": "Captures browser tab changes for Personale productivity tracking",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "storage"
+  ],
+  "incognito": "not_allowed",
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
