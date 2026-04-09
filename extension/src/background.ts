@@ -84,7 +84,7 @@ async function getUnsynced(limit = 50): Promise<PendingBrowserEvent[]> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
     const index = tx.objectStore(STORE_NAME).index("synced");
-    const req = index.getAll(IDBKeyRange.only(false), limit);
+    const req = index.getAll(IDBKeyRange.only(0), limit);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -99,7 +99,7 @@ async function markSynced(id: number): Promise<void> {
     req.onsuccess = () => {
       const record = req.result;
       if (record) {
-        record.synced = true;
+        record.synced = 1;
         store.put(record);
       }
       tx.oncomplete = () => resolve();
@@ -119,7 +119,7 @@ async function cleanupOldSynced(days = 7): Promise<void> {
       const cursor = req.result;
       if (cursor) {
         const record = cursor.value as PendingBrowserEvent;
-        if (record.synced && record.timestamp < cutoff) {
+        if (record.synced === 1 && record.timestamp < cutoff) {
           cursor.delete();
         }
         cursor.continue();
@@ -205,7 +205,7 @@ async function handleTabChange(tab: chrome.tabs.Tab): Promise<void> {
     url: truncateUrl(tab.url),
     timestamp: new Date().toISOString(),
     browser: detectBrowser(),
-    synced: false,
+    synced: 0,
   };
 
   await insertEvent(event);
@@ -229,16 +229,28 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   }
 });
 
-// ── Periodic flush + cleanup ──
+// ── Alarms (survives service worker suspension) ──
 
-setInterval(() => triggerFlush(), 60_000);
-setInterval(() => cleanupOldSynced(), 24 * 60 * 60 * 1000);
+chrome.alarms.create("personale-flush", { periodInMinutes: 1 });
+chrome.alarms.create("personale-cleanup", { periodInMinutes: 60 * 24 });
 
-// ── Startup ──
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "personale-flush") {
+    triggerFlush();
+  } else if (alarm.name === "personale-cleanup") {
+    cleanupOldSynced();
+  }
+});
 
-loadSettings().then(() => {
+// Also flush + capture on service worker startup (fires every time worker wakes)
+loadSettings().then(async () => {
   triggerFlush();
   cleanupOldSynced();
+  // Capture current tab on wake — catches what happened while worker was suspended
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) handleTabChange(tab);
+  } catch { /* no active tab */ }
 });
 
 chrome.storage.onChanged.addListener((changes) => {
