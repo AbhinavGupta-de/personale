@@ -93,3 +93,76 @@ INSERT INTO category_mappings (bundle_id, category) VALUES
     ('com.apple.iBooksX',                 'Reading'),
     ('com.apple.Preview',                 'Reading')
 ON CONFLICT (bundle_id) DO NOTHING;
+
+-- Browser navigation events (enriches "Browsing" app sessions with per-site detail)
+CREATE TABLE IF NOT EXISTS browser_events (
+    id              BIGSERIAL PRIMARY KEY,
+    domain          TEXT NOT NULL,
+    title           TEXT,
+    url             TEXT,
+    browser         TEXT,
+    timestamp       TIMESTAMPTZ NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_browser_events_timestamp ON browser_events (timestamp);
+
+-- Domain → category mapping for browser enrichment
+CREATE TABLE IF NOT EXISTS domain_category_mappings (
+    id          BIGSERIAL PRIMARY KEY,
+    domain      TEXT NOT NULL UNIQUE,
+    category    TEXT NOT NULL
+);
+
+-- Seed common domains
+INSERT INTO domain_category_mappings (domain, category) VALUES
+    -- Code
+    ('github.com',                  'Code'),
+    ('gitlab.com',                  'Code'),
+    ('bitbucket.org',               'Code'),
+    ('stackoverflow.com',           'Code'),
+    ('stackexchange.com',           'Code'),
+    ('console.cloud.google.com',    'Code'),
+    ('console.aws.amazon.com',      'Code'),
+    ('portal.azure.com',            'Code'),
+    ('sentry.io',                   'Code'),
+    ('vercel.com',                  'Code'),
+    ('netlify.com',                 'Code'),
+    ('npmjs.com',                   'Code'),
+    ('pypi.org',                    'Code'),
+    ('crates.io',                   'Code'),
+    ('hub.docker.com',              'Code'),
+    -- Communication
+    ('gmail.com',                   'Communication'),
+    ('mail.google.com',             'Communication'),
+    ('outlook.live.com',            'Communication'),
+    ('outlook.office365.com',       'Communication'),
+    ('slack.com',                   'Communication'),
+    ('discord.com',                 'Communication'),
+    ('teams.microsoft.com',         'Communication'),
+    ('web.whatsapp.com',            'Communication'),
+    ('web.telegram.org',            'Communication'),
+    -- Media
+    ('youtube.com',                 'Media'),
+    ('netflix.com',                 'Media'),
+    ('twitch.tv',                   'Media'),
+    ('spotify.com',                 'Media'),
+    ('music.apple.com',             'Media'),
+    ('soundcloud.com',              'Media'),
+    -- Writing
+    ('docs.google.com',             'Writing'),
+    ('notion.so',                   'Writing'),
+    ('medium.com',                  'Writing'),
+    ('substack.com',                'Writing'),
+    ('overleaf.com',                'Writing'),
+    -- Reading
+    ('news.ycombinator.com',        'Reading'),
+    ('reddit.com',                  'Reading'),
+    ('wikipedia.org',               'Reading'),
+    ('arxiv.org',                   'Reading'),
+    ('dev.to',                      'Reading'),
+    -- Design
+    ('figma.com',                   'Design'),
+    ('dribbble.com',                'Design'),
+    ('behance.net',                 'Design'),
+    ('canva.com',                   'Design')
+ON CONFLICT (domain) DO NOTHING;
