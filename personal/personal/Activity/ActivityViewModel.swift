@@ -139,7 +139,7 @@ class ActivityViewModel: ObservableObject {
     var sessionCount: Int { sessions.count }
 
     var percentOfTarget: Double {
-        let targetSecs = 8 * 3600
+        let targetSecs = AppSettings.shared.targetHoursPerDay * 3600
         return targetSecs > 0 ? Double(totalFocusSeconds) / Double(targetSecs) * 100 : 0
     }
 
