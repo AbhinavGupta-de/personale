@@ -75,23 +75,28 @@ class DashboardViewModel: ObservableObject {
     }
 
     var workHours: MockData.WorkHours {
+        let settings = AppSettings.shared
+        let targetH = settings.targetHoursPerDay
+        let targetStr = "\(targetH) hr 0 min"
+        let trackingStr = String(format: "%d:00 - %d:00", settings.dayStartHour, settings.dayEndHour)
+
         guard let stats = dayStats else {
             return MockData.WorkHours(
                 totalWorked: "0 min", percentOfDay: 0,
-                targetHours: "8 hr 0 min", trackingOn: true, trackingHours: "8:00 - 18:00")
+                targetHours: targetStr, trackingOn: true, trackingHours: trackingStr)
         }
         let totalSecs = stats.totalTrackedSeconds
         let hours = totalSecs / 3600
         let mins = (totalSecs % 3600) / 60
         let totalStr = hours > 0 ? "\(hours) hr \(mins) min" : "\(mins) min"
-        let targetSecs = 8 * 3600
+        let targetSecs = targetH * 3600
         let pct = targetSecs > 0 ? Double(totalSecs) / Double(targetSecs) * 100 : 0
         return MockData.WorkHours(
             totalWorked: totalStr,
             percentOfDay: pct,
-            targetHours: "8 hr 0 min",
+            targetHours: targetStr,
             trackingOn: true,
-            trackingHours: "8:00 - 18:00"
+            trackingHours: trackingStr
         )
     }
 

@@ -2,9 +2,12 @@ package com.abhinavgpt.server.service;
 
 import com.abhinavgpt.server.dto.*;
 import com.abhinavgpt.server.entity.AppSession;
+import com.abhinavgpt.server.entity.BrowserEvent;
 import com.abhinavgpt.server.entity.CategoryMapping;
 import com.abhinavgpt.server.repository.AppSessionRepository;
+import com.abhinavgpt.server.repository.BrowserEventRepository;
 import com.abhinavgpt.server.repository.CategoryMappingRepository;
+import com.abhinavgpt.server.repository.DomainCategoryMappingRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
@@ -16,15 +19,23 @@ public class StatsService {
 
     private final AppSessionRepository repository;
     private final CategoryMappingRepository categoryRepo;
+    private final BrowserEventRepository browserEventRepo;
+    private final DomainCategoryMappingRepository domainCategoryRepo;
 
     // In-memory cache of bundle_id → category with TTL-based refresh
     private Map<String, String> categoryCache;
+    private Map<String, String> domainCategoryCache;
     private Instant lastCacheLoad;
+    private Instant lastDomainCacheLoad;
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
-    public StatsService(AppSessionRepository repository, CategoryMappingRepository categoryRepo) {
+    public StatsService(AppSessionRepository repository, CategoryMappingRepository categoryRepo,
+                        BrowserEventRepository browserEventRepo,
+                        DomainCategoryMappingRepository domainCategoryRepo) {
         this.repository = repository;
         this.categoryRepo = categoryRepo;
+        this.browserEventRepo = browserEventRepo;
+        this.domainCategoryRepo = domainCategoryRepo;
     }
 
     private Map<String, String> getCategoryCache() {
@@ -37,9 +48,38 @@ public class StatsService {
         return categoryCache;
     }
 
+    private Map<String, String> getDomainCategoryCache() {
+        if (domainCategoryCache == null || lastDomainCacheLoad == null
+                || Instant.now().isAfter(lastDomainCacheLoad.plus(CACHE_TTL))) {
+            domainCategoryCache = new HashMap<>();
+            domainCategoryRepo.findAll().forEach(m -> domainCategoryCache.put(m.getDomain(), m.getCategory()));
+            lastDomainCacheLoad = Instant.now();
+        }
+        return domainCategoryCache;
+    }
+
     private String resolveCategory(String bundleId) {
         if (bundleId == null) return "Other";
         return getCategoryCache().getOrDefault(bundleId, "Other");
+    }
+
+    private String resolveDomainCategory(String domain) {
+        if (domain == null) return "Browsing";
+        // Try exact match first, then strip subdomain
+        Map<String, String> cache = getDomainCategoryCache();
+        String cat = cache.get(domain);
+        if (cat != null) return cat;
+        // Try without subdomain (e.g. "www.github.com" → "github.com")
+        int dot = domain.indexOf('.');
+        if (dot > 0 && domain.indexOf('.', dot + 1) > 0) {
+            cat = cache.get(domain.substring(dot + 1));
+            if (cat != null) return cat;
+        }
+        return "Browsing";
+    }
+
+    private boolean isBrowserBundle(String bundleId) {
+        return "Browsing".equals(resolveCategory(bundleId));
     }
 
     // Sessions shorter than this are absorbed into their neighbor's focus block
@@ -243,6 +283,7 @@ public class StatsService {
     public List<ActivityLogEntry> getActivityLog(LocalDate date, ZoneId zone, Instant now) {
         DayContext ctx = dayContext(date, zone, now);
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(zone);
+        List<BrowserEvent> browserEvents = browserEventRepo.findByTimestampBetween(ctx.startOfDay(), ctx.endOfDay());
 
         return ctx.sessions().stream()
             .filter(s -> {
@@ -255,6 +296,18 @@ public class StatsService {
                 Instant effEnd = effectiveEnd(s, ctx.endOfDay(), now);
                 long secs = Duration.between(effStart, effEnd).getSeconds();
                 String detail = s.getWindowTitle() != null ? s.getWindowTitle() : resolveCategory(s.getBundleId());
+
+                // Enrich browser sessions with most recent domain/title
+                if (isBrowserBundle(s.getBundleId()) && !browserEvents.isEmpty()) {
+                    BrowserEvent latest = browserEvents.stream()
+                        .filter(e -> !e.getTimestamp().isBefore(effStart) && e.getTimestamp().isBefore(effEnd))
+                        .max(Comparator.comparing(BrowserEvent::getTimestamp))
+                        .orElse(null);
+                    if (latest != null) {
+                        detail = latest.getDomain() + (latest.getTitle() != null ? " — " + latest.getTitle() : "");
+                    }
+                }
+
                 return new ActivityLogEntry(
                     timeFmt.format(effStart),
                     s.getAppName(),
@@ -356,6 +409,7 @@ public class StatsService {
 
     public List<CategoryBreakdownEntry> getCategoryBreakdown(LocalDate date, ZoneId zone, Instant now) {
         DayContext ctx = dayContext(date, zone, now);
+        List<BrowserEvent> browserEvents = browserEventRepo.findByTimestampBetween(ctx.startOfDay(), ctx.endOfDay());
 
         Map<String, Long> timeByCategory = new LinkedHashMap<>();
 
@@ -365,8 +419,27 @@ public class StatsService {
             long seconds = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
             if (seconds == 0) continue;
 
-            String category = resolveCategory(session.getBundleId());
-            timeByCategory.merge(category, seconds, Long::sum);
+            if (isBrowserBundle(session.getBundleId()) && !browserEvents.isEmpty()) {
+                // Split browser session time by domain category
+                Map<String, Long> domainTime = splitBrowserSessionByDomain(
+                    effStart, effEnd, browserEvents);
+                if (!domainTime.isEmpty()) {
+                    long accounted = domainTime.values().stream().mapToLong(Long::longValue).sum();
+                    for (var entry : domainTime.entrySet()) {
+                        timeByCategory.merge(entry.getKey(), entry.getValue(), Long::sum);
+                    }
+                    // Remainder stays as "Browsing"
+                    long remainder = seconds - accounted;
+                    if (remainder > 0) {
+                        timeByCategory.merge("Browsing", remainder, Long::sum);
+                    }
+                } else {
+                    timeByCategory.merge("Browsing", seconds, Long::sum);
+                }
+            } else {
+                String category = resolveCategory(session.getBundleId());
+                timeByCategory.merge(category, seconds, Long::sum);
+            }
         }
 
         long total = timeByCategory.values().stream().mapToLong(Long::longValue).sum();
@@ -379,6 +452,37 @@ public class StatsService {
                 total > 0 ? (int) Math.round(e.getValue() * 100.0 / total) : 0
             ))
             .toList();
+    }
+
+    /**
+     * Split a browser session's time across domain categories based on browser events
+     * within the session window. Returns domain_category → seconds.
+     */
+    private Map<String, Long> splitBrowserSessionByDomain(
+            Instant sessionStart, Instant sessionEnd, List<BrowserEvent> allBrowserEvents) {
+
+        // Filter browser events within session window
+        List<BrowserEvent> relevant = allBrowserEvents.stream()
+            .filter(e -> !e.getTimestamp().isBefore(sessionStart) && e.getTimestamp().isBefore(sessionEnd))
+            .sorted(Comparator.comparing(BrowserEvent::getTimestamp))
+            .toList();
+
+        if (relevant.isEmpty()) return Map.of();
+
+        Map<String, Long> result = new LinkedHashMap<>();
+
+        for (int i = 0; i < relevant.size(); i++) {
+            BrowserEvent event = relevant.get(i);
+            Instant start = event.getTimestamp();
+            Instant end = (i + 1 < relevant.size()) ? relevant.get(i + 1).getTimestamp() : sessionEnd;
+            long seconds = Math.max(0, Duration.between(start, end).getSeconds());
+            if (seconds == 0) continue;
+
+            String category = resolveDomainCategory(event.getDomain());
+            result.merge(category, seconds, Long::sum);
+        }
+
+        return result;
     }
 
     // ── Range aggregation: per-day breakdown over a date range ──
