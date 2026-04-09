@@ -164,5 +164,13 @@ INSERT INTO domain_category_mappings (domain, category) VALUES
     ('figma.com',                   'Design'),
     ('dribbble.com',                'Design'),
     ('behance.net',                 'Design'),
-    ('canva.com',                   'Design')
+    ('canva.com',                   'Design'),
+    -- Work infrastructure
+    ('docs.aws.amazon.com',         'Code'),
+    ('community.grafana.com',       'Code'),
+    ('notebooklm.google.com',       'Writing'),
+    ('grafana.internal-apps.emergentagent.com',    'Code'),
+    ('argocd.internal-apps.emergentagent.com',     'Code'),
+    ('argocd.internal-staging.emergentagent.com',  'Code'),
+    ('sso.emergentagent.com',                      'Code')
 ON CONFLICT (domain) DO NOTHING;

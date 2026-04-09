@@ -5,7 +5,7 @@ export interface PendingBrowserEvent {
   url: string;
   timestamp: string;
   browser: string;
-  synced: boolean;
+  synced: number; // 0 = unsynced, 1 = synced (IDB keys must be numbers, not booleans)
 }
 
 export interface ExtensionSettings {
