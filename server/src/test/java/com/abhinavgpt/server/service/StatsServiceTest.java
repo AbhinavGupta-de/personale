@@ -2,9 +2,13 @@ package com.abhinavgpt.server.service;
 
 import com.abhinavgpt.server.dto.*;
 import com.abhinavgpt.server.entity.AppSession;
+import com.abhinavgpt.server.entity.BrowserEvent;
 import com.abhinavgpt.server.entity.CategoryMapping;
+import com.abhinavgpt.server.entity.DomainCategoryMapping;
 import com.abhinavgpt.server.repository.AppSessionRepository;
+import com.abhinavgpt.server.repository.BrowserEventRepository;
 import com.abhinavgpt.server.repository.CategoryMappingRepository;
+import com.abhinavgpt.server.repository.DomainCategoryMappingRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +33,12 @@ class StatsServiceTest {
 
     @Mock
     private CategoryMappingRepository categoryRepo;
+
+    @Mock
+    private BrowserEventRepository browserEventRepo;
+
+    @Mock
+    private DomainCategoryMappingRepository domainCategoryRepo;
 
     @InjectMocks
     private StatsService statsService;
@@ -763,5 +773,143 @@ class StatsServiceTest {
         assertThat(summary.categoryBreakdown()).hasSize(2);
         assertThat(summary.categoryBreakdown().get(0).category()).isEqualTo("Code");
         assertThat(summary.categoryBreakdown().get(0).totalSeconds()).isEqualTo(7200);
+    }
+
+    // ── Browser enrichment tests ──
+
+    @Test
+    void getCategoryBreakdown_browserSession_splitsByDomainCategory() {
+        // A browser session from 10:00 to 10:30
+        AppSession browser = new AppSession("Brave Browser", "com.brave.Browser", null,
+            Instant.parse("2026-04-09T10:00:00Z"));
+        browser.setEndedAt(Instant.parse("2026-04-09T10:30:00Z"));
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(browser));
+        when(categoryRepo.findAll()).thenReturn(List.of(
+            new CategoryMapping("com.brave.Browser", "Browsing")
+        ));
+
+        // Browser events: github.com for 20 min, youtube.com for 10 min
+        BrowserEvent gh = new BrowserEvent("github.com", "PR Review", "https://github.com", "brave",
+            Instant.parse("2026-04-09T10:00:00Z"));
+        BrowserEvent yt = new BrowserEvent("youtube.com", "Talk", "https://youtube.com", "brave",
+            Instant.parse("2026-04-09T10:20:00Z"));
+        when(browserEventRepo.findByTimestampBetween(any(), any())).thenReturn(List.of(gh, yt));
+
+        when(domainCategoryRepo.findAll()).thenReturn(List.of(
+            new DomainCategoryMapping("github.com", "Code"),
+            new DomainCategoryMapping("youtube.com", "Media")
+        ));
+
+        LocalDate date = LocalDate.of(2026, 4, 9);
+        Instant now = Instant.parse("2026-04-09T12:00:00Z");
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+
+        // Should have Code (20 min = 1200s) and Media (10 min = 600s)
+        assertThat(breakdown).hasSize(2);
+        java.util.Map<String, Long> byCat = new java.util.HashMap<>();
+        for (var e : breakdown) byCat.put(e.category(), e.totalSeconds());
+        assertThat(byCat.get("Code")).isEqualTo(1200);
+        assertThat(byCat.get("Media")).isEqualTo(600);
+    }
+
+    @Test
+    void getCategoryBreakdown_browserSessionWithNoBrowserEvents_staysAsBrowsing() {
+        AppSession browser = new AppSession("Chrome", "com.google.Chrome", null,
+            Instant.parse("2026-04-09T10:00:00Z"));
+        browser.setEndedAt(Instant.parse("2026-04-09T10:30:00Z"));
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(browser));
+        when(categoryRepo.findAll()).thenReturn(List.of(
+            new CategoryMapping("com.google.Chrome", "Browsing")
+        ));
+        when(browserEventRepo.findByTimestampBetween(any(), any())).thenReturn(List.of());
+
+        LocalDate date = LocalDate.of(2026, 4, 9);
+        Instant now = Instant.parse("2026-04-09T12:00:00Z");
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+
+        assertThat(breakdown).hasSize(1);
+        assertThat(breakdown.getFirst().category()).isEqualTo("Browsing");
+        assertThat(breakdown.getFirst().totalSeconds()).isEqualTo(1800);
+    }
+
+    @Test
+    void getActivityLog_browserSession_enrichedWithDomainTitle() {
+        AppSession browser = new AppSession("Brave Browser", "com.brave.Browser", null,
+            Instant.parse("2026-04-09T10:00:00Z"));
+        browser.setEndedAt(Instant.parse("2026-04-09T10:30:00Z"));
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(browser));
+        when(categoryRepo.findAll()).thenReturn(List.of(
+            new CategoryMapping("com.brave.Browser", "Browsing")
+        ));
+
+        BrowserEvent event = new BrowserEvent("github.com", "PR #42", "https://github.com/pull/42", "brave",
+            Instant.parse("2026-04-09T10:15:00Z"));
+        when(browserEventRepo.findByTimestampBetween(any(), any())).thenReturn(List.of(event));
+
+        LocalDate date = LocalDate.of(2026, 4, 9);
+        Instant now = Instant.parse("2026-04-09T12:00:00Z");
+        List<ActivityLogEntry> log = statsService.getActivityLog(date, UTC, now);
+
+        assertThat(log).hasSize(1);
+        assertThat(log.getFirst().detail()).isEqualTo("github.com — PR #42");
+    }
+
+    @Test
+    void getCategoryBreakdown_subdomainResolvesToParentDomain() {
+        // www.github.com should resolve via github.com mapping
+        AppSession browser = new AppSession("Chrome", "com.google.Chrome", null,
+            Instant.parse("2026-04-09T10:00:00Z"));
+        browser.setEndedAt(Instant.parse("2026-04-09T10:30:00Z"));
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(browser));
+        when(categoryRepo.findAll()).thenReturn(List.of(
+            new CategoryMapping("com.google.Chrome", "Browsing")
+        ));
+
+        BrowserEvent event = new BrowserEvent("www.github.com", "Repo", "https://www.github.com", "chrome",
+            Instant.parse("2026-04-09T10:00:00Z"));
+        when(browserEventRepo.findByTimestampBetween(any(), any())).thenReturn(List.of(event));
+        when(domainCategoryRepo.findAll()).thenReturn(List.of(
+            new DomainCategoryMapping("github.com", "Code")
+        ));
+
+        LocalDate date = LocalDate.of(2026, 4, 9);
+        Instant now = Instant.parse("2026-04-09T12:00:00Z");
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+
+        assertThat(breakdown).hasSize(1);
+        assertThat(breakdown.getFirst().category()).isEqualTo("Code");
+        assertThat(breakdown.getFirst().totalSeconds()).isEqualTo(1800);
+    }
+
+    @Test
+    void getCategoryBreakdown_unmappedDomainFallsToBrowsing() {
+        AppSession browser = new AppSession("Chrome", "com.google.Chrome", null,
+            Instant.parse("2026-04-09T10:00:00Z"));
+        browser.setEndedAt(Instant.parse("2026-04-09T10:30:00Z"));
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(browser));
+        when(categoryRepo.findAll()).thenReturn(List.of(
+            new CategoryMapping("com.google.Chrome", "Browsing")
+        ));
+
+        // random-site.xyz is not in domain_category_mappings
+        BrowserEvent event = new BrowserEvent("random-site.xyz", "Some page", "https://random-site.xyz", "chrome",
+            Instant.parse("2026-04-09T10:00:00Z"));
+        when(browserEventRepo.findByTimestampBetween(any(), any())).thenReturn(List.of(event));
+        when(domainCategoryRepo.findAll()).thenReturn(List.of(
+            new DomainCategoryMapping("github.com", "Code")
+        ));
+
+        LocalDate date = LocalDate.of(2026, 4, 9);
+        Instant now = Instant.parse("2026-04-09T12:00:00Z");
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+
+        assertThat(breakdown).hasSize(1);
+        assertThat(breakdown.getFirst().category()).isEqualTo("Browsing");
+        assertThat(breakdown.getFirst().totalSeconds()).isEqualTo(1800);
     }
 }
