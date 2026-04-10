@@ -574,14 +574,28 @@ public class StatsService {
 
         if (relevant.isEmpty()) return List.of();
 
+        // Deduplicate: keep only the last event at each second (multiple browsers fire simultaneously)
+        Map<Long, BrowserEvent> deduped = new LinkedHashMap<>();
+        for (BrowserEvent event : relevant) {
+            deduped.put(event.getTimestamp().getEpochSecond(), event);
+        }
+        List<BrowserEvent> unique = new ArrayList<>(deduped.values());
+        unique.sort(Comparator.comparing(BrowserEvent::getTimestamp));
+
         Map<String, Long> domainTime = new LinkedHashMap<>();
-        for (int i = 0; i < relevant.size(); i++) {
-            BrowserEvent event = relevant.get(i);
+        long totalAllocated = 0;
+        long maxSeconds = Duration.between(sessionStart, sessionEnd).getSeconds();
+
+        for (int i = 0; i < unique.size(); i++) {
+            BrowserEvent event = unique.get(i);
             Instant start = event.getTimestamp();
-            Instant end = (i + 1 < relevant.size()) ? relevant.get(i + 1).getTimestamp() : sessionEnd;
+            Instant end = (i + 1 < unique.size()) ? unique.get(i + 1).getTimestamp() : sessionEnd;
             long seconds = Math.max(0, Duration.between(start, end).getSeconds());
-            if (seconds == 0) continue;
+            // Cap so we don't exceed the session duration
+            seconds = Math.min(seconds, maxSeconds - totalAllocated);
+            if (seconds <= 0) break;
             domainTime.merge(event.getDomain(), seconds, Long::sum);
+            totalAllocated += seconds;
         }
 
         return domainTime.entrySet().stream()
