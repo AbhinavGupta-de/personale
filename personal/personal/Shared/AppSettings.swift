@@ -22,17 +22,7 @@ class AppSettings: ObservableObject {
         didSet {
             let clamped = max(0, min(23, dayStartHour))
             if clamped != dayStartHour { dayStartHour = clamped; return }
-            if dayEndHour <= dayStartHour { dayEndHour = min(23, dayStartHour + 1) }
             UserDefaults.standard.set(dayStartHour, forKey: "dayStartHour")
-        }
-    }
-
-    @Published var dayEndHour: Int {
-        didSet {
-            let clamped = max(1, min(24, dayEndHour))
-            if clamped != dayEndHour { dayEndHour = clamped; return }
-            if dayEndHour <= dayStartHour { dayStartHour = max(0, dayEndHour - 1) }
-            UserDefaults.standard.set(dayEndHour, forKey: "dayEndHour")
         }
     }
 
@@ -91,9 +81,6 @@ class AppSettings: ObservableObject {
 
         let storedStart = UserDefaults.standard.object(forKey: "dayStartHour") as? Int
         self.dayStartHour = storedStart ?? 6
-
-        let storedEnd = UserDefaults.standard.object(forKey: "dayEndHour") as? Int
-        self.dayEndHour = storedEnd ?? 22
 
         let storedTarget = UserDefaults.standard.object(forKey: "targetHoursPerDay") as? Int
         self.targetHoursPerDay = storedTarget ?? 8

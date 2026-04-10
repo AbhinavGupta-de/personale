@@ -80,7 +80,7 @@ class DashboardViewModel: ObservableObject {
         let settings = AppSettings.shared
         let targetH = settings.targetHoursPerDay
         let targetStr = "\(targetH) hr 0 min"
-        let trackingStr = String(format: "%d:00 - %d:00", settings.dayStartHour, settings.dayEndHour)
+        let trackingStr = String(format: "From %d:00", settings.dayStartHour)
 
         guard let stats = dayStats else {
             return MockData.WorkHours(
