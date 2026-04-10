@@ -354,13 +354,17 @@ public class StatsService {
     public List<FocusSessionEntry> getFocusSessions(LocalDate date, ZoneId zone, Instant now) {
         DayContext ctx = dayContext(date, zone, now);
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm").withZone(zone);
+        List<BrowserEvent> dayBrowserEvents = browserEventRepo.findByTimestampBetween(
+            ctx.startOfDay(), ctx.endOfDay());
 
         return buildMergedSessions(ctx, now).stream()
             .map(block -> {
                 // Per-app breakdown: aggregate constituent sessions by app
+                // Also track start/end per app for browser event lookup
                 Map<String, long[]> appTime = new LinkedHashMap<>();
                 Map<String, String> appBundle = new LinkedHashMap<>();
                 Map<String, String> appCategory = new LinkedHashMap<>();
+                Map<String, Instant[]> appWindow = new LinkedHashMap<>(); // [start, end]
 
                 for (Constituent c : block.constituents) {
                     String key = c.bundleId() != null ? c.bundleId() : c.appName();
@@ -375,13 +379,25 @@ public class StatsService {
                     .map(e -> {
                         long secs = e.getValue()[0];
                         int pct = block.seconds > 0 ? (int) Math.round(secs * 100.0 / block.seconds) : 0;
-                        // Resolve app name from the key (bundleId or appName)
+                        String bundleId = appBundle.get(e.getKey());
                         String name = block.constituents.stream()
                             .filter(c -> e.getKey().equals(c.bundleId() != null ? c.bundleId() : c.appName()))
                             .map(Constituent::appName)
                             .findFirst().orElse(e.getKey());
+
+                        // For browser apps, add domain breakdown
+                        List<SessionAppBreakdown.DomainTime> domains = List.of();
+                        if (isBrowserBundle(bundleId) && !dayBrowserEvents.isEmpty()) {
+                            Map<String, Long> domTime = splitBrowserSessionByDomain(
+                                block.start, block.end, dayBrowserEvents);
+                            domains = domTime.entrySet().stream()
+                                .sorted((a2, b2) -> Long.compare(b2.getValue(), a2.getValue()))
+                                .map(d -> new SessionAppBreakdown.DomainTime(d.getKey(), d.getValue()))
+                                .toList();
+                        }
+
                         return new SessionAppBreakdown(
-                            name, appBundle.get(e.getKey()), appCategory.get(e.getKey()), secs, pct);
+                            name, bundleId, appCategory.get(e.getKey()), secs, pct, domains);
                     })
                     .toList();
 

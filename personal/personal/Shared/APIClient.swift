@@ -63,8 +63,16 @@ struct SessionAppBreakdownResponse: Decodable, Identifiable {
     let category: String
     let totalSeconds: Int
     let percent: Int
+    let domains: [DomainTimeResponse]?
 
     var id: String { appName }
+}
+
+struct DomainTimeResponse: Decodable, Identifiable {
+    let domain: String
+    let seconds: Int
+
+    var id: String { domain }
 }
 
 // MARK: - Range Response Models

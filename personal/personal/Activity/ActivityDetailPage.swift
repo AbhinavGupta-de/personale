@@ -345,6 +345,31 @@ struct SessionDetailCard: View {
                             .font(.system(size: 11).monospacedDigit())
                             .foregroundStyle(theme.mutedForeground)
                     }
+
+                    // Domain breakdown for browser apps
+                    if let domains = app.domains, !domains.isEmpty {
+                        ForEach(domains) { domain in
+                            HStack(spacing: 8) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(theme.mutedForeground.opacity(0.5))
+                                    .frame(width: 32, alignment: .trailing)
+
+                                Spacer().frame(width: 60)
+
+                                Text(domain.domain)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(theme.mutedForeground)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Text(formatDuration(domain.seconds))
+                                    .font(.system(size: 10).monospacedDigit())
+                                    .foregroundStyle(theme.mutedForeground.opacity(0.7))
+                            }
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 16)
