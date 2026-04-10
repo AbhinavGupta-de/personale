@@ -600,6 +600,14 @@ public class StatsService {
             totalAllocated += seconds;
         }
 
+        // Scale proportionally: raw domain times may exceed actual browser time
+        // because browser events fire even when non-browser apps are in focus
+        long rawTotal = domainTime.values().stream().mapToLong(Long::longValue).sum();
+        if (rawTotal > maxSeconds && rawTotal > 0) {
+            double scale = (double) maxSeconds / rawTotal;
+            domainTime.replaceAll((k, v) -> Math.max(1, Math.round(v * scale)));
+        }
+
         return domainTime.entrySet().stream()
             .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
             .limit(limit)
