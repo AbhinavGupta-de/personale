@@ -164,6 +164,9 @@ public class StatsService {
      * 4. Re-merge any adjacent same-category blocks created by absorption
      */
     private List<MergedBlock> buildMergedSessions(DayContext ctx, Instant now) {
+        List<BrowserEvent> browserEvents = browserEventRepo.findByTimestampBetween(
+            ctx.startOfDay(), ctx.endOfDay());
+
         List<MergedBlock> raw = ctx.sessions().stream()
             .filter(s -> {
                 Instant effEnd = effectiveEnd(s, ctx.endOfDay(), now);
@@ -175,6 +178,17 @@ public class StatsService {
                 Instant effEnd = effectiveEnd(s, ctx.endOfDay(), now);
                 long secs = Duration.between(effStart, effEnd).getSeconds();
                 String cat = resolveCategory(s.getBundleId());
+
+                // For browser sessions, use dominant domain category instead of "Browsing"
+                if (isBrowserBundle(s.getBundleId()) && !browserEvents.isEmpty()) {
+                    Map<String, Long> domainTime = splitBrowserSessionByDomain(effStart, effEnd, browserEvents);
+                    if (!domainTime.isEmpty()) {
+                        cat = domainTime.entrySet().stream()
+                            .max(Map.Entry.comparingByValue())
+                            .map(Map.Entry::getKey).orElse(cat);
+                    }
+                }
+
                 return new MergedBlock(cat, effStart, effEnd, secs, s.getAppName(),
                     List.of(new Constituent(s.getAppName(), s.getBundleId(), cat, secs)));
             })
@@ -452,6 +466,86 @@ public class StatsService {
                 total > 0 ? (int) Math.round(e.getValue() * 100.0 / total) : 0
             ))
             .toList();
+    }
+
+    // ── Domain stats: per-category breakdown with app + domain sources ──
+
+    public DomainStatsResponse getDomainStats(LocalDate date, ZoneId zone, Instant now) {
+        DayContext ctx = dayContext(date, zone, now);
+        List<BrowserEvent> browserEvents = browserEventRepo.findByTimestampBetween(
+            ctx.startOfDay(), ctx.endOfDay());
+
+        // category → source name → (type, seconds)
+        Map<String, Map<String, long[]>> catSources = new LinkedHashMap<>();
+        Map<String, Map<String, String>> catSourceTypes = new LinkedHashMap<>();
+
+        for (AppSession session : ctx.sessions()) {
+            Instant effStart = effectiveStart(session, ctx.startOfDay());
+            Instant effEnd = effectiveEnd(session, ctx.endOfDay(), now);
+            long seconds = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
+            if (seconds == 0) continue;
+
+            if (isBrowserBundle(session.getBundleId()) && !browserEvents.isEmpty()) {
+                // Split by domain
+                List<BrowserEvent> relevant = browserEvents.stream()
+                    .filter(e -> !e.getTimestamp().isBefore(effStart) && e.getTimestamp().isBefore(effEnd))
+                    .sorted(Comparator.comparing(BrowserEvent::getTimestamp))
+                    .toList();
+
+                long accounted = 0;
+                for (int i = 0; i < relevant.size(); i++) {
+                    BrowserEvent event = relevant.get(i);
+                    Instant start = event.getTimestamp();
+                    Instant end = (i + 1 < relevant.size()) ? relevant.get(i + 1).getTimestamp() : effEnd;
+                    long domSecs = Math.max(0, Duration.between(start, end).getSeconds());
+                    if (domSecs == 0) continue;
+
+                    String cat = resolveDomainCategory(event.getDomain());
+                    catSources.computeIfAbsent(cat, k -> new LinkedHashMap<>())
+                        .computeIfAbsent(event.getDomain(), k -> new long[1])[0] += domSecs;
+                    catSourceTypes.computeIfAbsent(cat, k -> new LinkedHashMap<>())
+                        .putIfAbsent(event.getDomain(), "domain");
+                    accounted += domSecs;
+                }
+                long remainder = seconds - accounted;
+                if (remainder > 0) {
+                    catSources.computeIfAbsent("Browsing", k -> new LinkedHashMap<>())
+                        .computeIfAbsent("(other browsing)", k -> new long[1])[0] += remainder;
+                    catSourceTypes.computeIfAbsent("Browsing", k -> new LinkedHashMap<>())
+                        .putIfAbsent("(other browsing)", "domain");
+                }
+            } else {
+                String cat = resolveCategory(session.getBundleId());
+                String appName = session.getAppName();
+                catSources.computeIfAbsent(cat, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(appName, k -> new long[1])[0] += seconds;
+                catSourceTypes.computeIfAbsent(cat, k -> new LinkedHashMap<>())
+                    .putIfAbsent(appName, "app");
+            }
+        }
+
+        // Build response
+        List<DomainStatsResponse.CategoryDetail> details = catSources.entrySet().stream()
+            .sorted((a, b) -> {
+                long aTotal = a.getValue().values().stream().mapToLong(v -> v[0]).sum();
+                long bTotal = b.getValue().values().stream().mapToLong(v -> v[0]).sum();
+                return Long.compare(bTotal, aTotal);
+            })
+            .map(catEntry -> {
+                String cat = catEntry.getKey();
+                long catTotal = catEntry.getValue().values().stream().mapToLong(v -> v[0]).sum();
+                List<DomainStatsResponse.Source> sources = catEntry.getValue().entrySet().stream()
+                    .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
+                    .map(e -> new DomainStatsResponse.Source(
+                        e.getKey(),
+                        catSourceTypes.getOrDefault(cat, Map.of()).getOrDefault(e.getKey(), "app"),
+                        e.getValue()[0]))
+                    .toList();
+                return new DomainStatsResponse.CategoryDetail(cat, catTotal, sources);
+            })
+            .toList();
+
+        return new DomainStatsResponse(details);
     }
 
     /**

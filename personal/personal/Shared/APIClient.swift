@@ -96,6 +96,26 @@ struct RangeSummaryResponse: Decodable {
     let categoryBreakdown: [CategoryBreakdownResponse]
 }
 
+// MARK: - Domain Stats Response Models
+
+struct DomainStatsResponse: Decodable {
+    let categoryDetails: [CategoryDetail]
+}
+
+struct CategoryDetail: Decodable {
+    let category: String
+    let totalSeconds: Int
+    let sources: [CategorySource]
+}
+
+struct CategorySource: Decodable, Identifiable {
+    let name: String
+    let type: String  // "app" or "domain"
+    let seconds: Int
+
+    var id: String { "\(type)-\(name)" }
+}
+
 // MARK: - API Client
 
 class APIClient {
@@ -143,6 +163,10 @@ class APIClient {
 
     func fetchRangeSummary(from: String, to: String) async throws -> RangeSummaryResponse {
         try await get("/api/stats/range/summary", params: ["from": from, "to": to])
+    }
+
+    func fetchDomainStats(date: String) async throws -> DomainStatsResponse {
+        try await get("/api/stats/domains", params: ["date": date])
     }
 
     private func get<T: Decodable>(_ path: String, params: [String: String] = [:]) async throws -> T {
