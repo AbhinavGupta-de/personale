@@ -224,7 +224,8 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 });
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
-  if (changeInfo.url || changeInfo.title) {
+  // Only track if this is the active tab (ignore background tab updates)
+  if ((changeInfo.url || changeInfo.title) && tab.active) {
     handleTabChange(tab);
   }
 });

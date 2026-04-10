@@ -567,16 +567,12 @@ public class StatsService {
      * Returns domain → seconds (top N, sorted by time desc).
      */
     /**
-     * Top domains for a session. Only counts time when a browser was the focused app.
-     * 1. Find app_sessions within the block where the app is a browser
-     * 2. For each browser app_session window, find the last browser_event before/at that window
-     *    to know what domain was showing, then walk forward through events
-     * 3. Aggregate domain → seconds, return top N
+     * Top domains for a session. Queries browser_events in the session window,
+     * allocates time from each event to the next, groups by domain, returns top N.
      */
     private List<SessionAppBreakdown.DomainTime> getTopDomainsForSession(
             Instant sessionStart, Instant sessionEnd, List<BrowserEvent> allBrowserEvents, int limit) {
 
-        // Get all browser events in the session window
         List<BrowserEvent> relevant = allBrowserEvents.stream()
             .filter(e -> !e.getTimestamp().isBefore(sessionStart) && e.getTimestamp().isBefore(sessionEnd))
             .sorted(Comparator.comparing(BrowserEvent::getTimestamp))
@@ -584,8 +580,6 @@ public class StatsService {
 
         if (relevant.isEmpty()) return List.of();
 
-        // Simple approach: walk events, time from each event to the next (or session end)
-        // Cap total to actual browser app time in this session
         Map<String, Long> domainTime = new LinkedHashMap<>();
         for (int i = 0; i < relevant.size(); i++) {
             BrowserEvent event = relevant.get(i);
@@ -594,17 +588,6 @@ public class StatsService {
             long seconds = Math.max(0, Duration.between(start, end).getSeconds());
             if (seconds == 0) continue;
             domainTime.merge(event.getDomain(), seconds, Long::sum);
-        }
-
-        // Cap: total domain time should not exceed total browser app time in this session
-        // (browser events fire in background even when other apps are focused)
-        long totalDomainTime = domainTime.values().stream().mapToLong(Long::longValue).sum();
-        long sessionDuration = Duration.between(sessionStart, sessionEnd).getSeconds();
-        long cap = Math.min(totalDomainTime, sessionDuration);
-
-        if (totalDomainTime > cap && totalDomainTime > 0) {
-            double scale = (double) cap / totalDomainTime;
-            domainTime.replaceAll((k, v) -> Math.max(1, Math.round(v * scale)));
         }
 
         return domainTime.entrySet().stream()
