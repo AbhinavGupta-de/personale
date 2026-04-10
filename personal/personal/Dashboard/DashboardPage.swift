@@ -43,14 +43,10 @@ struct DashboardPage: View {
                             }
                         }
 
-                        // Activity + Projects row
-                        HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                            ActivityLogCard(data: viewModel.activityLog)
+                        // Projects row (Activity log removed — use Activity page for detail)
+                        if DashboardFeatures.showProjects {
+                            ProjectsCard(data: MockData.projects)
                                 .frame(maxWidth: .infinity)
-                            if DashboardFeatures.showProjects {
-                                ProjectsCard(data: MockData.projects)
-                                    .frame(maxWidth: .infinity)
-                            }
                         }
                     }
                     .frame(maxWidth: .infinity)
