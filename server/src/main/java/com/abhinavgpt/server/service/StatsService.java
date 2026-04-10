@@ -385,15 +385,11 @@ public class StatsService {
                             .map(Constituent::appName)
                             .findFirst().orElse(e.getKey());
 
-                        // For browser apps, add domain breakdown
+                        // For browser apps, add top 5 domain breakdown scoped to this block
                         List<SessionAppBreakdown.DomainTime> domains = List.of();
                         if (isBrowserBundle(bundleId) && !dayBrowserEvents.isEmpty()) {
-                            Map<String, Long> domTime = splitBrowserSessionByDomain(
-                                block.start, block.end, dayBrowserEvents);
-                            domains = domTime.entrySet().stream()
-                                .sorted((a2, b2) -> Long.compare(b2.getValue(), a2.getValue()))
-                                .map(d -> new SessionAppBreakdown.DomainTime(d.getKey(), d.getValue()))
-                                .toList();
+                            domains = getTopDomainsForSession(
+                                block.start, block.end, dayBrowserEvents, 5);
                         }
 
                         return new SessionAppBreakdown(
@@ -565,13 +561,43 @@ public class StatsService {
     }
 
     /**
+     * Split a browser session's time by actual domain names.
+     * Returns domain → seconds (top N, sorted by time desc).
+     */
+    private List<SessionAppBreakdown.DomainTime> getTopDomainsForSession(
+            Instant sessionStart, Instant sessionEnd, List<BrowserEvent> allBrowserEvents, int limit) {
+
+        List<BrowserEvent> relevant = allBrowserEvents.stream()
+            .filter(e -> !e.getTimestamp().isBefore(sessionStart) && e.getTimestamp().isBefore(sessionEnd))
+            .sorted(Comparator.comparing(BrowserEvent::getTimestamp))
+            .toList();
+
+        if (relevant.isEmpty()) return List.of();
+
+        Map<String, Long> domainTime = new LinkedHashMap<>();
+        for (int i = 0; i < relevant.size(); i++) {
+            BrowserEvent event = relevant.get(i);
+            Instant start = event.getTimestamp();
+            Instant end = (i + 1 < relevant.size()) ? relevant.get(i + 1).getTimestamp() : sessionEnd;
+            long seconds = Math.max(0, Duration.between(start, end).getSeconds());
+            if (seconds == 0) continue;
+            domainTime.merge(event.getDomain(), seconds, Long::sum);
+        }
+
+        return domainTime.entrySet().stream()
+            .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+            .limit(limit)
+            .map(e -> new SessionAppBreakdown.DomainTime(e.getKey(), e.getValue()))
+            .toList();
+    }
+
+    /**
      * Split a browser session's time across domain categories based on browser events
      * within the session window. Returns domain_category → seconds.
      */
     private Map<String, Long> splitBrowserSessionByDomain(
             Instant sessionStart, Instant sessionEnd, List<BrowserEvent> allBrowserEvents) {
 
-        // Filter browser events within session window
         List<BrowserEvent> relevant = allBrowserEvents.stream()
             .filter(e -> !e.getTimestamp().isBefore(sessionStart) && e.getTimestamp().isBefore(sessionEnd))
             .sorted(Comparator.comparing(BrowserEvent::getTimestamp))
