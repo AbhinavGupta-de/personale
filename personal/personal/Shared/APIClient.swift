@@ -53,6 +53,7 @@ struct FocusSessionResponse: Decodable, Identifiable {
     let duration: String
     let apps: [SessionAppBreakdownResponse]
     let categories: [CategoryBreakdownResponse]
+    let topDomains: [DomainTimeResponse]?
 
     var id: String { "\(name)-\(startTime)" }
 }

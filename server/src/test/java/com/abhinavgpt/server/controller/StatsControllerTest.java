@@ -164,7 +164,8 @@ class StatsControllerTest {
                     new SessionAppBreakdown("Xcode", "com.apple.dt.Xcode", "Code", 3600, 67, List.of()),
                     new SessionAppBreakdown("Terminal", "com.apple.Terminal", "Code", 1800, 33, List.of())
                 ),
-                List.of(new CategoryBreakdownEntry("Code", 5400, 100))
+                List.of(new CategoryBreakdownEntry("Code", 5400, 100)),
+                List.of()
             )
         ));
 

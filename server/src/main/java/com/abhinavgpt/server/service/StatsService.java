@@ -385,15 +385,8 @@ public class StatsService {
                             .map(Constituent::appName)
                             .findFirst().orElse(e.getKey());
 
-                        // For browser apps, add top 5 domain breakdown scoped to this block
-                        List<SessionAppBreakdown.DomainTime> domains = List.of();
-                        if (isBrowserBundle(bundleId) && !dayBrowserEvents.isEmpty()) {
-                            domains = getTopDomainsForSession(
-                                block.start, block.end, dayBrowserEvents, 5);
-                        }
-
                         return new SessionAppBreakdown(
-                            name, bundleId, appCategory.get(e.getKey()), secs, pct, domains);
+                            name, bundleId, appCategory.get(e.getKey()), secs, pct, List.of());
                     })
                     .toList();
 
@@ -409,6 +402,14 @@ public class StatsService {
                         block.seconds > 0 ? (int) Math.round(e.getValue() * 100.0 / block.seconds) : 0))
                     .toList();
 
+                // Top domains for the whole session (computed once, not per-app)
+                List<SessionAppBreakdown.DomainTime> topDomains = List.of();
+                boolean hasBrowser = apps.stream().anyMatch(a -> isBrowserBundle(a.bundleId()));
+                if (hasBrowser && !dayBrowserEvents.isEmpty()) {
+                    topDomains = getTopDomainsForSession(
+                        block.start, block.end, dayBrowserEvents, 8);
+                }
+
                 return new FocusSessionEntry(
                     block.category,
                     timeFmt.format(block.start),
@@ -416,7 +417,8 @@ public class StatsService {
                     block.seconds,
                     formatDuration(block.seconds),
                     apps,
-                    categories
+                    categories,
+                    topDomains
                 );
             })
             .toList();

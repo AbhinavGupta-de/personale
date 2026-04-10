@@ -268,19 +268,8 @@ struct SessionDetailCard: View {
 
     @Environment(\.theme) private var theme
 
-    // Aggregate all domains from all browser apps
     private var allDomains: [DomainTimeResponse] {
-        var domainMap: [String: Int] = [:]
-        for app in session.apps {
-            guard let domains = app.domains else { continue }
-            for d in domains {
-                domainMap[d.domain, default: 0] += d.seconds
-            }
-        }
-        return domainMap
-            .sorted { $0.value > $1.value }
-            .prefix(8)
-            .map { DomainTimeResponse(domain: $0.key, seconds: $0.value) }
+        session.topDomains ?? []
     }
 
     var body: some View {

@@ -9,5 +9,6 @@ public record FocusSessionEntry(
     long durationSeconds,
     String duration,
     List<SessionAppBreakdown> apps,
-    List<CategoryBreakdownEntry> categories
+    List<CategoryBreakdownEntry> categories,
+    List<SessionAppBreakdown.DomainTime> topDomains
 ) {}
