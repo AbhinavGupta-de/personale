@@ -105,21 +105,6 @@ struct SettingsPage: View {
                 }
 
                 HStack {
-                    Text("Day End")
-                        .font(.system(size: 12))
-                        .foregroundStyle(theme.foreground)
-                        .frame(width: 120, alignment: .leading)
-                    Picker("", selection: $settings.dayEndHour) {
-                        ForEach(0..<24, id: \.self) { hour in
-                            Text(String(format: "%d:00", hour)).tag(hour)
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(width: 80)
-                    Spacer()
-                }
-
-                HStack {
                     Text("Target Hours")
                         .font(.system(size: 12))
                         .foregroundStyle(theme.foreground)

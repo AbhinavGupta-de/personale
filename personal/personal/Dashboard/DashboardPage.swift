@@ -43,14 +43,10 @@ struct DashboardPage: View {
                             }
                         }
 
-                        // Activity + Projects row
-                        HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                            ActivityLogCard(data: viewModel.activityLog)
+                        // Projects row (Activity log removed — use Activity page for detail)
+                        if DashboardFeatures.showProjects {
+                            ProjectsCard(data: MockData.projects)
                                 .frame(maxWidth: .infinity)
-                            if DashboardFeatures.showProjects {
-                                ProjectsCard(data: MockData.projects)
-                                    .frame(maxWidth: .infinity)
-                            }
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -63,7 +59,7 @@ struct DashboardPage: View {
                             ScoresCard(data: viewModel.scores)
                         }
 
-                        TimeBreakdownCard(data: viewModel.timeBreakdown)
+                        TimeBreakdownCard(data: viewModel.timeBreakdown, domainStats: viewModel.domainStats)
                     }
                     .frame(width: 320)
                 }
@@ -557,11 +553,62 @@ struct ScoresCard: View {
     }
 }
 
-// MARK: - Time Breakdown Card
+// MARK: - Time Breakdown Card (expandable with drill-down)
 
 struct TimeBreakdownCard: View {
     let data: [MockData.TimeBreakdownEntry]
+    let domainStats: DomainStatsResponse?
     @Environment(\.theme) private var theme
+    @State private var expandedCategory: String?
+
+    @ViewBuilder
+    private func sourcesList(for category: String) -> some View {
+        let sources = sourcesFor(category: category)
+        if !sources.isEmpty {
+            VStack(spacing: 3) {
+                ForEach(sources) { source in
+                    sourceRow(source: source)
+                }
+            }
+            .padding(.leading, 36)
+            .padding(.trailing, 4)
+            .padding(.vertical, 4)
+            .transition(.opacity)
+        }
+    }
+
+    private func sourceRow(source: CategorySource) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: source.type == "domain" ? "globe" : "app")
+                .font(.system(size: 8))
+                .foregroundStyle(theme.mutedForeground.opacity(0.6))
+                .frame(width: 28, alignment: .trailing)
+
+            Text(source.name)
+                .font(.system(size: 10))
+                .foregroundStyle(theme.mutedForeground)
+                .lineLimit(1)
+
+            Spacer()
+
+            Text(formatDuration(source.seconds))
+                .font(.system(size: 10).monospacedDigit())
+                .foregroundStyle(theme.mutedForeground.opacity(0.7))
+        }
+    }
+
+    private func sourcesFor(category: String) -> [CategorySource] {
+        guard let details = domainStats?.categoryDetails
+            .first(where: { $0.category == category })
+        else { return [] }
+        return details.sources
+    }
+
+    private func formatDuration(_ seconds: Int) -> String {
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        return h > 0 ? "\(h) hr \(m) min" : "\(m) min"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -571,41 +618,56 @@ struct TimeBreakdownCard: View {
                 .padding(.bottom, 10)
 
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: 4) {
                     ForEach(Array(data.enumerated()), id: \.offset) { _, item in
-                        HStack(spacing: 8) {
-                            Text("\(item.percent)%")
-                                .font(.system(size: 11).monospacedDigit())
-                                .foregroundStyle(theme.mutedForeground)
-                                .frame(width: 28, alignment: .trailing)
-
-                            Text(item.category)
-                                .font(.system(size: 11))
-                                .foregroundStyle(theme.foreground)
-                                .frame(width: 112, alignment: .leading)
-                                .lineLimit(1)
-
-                            // Progress bar
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 2.5)
-                                        .fill(theme.secondary.opacity(0.6))
-                                    RoundedRectangle(cornerRadius: 2.5)
-                                        .fill(Color(hex: item.colorHex))
-                                        .frame(width: min(CGFloat(item.percent) * 2.2 / 100 * geo.size.width, geo.size.width))
+                        VStack(spacing: 0) {
+                            // Category row (clickable)
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    expandedCategory = expandedCategory == item.category ? nil : item.category
                                 }
-                            }
-                            .frame(height: 5)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Text("\(item.percent)%")
+                                        .font(.system(size: 11).monospacedDigit())
+                                        .foregroundStyle(theme.mutedForeground)
+                                        .frame(width: 28, alignment: .trailing)
 
-                            Text(item.time)
-                                .font(.system(size: 11).monospacedDigit())
-                                .foregroundStyle(theme.mutedForeground)
-                                .frame(width: 64, alignment: .trailing)
+                                    Text(item.category)
+                                        .font(.system(size: 11, weight: expandedCategory == item.category ? .semibold : .regular))
+                                        .foregroundStyle(theme.foreground)
+                                        .frame(width: 112, alignment: .leading)
+                                        .lineLimit(1)
+
+                                    GeometryReader { geo in
+                                        ZStack(alignment: .leading) {
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(theme.secondary.opacity(0.6))
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(Color(hex: item.colorHex))
+                                                .frame(width: min(CGFloat(item.percent) * 2.2 / 100 * geo.size.width, geo.size.width))
+                                        }
+                                    }
+                                    .frame(height: 5)
+
+                                    Text(item.time)
+                                        .font(.system(size: 11).monospacedDigit())
+                                        .foregroundStyle(theme.mutedForeground)
+                                        .frame(width: 64, alignment: .trailing)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                            .buttonStyle(.plain)
+
+                            // Expanded sources
+                            if expandedCategory == item.category {
+                                sourcesList(for: item.category)
+                            }
                         }
                     }
                 }
             }
-            .frame(height: 210)
+            .frame(height: 280)
             .padding(.horizontal, 16)
             .padding(.bottom, 14)
         }

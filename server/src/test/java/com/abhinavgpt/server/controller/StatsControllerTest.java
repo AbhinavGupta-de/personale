@@ -161,10 +161,11 @@ class StatsControllerTest {
         when(statsService.getFocusSessions(any(), any(), any())).thenReturn(List.of(
             new FocusSessionEntry("Code", "09:00", "10:30", 5400, "1 hr 30 min",
                 List.of(
-                    new SessionAppBreakdown("Xcode", "com.apple.dt.Xcode", "Code", 3600, 67),
-                    new SessionAppBreakdown("Terminal", "com.apple.Terminal", "Code", 1800, 33)
+                    new SessionAppBreakdown("Xcode", "com.apple.dt.Xcode", "Code", 3600, 67, List.of()),
+                    new SessionAppBreakdown("Terminal", "com.apple.Terminal", "Code", 1800, 33, List.of())
                 ),
-                List.of(new CategoryBreakdownEntry("Code", 5400, 100))
+                List.of(new CategoryBreakdownEntry("Code", 5400, 100)),
+                List.of()
             )
         ));
 

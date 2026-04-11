@@ -81,4 +81,11 @@ public class StatsController {
             statsService.getRangeSummary(LocalDate.parse(from), LocalDate.parse(to),
                 ZoneId.systemDefault(), Instant.now()));
     }
+
+    @GetMapping("/domains")
+    public ResponseEntity<DomainStatsResponse> getDomains(@RequestParam String date) {
+        LocalDate day = LocalDate.parse(date);
+        return ResponseEntity.ok(
+            statsService.getDomainStats(day, ZoneId.systemDefault(), Instant.now()));
+    }
 }
