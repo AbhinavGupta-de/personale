@@ -268,153 +268,170 @@ struct SessionDetailCard: View {
 
     @Environment(\.theme) private var theme
 
+    private var allDomains: [DomainTimeResponse] {
+        session.topDomains ?? []
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
+            // ── Header ──
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(session.name)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(theme.foreground)
-                    Spacer()
-                    Text(session.duration)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(theme.foreground)
+                    Text("\(session.startTime) – \(session.endTime)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.mutedForeground)
                 }
-                Text("Automatically created based on your activity.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(theme.mutedForeground)
+                Spacer()
+                Text(session.duration)
+                    .font(.system(size: 18, weight: .bold).monospacedDigit())
+                    .foregroundStyle(theme.foreground)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 14)
+            .padding(16)
 
             Divider().opacity(0.3).padding(.horizontal, 16)
 
-            // Stats
-            HStack(spacing: 24) {
-                statItem(label: "Focus Time", value: session.duration)
-                statItem(
-                    label: "Apps Used",
-                    value: "\(session.apps.count)")
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider().opacity(0.3).padding(.horizontal, 16)
-
-            // Per-app breakdown
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Apps")
-                    .font(.system(size: 10, weight: .semibold))
-                    .tracking(0.5)
-                    .foregroundStyle(theme.mutedForeground)
-                    .padding(.bottom, 2)
-
-                ForEach(session.apps) { app in
-                    HStack(spacing: 8) {
-                        Text("\(app.percent)%")
-                            .font(.system(size: 11).monospacedDigit())
-                            .foregroundStyle(theme.mutedForeground)
-                            .frame(width: 32, alignment: .trailing)
-
-                        // Progress bar
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2.5)
-                                    .fill(theme.secondary.opacity(0.6))
-                                RoundedRectangle(cornerRadius: 2.5)
-                                    .fill(categoryColor(app.category))
-                                    .frame(
-                                        width: min(
-                                            CGFloat(app.percent) / 100.0
-                                                * geo.size.width,
-                                            geo.size.width))
-                            }
-                        }
-                        .frame(width: 60, height: 5)
-
-                        Text(app.appName)
-                            .font(.system(size: 11))
+            // ── Category donut + stats ──
+            HStack(spacing: 20) {
+                // Mini donut chart
+                ZStack {
+                    ForEach(Array(session.categories.enumerated()), id: \.offset) { i, cat in
+                        let startAngle = categoryStartAngle(index: i)
+                        let endAngle = startAngle + Angle(degrees: Double(cat.percent) * 3.6)
+                        Circle()
+                            .trim(from: CGFloat(startAngle.degrees / 360),
+                                  to: CGFloat(endAngle.degrees / 360))
+                            .stroke(categoryColor(cat.category), lineWidth: 8)
+                            .rotationEffect(.degrees(-90))
+                    }
+                    VStack(spacing: 0) {
+                        Text("\(session.apps.count)")
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(theme.foreground)
-                            .lineLimit(1)
-
-                        Spacer()
-
-                        Text(formatDuration(app.totalSeconds))
-                            .font(.system(size: 11).monospacedDigit())
+                        Text("apps")
+                            .font(.system(size: 8))
                             .foregroundStyle(theme.mutedForeground)
                     }
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
+                .frame(width: 72, height: 72)
 
-            Divider().opacity(0.3).padding(.horizontal, 16).padding(.top, 12)
-
-            // Categories breakdown
-            if session.categories.count > 1 {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Categories")
-                        .font(.system(size: 10, weight: .semibold))
-                        .tracking(0.5)
-                        .foregroundStyle(theme.mutedForeground)
-                        .padding(.bottom, 2)
-
-                    ForEach(Array(session.categories.enumerated()), id: \.offset) {
-                        _, cat in
-                        HStack(spacing: 8) {
-                            Text("\(cat.percent)%")
-                                .font(.system(size: 11).monospacedDigit())
-                                .foregroundStyle(theme.mutedForeground)
-                                .frame(width: 32, alignment: .trailing)
-
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 2.5)
-                                        .fill(theme.secondary.opacity(0.6))
-                                    RoundedRectangle(cornerRadius: 2.5)
-                                        .fill(categoryColor(cat.category))
-                                        .frame(
-                                            width: min(
-                                                CGFloat(cat.percent) / 100.0
-                                                    * geo.size.width,
-                                                geo.size.width))
-                                }
-                            }
-                            .frame(width: 60, height: 5)
-
+                // Category legend
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(session.categories.enumerated()), id: \.offset) { _, cat in
+                        HStack(spacing: 6) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(categoryColor(cat.category))
+                                .frame(width: 8, height: 8)
                             Text(cat.category)
                                 .font(.system(size: 11))
                                 .foregroundStyle(theme.foreground)
+                            Spacer()
+                            Text("\(cat.percent)%")
+                                .font(.system(size: 11).monospacedDigit())
+                                .foregroundStyle(theme.mutedForeground)
+                            Text(formatDuration(cat.totalSeconds))
+                                .font(.system(size: 10).monospacedDigit())
+                                .foregroundStyle(theme.mutedForeground.opacity(0.7))
+                                .frame(width: 60, alignment: .trailing)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+
+            Divider().opacity(0.3).padding(.horizontal, 16)
+
+            // ── Top Apps ──
+            VStack(alignment: .leading, spacing: 6) {
+                Text("TOP APPS")
+                    .font(.system(size: 9, weight: .semibold))
+                    .tracking(0.8)
+                    .foregroundStyle(theme.mutedForeground)
+
+                ForEach(session.apps.prefix(6)) { app in
+                    sessionAppRow(app: app)
+                }
+                if session.apps.count > 6 {
+                    Text("+\(session.apps.count - 6) more")
+                        .font(.system(size: 9))
+                        .foregroundStyle(theme.mutedForeground.opacity(0.6))
+                        .padding(.leading, 40)
+                }
+            }
+            .padding(16)
+
+            // ── Top Domains (if any browser usage) ──
+            if !allDomains.isEmpty {
+                Divider().opacity(0.3).padding(.horizontal, 16)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("TOP SITES")
+                        .font(.system(size: 9, weight: .semibold))
+                        .tracking(0.8)
+                        .foregroundStyle(theme.mutedForeground)
+
+                    ForEach(allDomains) { domain in
+                        HStack(spacing: 8) {
+                            Image(systemName: "globe")
+                                .font(.system(size: 9))
+                                .foregroundStyle(theme.mutedForeground.opacity(0.5))
+                                .frame(width: 20)
+
+                            Text(domain.domain)
+                                .font(.system(size: 11))
+                                .foregroundStyle(theme.foreground)
+                                .lineLimit(1)
 
                             Spacer()
 
-                            Text(formatDuration(cat.totalSeconds))
+                            Text(formatDuration(domain.seconds))
                                 .font(.system(size: 11).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(16)
             }
 
-            Spacer(minLength: 14)
+            Spacer(minLength: 8)
         }
         .dashboardCard()
     }
 
-    private func statItem(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .tracking(0.5)
+    // ── Helpers ──
+
+    private func sessionAppRow(app: SessionAppBreakdownResponse) -> some View {
+        HStack(spacing: 8) {
+            Text("\(app.percent)%")
+                .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(theme.mutedForeground)
-            Text(value)
-                .font(.system(size: 16, weight: .bold))
+                .frame(width: 30, alignment: .trailing)
+
+            GeometryReader { geo in
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(categoryColor(app.category))
+                    .frame(width: max(2, CGFloat(app.percent) / 100.0 * geo.size.width))
+            }
+            .frame(width: 50, height: 5)
+
+            Text(app.appName)
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(theme.foreground)
+                .lineLimit(1)
+
+            Spacer()
+
+            Text(formatDuration(app.totalSeconds))
+                .font(.system(size: 11).monospacedDigit())
+                .foregroundStyle(theme.mutedForeground)
         }
+    }
+
+    private func categoryStartAngle(index: Int) -> Angle {
+        let preceding = session.categories.prefix(index).reduce(0) { $0 + $1.percent }
+        return Angle(degrees: Double(preceding) * 3.6)
     }
 }
 
@@ -562,8 +579,8 @@ struct SessionDetailOverlay: View {
                     formatDuration: formatDuration
                 )
             }
-            .frame(maxHeight: 560)
-            .frame(width: 420)
+            .frame(maxHeight: 620)
+            .frame(width: 480)
             .background(theme.background)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .shadow(color: .black.opacity(0.5), radius: 20)

@@ -14,6 +14,7 @@ class DashboardViewModel: ObservableObject {
     @Published var activityEntries: [ActivityLogEntryResponse]?
     @Published var categoryBreakdown: [CategoryBreakdownResponse]?
     @Published var workblockEntries: [WorkblockEntryResponse]?
+    @Published var domainStats: DomainStatsResponse?
 
     // Break timer — ticks every second, computed client-side from existing data
     @Published var secondsSinceLastBreak: Int = 0
@@ -31,6 +32,7 @@ class DashboardViewModel: ObservableObject {
         var activityEntries: [ActivityLogEntryResponse]?
         var categoryBreakdown: [CategoryBreakdownResponse]?
         var workblockEntries: [WorkblockEntryResponse]?
+        var domainStats: DomainStatsResponse?
 
         var hasAnyData: Bool {
             dayStats != nil || timelineEntries != nil || activityEntries != nil
@@ -78,7 +80,7 @@ class DashboardViewModel: ObservableObject {
         let settings = AppSettings.shared
         let targetH = settings.targetHoursPerDay
         let targetStr = "\(targetH) hr 0 min"
-        let trackingStr = String(format: "%d:00 - %d:00", settings.dayStartHour, settings.dayEndHour)
+        let trackingStr = String(format: "From %d:00", settings.dayStartHour)
 
         guard let stats = dayStats else {
             return MockData.WorkHours(
@@ -326,6 +328,7 @@ class DashboardViewModel: ObservableObject {
             activityEntries = cached.activityEntries
             categoryBreakdown = cached.categoryBreakdown
             workblockEntries = cached.workblockEntries
+            domainStats = cached.domainStats
             isLoading = !cached.hasAnyData
         } else {
             dayStats = nil
@@ -333,6 +336,7 @@ class DashboardViewModel: ObservableObject {
             activityEntries = nil
             categoryBreakdown = nil
             workblockEntries = nil
+            domainStats = nil
             isLoading = true
         }
 
@@ -390,6 +394,13 @@ class DashboardViewModel: ObservableObject {
             self.workblockEntries = w
             self.cache[date, default: DayCache()].workblockEntries = w
             self.isLoading = false
+        }
+        Task {
+            guard let d = try? await api.fetchDomainStats(date: date),
+                activeFetchDate == date
+            else { return }
+            self.domainStats = d
+            self.cache[date, default: DayCache()].domainStats = d
         }
 
         // Prefetch adjacent days in background

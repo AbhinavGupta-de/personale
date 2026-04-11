@@ -53,6 +53,7 @@ struct FocusSessionResponse: Decodable, Identifiable {
     let duration: String
     let apps: [SessionAppBreakdownResponse]
     let categories: [CategoryBreakdownResponse]
+    let topDomains: [DomainTimeResponse]?
 
     var id: String { "\(name)-\(startTime)" }
 }
@@ -63,8 +64,16 @@ struct SessionAppBreakdownResponse: Decodable, Identifiable {
     let category: String
     let totalSeconds: Int
     let percent: Int
+    let domains: [DomainTimeResponse]?
 
     var id: String { appName }
+}
+
+struct DomainTimeResponse: Decodable, Identifiable {
+    let domain: String
+    let seconds: Int
+
+    var id: String { domain }
 }
 
 // MARK: - Range Response Models
@@ -94,6 +103,26 @@ struct RangeSummaryResponse: Decodable {
     let avgSecondsPerDay: Int
     let avgSecondsPerWeek: Int
     let categoryBreakdown: [CategoryBreakdownResponse]
+}
+
+// MARK: - Domain Stats Response Models
+
+struct DomainStatsResponse: Decodable {
+    let categoryDetails: [CategoryDetail]
+}
+
+struct CategoryDetail: Decodable {
+    let category: String
+    let totalSeconds: Int
+    let sources: [CategorySource]
+}
+
+struct CategorySource: Decodable, Identifiable {
+    let name: String
+    let type: String  // "app" or "domain"
+    let seconds: Int
+
+    var id: String { "\(type)-\(name)" }
 }
 
 // MARK: - API Client
@@ -143,6 +172,10 @@ class APIClient {
 
     func fetchRangeSummary(from: String, to: String) async throws -> RangeSummaryResponse {
         try await get("/api/stats/range/summary", params: ["from": from, "to": to])
+    }
+
+    func fetchDomainStats(date: String) async throws -> DomainStatsResponse {
+        try await get("/api/stats/domains", params: ["date": date])
     }
 
     private func get<T: Decodable>(_ path: String, params: [String: String] = [:]) async throws -> T {
