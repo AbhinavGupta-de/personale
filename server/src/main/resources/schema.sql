@@ -23,6 +23,25 @@ CREATE TABLE IF NOT EXISTS category_mappings (
     category    TEXT NOT NULL
 );
 
+-- M4: per-category idle thresholds (how long a gap before a session is split)
+-- Reading allows long pauses (thinking, scrolling); Communication needs snappy cuts.
+CREATE TABLE IF NOT EXISTS category_thresholds (
+    category               TEXT PRIMARY KEY,
+    idle_threshold_seconds INT  NOT NULL
+);
+
+INSERT INTO category_thresholds (category, idle_threshold_seconds) VALUES
+    ('Code',          600),   -- 10 min: natural thinking pauses
+    ('Reading',       900),   -- 15 min: long scroll/read sessions
+    ('Writing',       600),   -- 10 min: think, draft, revise
+    ('Design',        600),   -- 10 min: contemplate, iterate
+    ('Communication', 180),   -- 3 min: chats are snappy
+    ('Browsing',      300),   -- 5 min: tab-switching noise
+    ('Media',         600),   -- 10 min: passive consumption
+    ('Utilities',     180),   -- 3 min: quick task tools
+    ('Other',         300)    -- 5 min: default
+ON CONFLICT (category) DO NOTHING;
+
 -- Seed common macOS app categories
 INSERT INTO category_mappings (bundle_id, category) VALUES
     -- Coding: IDEs & editors

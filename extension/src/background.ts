@@ -189,6 +189,12 @@ async function handleTabChange(tab: chrome.tabs.Tab): Promise<void> {
   if (!settings.enabled) return;
   if (!tab.url) return;
 
+  // Only record if this browser window is actually focused
+  try {
+    const win = await chrome.windows.get(tab.windowId);
+    if (!win.focused) return;
+  } catch { return; }
+
   const domain = extractDomain(tab.url);
   if (!domain) return;
   if (isExcluded(domain)) return;
