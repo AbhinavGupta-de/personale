@@ -4,14 +4,16 @@ import com.abhinavgpt.server.dto.*;
 import com.abhinavgpt.server.entity.AppSession;
 import com.abhinavgpt.server.entity.BrowserEvent;
 import com.abhinavgpt.server.entity.CategoryMapping;
+import com.abhinavgpt.server.entity.CategoryThreshold;
 import com.abhinavgpt.server.entity.DomainCategoryMapping;
 import com.abhinavgpt.server.repository.AppSessionRepository;
 import com.abhinavgpt.server.repository.BrowserEventRepository;
 import com.abhinavgpt.server.repository.CategoryMappingRepository;
+import com.abhinavgpt.server.repository.CategoryThresholdRepository;
 import com.abhinavgpt.server.repository.DomainCategoryMappingRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -40,10 +42,22 @@ class StatsServiceTest {
     @Mock
     private DomainCategoryMappingRepository domainCategoryRepo;
 
-    @InjectMocks
+    @Mock
+    private CategoryThresholdRepository thresholdRepo;
+
     private StatsService statsService;
 
     private static final ZoneId UTC = ZoneOffset.UTC;
+
+    @BeforeEach
+    void setUp() {
+        CategoryResolver categoryResolver = new CategoryResolver(
+            categoryRepo, domainCategoryRepo, thresholdRepo);
+        DomainTimeService domainTimeService = new DomainTimeService(categoryResolver);
+        SessionMergeService mergeService = new SessionMergeService(categoryResolver, domainTimeService);
+        statsService = new StatsService(
+            repository, browserEventRepo, categoryResolver, mergeService, domainTimeService);
+    }
 
     // ── Existing daily stats tests ──
 

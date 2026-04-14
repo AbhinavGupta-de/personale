@@ -114,10 +114,13 @@ struct SessionTimelineCard: View {
 
             ScrollView {
                 ZStack(alignment: .topLeading) {
-                    // Hour grid lines and labels
+                    // Hour grid lines and labels — each row is hourHeight tall
+                    // with content pinned to the TOP so the label's baseline
+                    // aligns with y = hour * hourHeight (the same origin the
+                    // session blocks use for their topOffset).
                     VStack(spacing: 0) {
                         ForEach(startHour..<endHour, id: \.self) { hour in
-                            HStack(alignment: .top, spacing: 8) {
+                            HStack(alignment: .center, spacing: 8) {
                                 Text(formatHourLabel(hour))
                                     .font(.system(size: 9, design: .monospaced))
                                     .foregroundStyle(theme.mutedForeground)
@@ -127,7 +130,7 @@ struct SessionTimelineCard: View {
                                     .fill(theme.border.opacity(0.3))
                                     .frame(height: 1)
                             }
-                            .frame(height: hourHeight)
+                            .frame(height: hourHeight, alignment: .top)
                         }
                     }
 
