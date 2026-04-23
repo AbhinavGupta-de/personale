@@ -146,6 +146,30 @@ INSERT INTO category_mappings (bundle_id, category) VALUES
     ('com.apple.Preview',                 'Reading')
 ON CONFLICT (bundle_id) DO NOTHING;
 
+-- Review pipeline: user-editable title/description per focus-session block.
+-- block_key = sha256(date + startTime + endTime + category) keeps a stable row
+-- across re-derivation as long as the merge boundaries don't shift.
+CREATE TABLE IF NOT EXISTS session_reviews (
+    block_key       TEXT PRIMARY KEY,
+    block_date      DATE        NOT NULL,
+    start_time      TEXT        NOT NULL,   -- "HH:mm"
+    end_time        TEXT        NOT NULL,   -- "HH:mm"
+    category        TEXT        NOT NULL,
+    title           TEXT,
+    description     TEXT,
+    task            TEXT,
+    project         TEXT,
+    client          TEXT,
+    status          TEXT        NOT NULL DEFAULT 'pending',  -- pending|approved|rejected
+    ai_title        TEXT,
+    ai_description  TEXT,
+    ai_model        TEXT,
+    ai_generated_at TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_session_reviews_date_status ON session_reviews (block_date, status);
+
 -- M16: AI-generated insights attached to a pomodoro session (title + description).
 CREATE TABLE IF NOT EXISTS pomodoro_session_insights (
     session_id      BIGINT PRIMARY KEY,

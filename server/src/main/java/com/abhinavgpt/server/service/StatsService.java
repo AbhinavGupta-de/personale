@@ -78,7 +78,22 @@ public class StatsService {
             nameByBundle.putIfAbsent(key, session.getAppName());
         }
 
+        // Suppress browser apps that already emit per-domain events via the
+        // extension — avoids double counting (Firefox stays because no
+        // extension exists for it yet; domain rows replace the browser entry).
+        java.util.Set<String> trackedBrowserNames = browserEventRepo
+            .findByTimestampBetween(ctx.startOfDay(), ctx.endOfDay()).stream()
+            .map(BrowserEvent::getBrowser)
+            .filter(java.util.Objects::nonNull)
+            .map(String::toLowerCase)
+            .collect(java.util.stream.Collectors.toSet());
+
         List<AppTimeEntry> apps = timeByBundle.entrySet().stream()
+            .filter(e -> {
+                if (!categoryResolver.isBrowserBundle(e.getKey())) return true;
+                String appName = nameByBundle.get(e.getKey());
+                return appName == null || !trackedBrowserNames.contains(appName.toLowerCase());
+            })
             .map(e -> {
                 String bundleId = e.getKey().equals(nameByBundle.get(e.getKey())) ? null : e.getKey();
                 return new AppTimeEntry(nameByBundle.get(e.getKey()), bundleId, e.getValue()[0]);
