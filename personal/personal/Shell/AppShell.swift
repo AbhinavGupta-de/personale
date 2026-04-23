@@ -329,23 +329,25 @@ struct DateNavigator: View {
     let views: [String]
     var isToday: Bool
     var isLoading: Bool
+    @Binding var activeView: String
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
     var onToday: (() -> Void)?
-    @State private var activeView: String
     @Environment(\.theme) private var theme
 
-    init(dateText: String, views: [String] = ["Day", "Week"], defaultView: String = "Day",
+    init(dateText: String,
+         views: [String] = ["Day", "Week"],
+         activeView: Binding<String>,
          isToday: Bool = true, isLoading: Bool = false,
          onPrevious: (() -> Void)? = nil, onNext: (() -> Void)? = nil, onToday: (() -> Void)? = nil) {
         self.dateText = dateText
         self.views = views
+        self._activeView = activeView
         self.isToday = isToday
         self.isLoading = isLoading
         self.onPrevious = onPrevious
         self.onNext = onNext
         self.onToday = onToday
-        self._activeView = State(initialValue: defaultView)
     }
 
     var body: some View {
