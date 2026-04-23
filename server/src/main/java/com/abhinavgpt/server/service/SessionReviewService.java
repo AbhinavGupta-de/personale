@@ -64,6 +64,7 @@ public class SessionReviewService {
         if (req.task() != null) r.setTask(req.task());
         if (req.project() != null) r.setProject(req.project());
         if (req.client() != null) r.setClient(req.client());
+        if (req.category() != null) r.setOverrideCategory(req.category().isBlank() ? null : req.category());
         r.setUpdatedAt(Instant.now());
         SessionReview saved = repo.save(r);
         saved.markPersisted();
@@ -140,13 +141,17 @@ public class SessionReviewService {
         List<AppTimeEntry> apps = block.apps().stream()
             .map(a -> new AppTimeEntry(a.appName(), a.bundleId(), a.totalSeconds()))
             .toList();
+        // Effective category: user override wins over derived.
+        String effectiveCategory = stored != null && stored.getOverrideCategory() != null
+            ? stored.getOverrideCategory()
+            : block.name();
         return new SessionReviewResponse(
             key,
             date.toString(),
             block.startTime(),
             block.endTime(),
             block.durationSeconds(),
-            block.name(),
+            effectiveCategory,
             stored != null ? stored.getTitle() : null,
             stored != null ? stored.getDescription() : null,
             stored != null ? stored.getTask() : null,

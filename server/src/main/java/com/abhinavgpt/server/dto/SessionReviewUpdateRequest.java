@@ -5,5 +5,6 @@ public record SessionReviewUpdateRequest(
     String description,
     String task,
     String project,
-    String client
+    String client,
+    String category    // override — nullable to keep derived category
 ) {}

@@ -165,10 +165,12 @@ CREATE TABLE IF NOT EXISTS session_reviews (
     ai_description  TEXT,
     ai_model        TEXT,
     ai_generated_at TIMESTAMPTZ,
+    override_category TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_session_reviews_date_status ON session_reviews (block_date, status);
+ALTER TABLE session_reviews ADD COLUMN IF NOT EXISTS override_category TEXT;
 
 -- M16: AI-generated insights attached to a pomodoro session (title + description).
 CREATE TABLE IF NOT EXISTS pomodoro_session_insights (
