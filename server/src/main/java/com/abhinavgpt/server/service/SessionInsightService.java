@@ -200,8 +200,16 @@ public class SessionInsightService {
 
         List<BrowserEvent> events = browserEventRepo.findByTimestampBetween(start, end);
         Map<String, Long> perDomain = new HashMap<>();
+        // Per-domain: title → count, so we surface the actual thing the user was
+        // reading/viewing (e.g. AO3 fic name) not just the bare domain.
+        Map<String, Map<String, Long>> titlesPerDomain = new HashMap<>();
         for (BrowserEvent e : events) {
             perDomain.merge(e.getDomain(), 1L, Long::sum);
+            if (e.getTitle() != null && !e.getTitle().isBlank()) {
+                titlesPerDomain
+                    .computeIfAbsent(e.getDomain(), k -> new HashMap<>())
+                    .merge(e.getTitle().trim(), 1L, Long::sum);
+            }
         }
 
         StringBuilder sb = new StringBuilder();
@@ -218,11 +226,24 @@ public class SessionInsightService {
                 .append("\n"));
 
         if (!perDomain.isEmpty()) {
-            sb.append("\nBrowser domains visited (visit count):\n");
+            sb.append("\nBrowser domains visited (visit count + page titles):\n");
             perDomain.entrySet().stream()
                 .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
                 .limit(15)
-                .forEach(e -> sb.append("- ").append(e.getKey()).append(" — ").append(e.getValue()).append("\n"));
+                .forEach(e -> {
+                    sb.append("- ").append(e.getKey()).append(" — ").append(e.getValue());
+                    Map<String, Long> titleMap = titlesPerDomain.get(e.getKey());
+                    if (titleMap != null && !titleMap.isEmpty()) {
+                        // top 3 distinct page titles per domain by visit count
+                        List<String> topTitles = titleMap.entrySet().stream()
+                            .sorted((a2, b2) -> Long.compare(b2.getValue(), a2.getValue()))
+                            .limit(3)
+                            .map(t -> "\"" + clip(t.getKey(), 110) + "\"")
+                            .toList();
+                        sb.append("\n    pages: ").append(String.join("; ", topTitles));
+                    }
+                    sb.append("\n");
+                });
         }
         return sb.toString();
     }
