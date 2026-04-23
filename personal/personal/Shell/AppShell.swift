@@ -7,6 +7,7 @@ import SwiftUI
 enum AppRoute: String, CaseIterable {
     case dashboard
     case activity
+    case pomodoro
     case productivity
     case settings
 }
@@ -27,6 +28,8 @@ struct AppShell: View {
                         switch activePage {
                         case .activity:
                             ActivityDetailPage()
+                        case .pomodoro:
+                            PomodoroPage()
                         case .productivity:
                             ProductivityPage()
                         case .settings:
@@ -64,7 +67,10 @@ struct Sidebar: View {
             SidebarItem(id: "dashboard", icon: "house", label: "Dashboard", route: .dashboard),
         ]
         if SidebarFeatures.showActivity {
-            items.append(SidebarItem(id: "activity", icon: "timer", label: "Activity", route: .activity))
+            items.append(SidebarItem(id: "activity", icon: "globe", label: "Activity", route: .activity))
+        }
+        if SidebarFeatures.showPomodoro {
+            items.append(SidebarItem(id: "pomodoro", icon: "timer", label: "Timer", route: .pomodoro))
         }
         if SidebarFeatures.showProductivity {
             items.append(SidebarItem(id: "productivity", icon: "chart.bar", label: "Productivity", route: .productivity))

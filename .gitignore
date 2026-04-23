@@ -27,3 +27,9 @@ personal/plan/
 
 # Reference repos
 dashboard-designs/
+
+# Logs
+excalidraw.log
+personal/excalidraw.log
+*.log
+

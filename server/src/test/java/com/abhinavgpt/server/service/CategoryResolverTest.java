@@ -3,9 +3,11 @@ package com.abhinavgpt.server.service;
 import com.abhinavgpt.server.entity.CategoryMapping;
 import com.abhinavgpt.server.entity.CategoryThreshold;
 import com.abhinavgpt.server.entity.DomainCategoryMapping;
+import com.abhinavgpt.server.entity.TrackingRule;
 import com.abhinavgpt.server.repository.CategoryMappingRepository;
 import com.abhinavgpt.server.repository.CategoryThresholdRepository;
 import com.abhinavgpt.server.repository.DomainCategoryMappingRepository;
+import com.abhinavgpt.server.repository.TrackingRuleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,5 +85,61 @@ class CategoryResolverTest {
     void idleThreshold_unknownCategory_fallsBackToDefault() {
         when(thresholdRepo.findAll()).thenReturn(List.of());
         assertThat(resolver.idleThresholdSeconds("Nonexistent")).isEqualTo(300);
+    }
+
+    // ── M13 rule override hook ──
+
+    @org.junit.jupiter.api.Nested
+    class WithRuleOverrides {
+        @Mock private TrackingRuleRepository ruleRepo;
+        private CategoryResolver resolverWithRules;
+
+        @BeforeEach
+        void setUp() {
+            resolverWithRules = new CategoryResolver(bundleRepo, domainRepo, thresholdRepo, ruleRepo);
+        }
+
+        @Test
+        void macosRuleOverridesBundleMapping() {
+            when(ruleRepo.findAll()).thenReturn(List.of(
+                rule("macos", "org.mozilla.firefox", "Reading")));
+
+            assertThat(resolverWithRules.categoryForBundle("org.mozilla.firefox"))
+                .isEqualTo("Reading");
+        }
+
+        @Test
+        void browserRuleOverridesDomainMapping() {
+            when(ruleRepo.findAll()).thenReturn(List.of(
+                rule("browser", "youtube.com", "Learning")));
+
+            assertThat(resolverWithRules.categoryForDomain("youtube.com"))
+                .isEqualTo("Learning");
+        }
+
+        @Test
+        void ruleMatchingIsCaseInsensitive() {
+            when(ruleRepo.findAll()).thenReturn(List.of(
+                rule("browser", "GitHub.com", "Code")));
+            assertThat(resolverWithRules.categoryForDomain("github.com"))
+                .isEqualTo("Code");
+        }
+
+        @Test
+        void noMatchingRule_fallsBackToMapping() {
+            when(bundleRepo.findAll()).thenReturn(List.of(
+                new CategoryMapping("com.apple.dt.Xcode", "Code")));
+            when(ruleRepo.findAll()).thenReturn(List.of(
+                rule("macos", "org.mozilla.firefox", "Reading")));
+            assertThat(resolverWithRules.categoryForBundle("com.apple.dt.Xcode"))
+                .isEqualTo("Code");
+        }
+
+        private TrackingRule rule(String source, String appName, String category) {
+            TrackingRule r = new TrackingRule(source, appName, null, category,
+                false, false, false, false, true, false);
+            r.setId(1L);
+            return r;
+        }
     }
 }

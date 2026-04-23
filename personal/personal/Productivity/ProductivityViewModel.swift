@@ -14,6 +14,7 @@ class ProductivityViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var rangeData: RangeResponse?
     @Published var summaryData: RangeSummaryResponse?
+    @Published var interruptors: [InterruptorResponse] = []
 
     // The anchor date for the current period (any day within the period)
     @Published var anchorDate: Date = Date()
@@ -149,6 +150,12 @@ class ProductivityViewModel: ObservableObject {
             self.cache[key] = (range, summary)
             self.isLoading = false
         }
+        Task {
+            if let list = try? await api.fetchInterruptorsRange(from: from, to: to),
+               activeFetchKey == key {
+                self.interruptors = list
+            }
+        }
     }
 
     // MARK: - Computed display data
@@ -213,6 +220,49 @@ class ProductivityViewModel: ObservableObject {
             ("Communication", pct(communication, total), communication, "cyan"),
             ("Other", pct(other, total), other, "gray"),
         ]
+    }
+
+    // MARK: - Focus score (M10)
+
+    private static let focusCategories: Set<String> = [
+        "Code", "Reading", "Writing", "Design", "Documenting", "Learning"
+    ]
+
+    /// Focus score for a single day: focus-seconds / total-seconds as a 0–100 int.
+    private func focusScore(_ day: RangeDayBreakdownResponse) -> Int {
+        guard day.totalTrackedSeconds > 0 else { return 0 }
+        let focus = day.categories
+            .filter { Self.focusCategories.contains($0.category) }
+            .map(\.seconds)
+            .reduce(0, +)
+        return Int(round(Double(focus) * 100.0 / Double(day.totalTrackedSeconds)))
+    }
+
+    var averageFocusScore: Int {
+        guard let range = rangeData else { return 0 }
+        let scored = range.days.filter { $0.totalTrackedSeconds > 0 }
+        guard !scored.isEmpty else { return 0 }
+        let total = scored.map(focusScore).reduce(0, +)
+        return total / scored.count
+    }
+
+    /// Per-day focus scores for the bar chart, with short labels ("Mon", "Tue"…).
+    var focusScorePerDay: [(label: String, score: Int)] {
+        guard let range = rangeData else { return [] }
+        let cal = Calendar.current
+        let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM-dd"
+        let dayFmt = DateFormatter(); dayFmt.dateFormat = periodMode == .week ? "EEE" : "d"
+        return range.days.map { day in
+            let score = focusScore(day)
+            let parsed = fmt.date(from: day.date) ?? cal.startOfDay(for: Date())
+            return (dayFmt.string(from: parsed), score)
+        }
+    }
+
+    /// Real interruptors: short (<2 min) app sessions fragmenting longer work,
+    /// aggregated across the selected range by app.
+    var topInterruptors: [(name: String, count: Int)] {
+        interruptors.prefix(6).map { ($0.appName, $0.count) }
     }
 
     // MARK: - Helpers

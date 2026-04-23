@@ -72,7 +72,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(session));
 
-        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now);
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 0);
 
         assertThat(response.apps()).hasSize(1);
         assertThat(response.apps().getFirst().appName()).isEqualTo("Safari");
@@ -89,7 +89,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(session));
 
-        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now);
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 0);
 
         assertThat(response.apps()).hasSize(1);
         assertThat(response.apps().getFirst().totalSeconds()).isEqualTo(900);
@@ -110,7 +110,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(s1, s2));
 
-        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now);
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 0);
 
         assertThat(response.apps()).hasSize(1);
         assertThat(response.apps().getFirst().totalSeconds()).isEqualTo(3600);
@@ -134,7 +134,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(short1, long1, med1));
 
-        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now);
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 0);
 
         assertThat(response.apps()).hasSize(3);
         assertThat(response.apps().get(0).appName()).isEqualTo("Safari");
@@ -148,7 +148,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now);
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 0);
 
         assertThat(response.apps()).isEmpty();
         assertThat(response.totalTrackedSeconds()).isZero();
@@ -166,7 +166,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(session));
 
-        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now);
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 0);
 
         assertThat(response.apps()).hasSize(1);
         assertThat(response.apps().getFirst().totalSeconds()).isEqualTo(7200);
@@ -178,9 +178,137 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now);
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 0);
 
         assertThat(response.date()).isEqualTo("2026-01-15");
+    }
+
+    // ── dayStartHour windowing ──
+
+    @Test
+    void getTimePerApp_dayStartHour_queriesShiftedWindow() {
+        LocalDate date = LocalDate.of(2026, 3, 10);
+        Instant now = Instant.parse("2026-03-11T08:00:00Z");
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
+        statsService.getTimePerApp(date, UTC, now, 6);
+
+        org.mockito.ArgumentCaptor<Instant> startCap = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        org.mockito.ArgumentCaptor<Instant> endCap = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        org.mockito.Mockito.verify(repository)
+            .findSessionsOverlapping(startCap.capture(), endCap.capture());
+        assertThat(startCap.getValue()).isEqualTo(Instant.parse("2026-03-10T06:00:00Z"));
+        assertThat(endCap.getValue()).isEqualTo(Instant.parse("2026-03-11T06:00:00Z"));
+    }
+
+    @Test
+    void getTimePerAppToday_beforeDayStart_usesPreviousDate() {
+        // 4am with dayStartHour=6 → logical date is yesterday
+        Instant now = Instant.parse("2026-03-11T04:30:00Z");
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 6);
+
+        assertThat(response.date()).isEqualTo("2026-03-10");
+    }
+
+    @Test
+    void getTimePerAppToday_afterDayStart_usesCurrentDate() {
+        Instant now = Instant.parse("2026-03-11T09:00:00Z");
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
+        DailyStatsResponse response = statsService.getTimePerAppToday(UTC, now, 6);
+
+        assertThat(response.date()).isEqualTo("2026-03-11");
+    }
+
+    // ── Interruptors ──
+
+    @Test
+    void interruptors_countsShortSessionsOnly() {
+        Instant now = Instant.parse("2026-04-20T12:00:00Z");
+        LocalDate date = LocalDate.of(2026, 4, 20);
+
+        // Long session (5 min) — should be excluded
+        AppSession longSess = new AppSession("Xcode", "com.apple.dt.Xcode", null,
+            Instant.parse("2026-04-20T09:00:00Z"));
+        longSess.setEndedAt(Instant.parse("2026-04-20T09:05:00Z"));
+
+        // 3 short Slack sessions (30s each)
+        AppSession short1 = new AppSession("Slack", "com.tinyspeck.slackmacgap", null,
+            Instant.parse("2026-04-20T09:10:00Z"));
+        short1.setEndedAt(Instant.parse("2026-04-20T09:10:30Z"));
+        AppSession short2 = new AppSession("Slack", "com.tinyspeck.slackmacgap", null,
+            Instant.parse("2026-04-20T09:20:00Z"));
+        short2.setEndedAt(Instant.parse("2026-04-20T09:20:30Z"));
+        AppSession short3 = new AppSession("Slack", "com.tinyspeck.slackmacgap", null,
+            Instant.parse("2026-04-20T09:30:00Z"));
+        short3.setEndedAt(Instant.parse("2026-04-20T09:30:30Z"));
+
+        when(repository.findSessionsOverlapping(any(), any()))
+            .thenReturn(List.of(longSess, short1, short2, short3));
+
+        List<InterruptorEntry> result = statsService.getInterruptors(date, UTC, now, 0);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).appName()).isEqualTo("Slack");
+        assertThat(result.get(0).count()).isEqualTo(3);
+        assertThat(result.get(0).totalSeconds()).isEqualTo(90);
+    }
+
+    @Test
+    void interruptors_respects120sThreshold() {
+        Instant now = Instant.parse("2026-04-20T12:00:00Z");
+        LocalDate date = LocalDate.of(2026, 4, 20);
+
+        // Exactly 120s — boundary excluded
+        AppSession boundary = new AppSession("Mail", "com.apple.mail", null,
+            Instant.parse("2026-04-20T09:00:00Z"));
+        boundary.setEndedAt(Instant.parse("2026-04-20T09:02:00Z"));
+        // 119s — included
+        AppSession justUnder = new AppSession("Mail", "com.apple.mail", null,
+            Instant.parse("2026-04-20T10:00:00Z"));
+        justUnder.setEndedAt(Instant.parse("2026-04-20T10:01:59Z"));
+
+        when(repository.findSessionsOverlapping(any(), any()))
+            .thenReturn(List.of(boundary, justUnder));
+
+        List<InterruptorEntry> result = statsService.getInterruptors(date, UTC, now, 0);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).count()).isEqualTo(1);
+        assertThat(result.get(0).totalSeconds()).isEqualTo(119);
+    }
+
+    @Test
+    void interruptors_cappedAt10ApsSortedByCount() {
+        Instant now = Instant.parse("2026-04-20T12:00:00Z");
+        LocalDate date = LocalDate.of(2026, 4, 20);
+
+        List<AppSession> all = new java.util.ArrayList<>();
+        // App A: 5 short sessions
+        for (int i = 0; i < 5; i++) {
+            AppSession s = new AppSession("AppA", "app.a", null,
+                Instant.parse("2026-04-20T09:00:00Z").plusSeconds(i * 60));
+            s.setEndedAt(s.getStartedAt().plusSeconds(30));
+            all.add(s);
+        }
+        // App B: 2 short sessions
+        for (int i = 0; i < 2; i++) {
+            AppSession s = new AppSession("AppB", "app.b", null,
+                Instant.parse("2026-04-20T10:00:00Z").plusSeconds(i * 60));
+            s.setEndedAt(s.getStartedAt().plusSeconds(30));
+            all.add(s);
+        }
+
+        when(repository.findSessionsOverlapping(any(), any())).thenReturn(all);
+
+        List<InterruptorEntry> result = statsService.getInterruptors(date, UTC, now, 0);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).appName()).isEqualTo("AppA");
+        assertThat(result.get(0).count()).isEqualTo(5);
+        assertThat(result.get(1).appName()).isEqualTo("AppB");
     }
 
     // ── getTimePerApp (date parameter) ──
@@ -192,7 +320,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        DailyStatsResponse response = statsService.getTimePerApp(date, UTC, now);
+        DailyStatsResponse response = statsService.getTimePerApp(date, UTC, now, 0);
 
         assertThat(response.date()).isEqualTo("2026-03-10");
     }
@@ -218,7 +346,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        List<TimelineEntry> timeline = statsService.getTimeline(date, UTC, now);
+        List<TimelineEntry> timeline = statsService.getTimeline(date, UTC, now, 0);
 
         assertThat(timeline).hasSize(2);
         assertThat(timeline.get(0).appName()).isEqualTo("Xcode");
@@ -246,7 +374,7 @@ class StatsServiceTest {
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(real, idle));
         when(categoryRepo.findAll()).thenReturn(List.of());
 
-        List<TimelineEntry> timeline = statsService.getTimeline(date, UTC, now);
+        List<TimelineEntry> timeline = statsService.getTimeline(date, UTC, now, 0);
 
         assertThat(timeline).hasSize(1);
         assertThat(timeline.getFirst().appName()).isEqualTo("Xcode");
@@ -259,7 +387,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        List<TimelineEntry> timeline = statsService.getTimeline(date, UTC, now);
+        List<TimelineEntry> timeline = statsService.getTimeline(date, UTC, now, 0);
 
         assertThat(timeline).isEmpty();
     }
@@ -281,7 +409,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(s1, s2));
 
-        List<ActivityLogEntry> log = statsService.getActivityLog(date, UTC, now);
+        List<ActivityLogEntry> log = statsService.getActivityLog(date, UTC, now, 0);
 
         assertThat(log).hasSize(2);
         assertThat(log.get(0).appName()).isEqualTo("Terminal");
@@ -305,7 +433,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        List<ActivityLogEntry> log = statsService.getActivityLog(date, UTC, now);
+        List<ActivityLogEntry> log = statsService.getActivityLog(date, UTC, now, 0);
 
         assertThat(log).hasSize(1);
         assertThat(log.getFirst().detail()).isEqualTo("Browsing");
@@ -337,7 +465,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now, 0);
 
         assertThat(breakdown).hasSize(2);
         // Code = 1h + 30m = 5400s (75%), Browsing = 30m = 1800s (25%)
@@ -361,7 +489,7 @@ class StatsServiceTest {
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of(unknown));
         when(categoryRepo.findAll()).thenReturn(List.of());
 
-        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now, 0);
 
         assertThat(breakdown).hasSize(1);
         assertThat(breakdown.getFirst().category()).isEqualTo("Other");
@@ -375,7 +503,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now, 0);
 
         assertThat(breakdown).isEmpty();
     }
@@ -408,7 +536,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now);
+        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now, 0);
 
         assertThat(blocks).hasSize(2);
         assertThat(blocks.get(0).task()).isEqualTo("Code");
@@ -443,7 +571,7 @@ class StatsServiceTest {
             new CategoryMapping("com.tinyspeck.slackmacgap", "Communication")
         ));
 
-        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now);
+        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now, 0);
 
         assertThat(blocks).hasSize(3);
         assertThat(blocks.get(0).task()).isEqualTo("Code");
@@ -477,7 +605,7 @@ class StatsServiceTest {
             new CategoryMapping("com.tinyspeck.slackmacgap", "Communication")
         ));
 
-        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now);
+        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now, 0);
 
         // Brief Slack check absorbed → single Code block spanning 09:00-10:17
         assertThat(blocks).hasSize(1);
@@ -513,7 +641,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now);
+        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now, 0);
 
         // Brief Finder absorbed into predecessor (Code), then Browsing stays separate
         assertThat(blocks).hasSize(2);
@@ -530,7 +658,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now);
+        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now, 0);
 
         assertThat(blocks).isEmpty();
     }
@@ -555,7 +683,7 @@ class StatsServiceTest {
             new CategoryMapping("com.tinyspeck.slackmacgap", "Communication")
         ));
 
-        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now);
+        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now, 0);
 
         // Gap > 3 min threshold — should be TWO separate Communication blocks
         assertThat(blocks).hasSize(2);
@@ -586,7 +714,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.dt.Xcode", "Code")
         ));
 
-        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now);
+        List<WorkblockEntry> blocks = statsService.getWorkblocks(date, UTC, now, 0);
 
         // Small gap — should merge into one block
         assertThat(blocks).hasSize(1);
@@ -621,7 +749,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        List<FocusSessionEntry> sessions = statsService.getFocusSessions(date, UTC, now);
+        List<FocusSessionEntry> sessions = statsService.getFocusSessions(date, UTC, now, 0);
 
         // Code block (Xcode+Terminal merged), Browsing block (Safari)
         assertThat(sessions).hasSize(2);
@@ -671,7 +799,7 @@ class StatsServiceTest {
             new CategoryMapping("com.tinyspeck.slackmacgap", "Communication")
         ));
 
-        List<FocusSessionEntry> sessions = statsService.getFocusSessions(date, UTC, now);
+        List<FocusSessionEntry> sessions = statsService.getFocusSessions(date, UTC, now, 0);
 
         // Single merged Code session containing both Xcode and Slack
         assertThat(sessions).hasSize(1);
@@ -693,7 +821,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        List<FocusSessionEntry> sessions = statsService.getFocusSessions(date, UTC, now);
+        List<FocusSessionEntry> sessions = statsService.getFocusSessions(date, UTC, now, 0);
 
         assertThat(sessions).isEmpty();
     }
@@ -724,7 +852,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        RangeResponse response = statsService.getRange(from, to, UTC, now);
+        RangeResponse response = statsService.getRange(from, to, UTC, now, 0);
 
         assertThat(response.days()).hasSize(2);
         assertThat(response.days().get(0).date()).isEqualTo("2026-03-07");
@@ -745,7 +873,7 @@ class StatsServiceTest {
 
         when(repository.findSessionsOverlapping(any(), any())).thenReturn(List.of());
 
-        RangeResponse response = statsService.getRange(from, to, UTC, now);
+        RangeResponse response = statsService.getRange(from, to, UTC, now, 0);
 
         assertThat(response.days()).hasSize(1);
         assertThat(response.days().get(0).totalTrackedSeconds()).isEqualTo(0);
@@ -778,7 +906,7 @@ class StatsServiceTest {
             new CategoryMapping("com.apple.Safari", "Browsing")
         ));
 
-        RangeSummaryResponse summary = statsService.getRangeSummary(from, to, UTC, now);
+        RangeSummaryResponse summary = statsService.getRangeSummary(from, to, UTC, now, 0);
 
         assertThat(summary.totalTrackedSeconds()).isEqualTo(10800); // 3h
         assertThat(summary.daysWithData()).isEqualTo(2);
@@ -817,7 +945,7 @@ class StatsServiceTest {
 
         LocalDate date = LocalDate.of(2026, 4, 9);
         Instant now = Instant.parse("2026-04-09T12:00:00Z");
-        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now, 0);
 
         // Should have Code (20 min = 1200s) and Media (10 min = 600s)
         assertThat(breakdown).hasSize(2);
@@ -841,7 +969,7 @@ class StatsServiceTest {
 
         LocalDate date = LocalDate.of(2026, 4, 9);
         Instant now = Instant.parse("2026-04-09T12:00:00Z");
-        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now, 0);
 
         assertThat(breakdown).hasSize(1);
         assertThat(breakdown.getFirst().category()).isEqualTo("Browsing");
@@ -865,7 +993,7 @@ class StatsServiceTest {
 
         LocalDate date = LocalDate.of(2026, 4, 9);
         Instant now = Instant.parse("2026-04-09T12:00:00Z");
-        List<ActivityLogEntry> log = statsService.getActivityLog(date, UTC, now);
+        List<ActivityLogEntry> log = statsService.getActivityLog(date, UTC, now, 0);
 
         assertThat(log).hasSize(1);
         assertThat(log.getFirst().detail()).isEqualTo("github.com — PR #42");
@@ -892,7 +1020,7 @@ class StatsServiceTest {
 
         LocalDate date = LocalDate.of(2026, 4, 9);
         Instant now = Instant.parse("2026-04-09T12:00:00Z");
-        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now, 0);
 
         assertThat(breakdown).hasSize(1);
         assertThat(breakdown.getFirst().category()).isEqualTo("Code");
@@ -920,7 +1048,7 @@ class StatsServiceTest {
 
         LocalDate date = LocalDate.of(2026, 4, 9);
         Instant now = Instant.parse("2026-04-09T12:00:00Z");
-        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now);
+        List<CategoryBreakdownEntry> breakdown = statsService.getCategoryBreakdown(date, UTC, now, 0);
 
         assertThat(breakdown).hasSize(1);
         assertThat(breakdown.getFirst().category()).isEqualTo("Browsing");

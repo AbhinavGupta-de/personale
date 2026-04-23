@@ -11,6 +11,7 @@ enum SidebarFeatures {
     static let showHabits = false         // deferred
     static let showProductivity = true    // M4
     static let showTeam = false           // M9
+    static let showPomodoro = true        // M11
 }
 
 // MARK: - Dashboard Feature Flags

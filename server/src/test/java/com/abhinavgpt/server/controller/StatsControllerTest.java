@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,7 +40,7 @@ class StatsControllerTest {
             5400,
             0
         );
-        when(statsService.getTimePerAppToday(any(), any())).thenReturn(response);
+        when(statsService.getTimePerAppToday(any(), any(), anyInt())).thenReturn(response);
 
         mockMvc.perform(get("/api/stats/today"))
             .andExpect(status().isOk())
@@ -55,7 +56,7 @@ class StatsControllerTest {
     @Test
     void getToday_noData_returnsEmptyList() throws Exception {
         DailyStatsResponse response = new DailyStatsResponse("2026-03-07", List.of(), 0, 0);
-        when(statsService.getTimePerAppToday(any(), any())).thenReturn(response);
+        when(statsService.getTimePerAppToday(any(), any(), anyInt())).thenReturn(response);
 
         mockMvc.perform(get("/api/stats/today"))
             .andExpect(status().isOk())
@@ -72,7 +73,7 @@ class StatsControllerTest {
             List.of(new AppTimeEntry("Xcode", "com.apple.dt.Xcode", 7200)),
             7200, 2
         );
-        when(statsService.getTimePerApp(any(), any(), any())).thenReturn(response);
+        when(statsService.getTimePerApp(any(), any(), any(), anyInt())).thenReturn(response);
 
         mockMvc.perform(get("/api/stats/day").param("date", "2026-03-10"))
             .andExpect(status().isOk())
@@ -85,7 +86,7 @@ class StatsControllerTest {
 
     @Test
     void getTimeline_returns200WithBlocks() throws Exception {
-        when(statsService.getTimeline(any(), any(), any())).thenReturn(List.of(
+        when(statsService.getTimeline(any(), any(), any(), anyInt())).thenReturn(List.of(
             new TimelineEntry("09:00", "10:00", "Xcode", "com.apple.dt.Xcode", "Code"),
             new TimelineEntry("10:00", "10:30", "Safari", "com.apple.Safari", "Browsing")
         ));
@@ -104,7 +105,7 @@ class StatsControllerTest {
 
     @Test
     void getActivity_returns200WithLog() throws Exception {
-        when(statsService.getActivityLog(any(), any(), any())).thenReturn(List.of(
+        when(statsService.getActivityLog(any(), any(), any(), anyInt())).thenReturn(List.of(
             new ActivityLogEntry("09:00:00", "Terminal", "com.apple.Terminal", "zsh", 1800),
             new ActivityLogEntry("09:30:00", "Safari", "com.apple.Safari", "GitHub", 1800)
         ));
@@ -122,7 +123,7 @@ class StatsControllerTest {
 
     @Test
     void getCategories_returns200WithBreakdown() throws Exception {
-        when(statsService.getCategoryBreakdown(any(), any(), any())).thenReturn(List.of(
+        when(statsService.getCategoryBreakdown(any(), any(), any(), anyInt())).thenReturn(List.of(
             new CategoryBreakdownEntry("Code", 5400, 75),
             new CategoryBreakdownEntry("Browsing", 1800, 25)
         ));
@@ -140,7 +141,7 @@ class StatsControllerTest {
 
     @Test
     void getWorkblocks_returns200WithBlocks() throws Exception {
-        when(statsService.getWorkblocks(any(), any(), any())).thenReturn(List.of(
+        when(statsService.getWorkblocks(any(), any(), any(), anyInt())).thenReturn(List.of(
             new WorkblockEntry("9:00", "Code", "1 hr 30 min", 5400),
             new WorkblockEntry("10:30", "Browsing", "30 min", 1800)
         ));
@@ -158,7 +159,7 @@ class StatsControllerTest {
 
     @Test
     void getSessions_returns200WithFocusSessions() throws Exception {
-        when(statsService.getFocusSessions(any(), any(), any())).thenReturn(List.of(
+        when(statsService.getFocusSessions(any(), any(), any(), anyInt())).thenReturn(List.of(
             new FocusSessionEntry("Code", "09:00", "10:30", 5400, "1 hr 30 min",
                 List.of(
                     new SessionAppBreakdown("Xcode", "com.apple.dt.Xcode", "Code", 3600, 67, List.of()),
@@ -187,7 +188,7 @@ class StatsControllerTest {
 
     @Test
     void getRange_returns200WithDays() throws Exception {
-        when(statsService.getRange(any(), any(), any(), any())).thenReturn(
+        when(statsService.getRange(any(), any(), any(), any(), anyInt())).thenReturn(
             new RangeResponse("2026-03-01", "2026-03-02", List.of(
                 new RangeDayBreakdown("2026-03-01", 3600, List.of(
                     new RangeDayBreakdown.CategorySeconds("Code", 3600))),
@@ -211,7 +212,7 @@ class StatsControllerTest {
 
     @Test
     void getRangeSummary_returns200WithAggregates() throws Exception {
-        when(statsService.getRangeSummary(any(), any(), any(), any())).thenReturn(
+        when(statsService.getRangeSummary(any(), any(), any(), any(), anyInt())).thenReturn(
             new RangeSummaryResponse("2026-03-01", "2026-03-07", 36000, 5, 7200, 36000,
                 List.of(new CategoryBreakdownEntry("Code", 36000, 100)))
         );
