@@ -12,7 +12,7 @@ enum SidebarFeatures {
     static let showProductivity = true    // M4
     static let showTeam = false           // M9
     static let showPomodoro = true        // M11
-    static let showReview = true          // Rize-style Time Entry Review
+    static let showReview = true          // Time Entry Review page
 }
 
 // MARK: - Dashboard Feature Flags
