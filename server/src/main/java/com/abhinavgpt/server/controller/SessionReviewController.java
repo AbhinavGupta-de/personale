@@ -53,6 +53,35 @@ public class SessionReviewController {
             LocalDate.parse(date), ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
+    /** Fire AI generate for every block on this day that doesn't yet have an
+     *  AI draft. Returns the refreshed list. Blocks already drafted are skipped. */
+    @PostMapping("/generate-missing")
+    public ResponseEntity<List<SessionReviewResponse>> generateMissing(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
+        LocalDate d = LocalDate.parse(date);
+        ZoneId zone = ZoneId.systemDefault();
+        Instant now = Instant.now();
+        int dsh = dayStartHour;
+        List<SessionReviewResponse> current = service.listForDate(d, zone, now, dsh, "all");
+        for (SessionReviewResponse r : current) {
+            if (r.aiTitle() != null && !r.aiTitle().isBlank()) continue;
+            try {
+                FocusSessionEntry block = service.findBlock(r.blockKey(), d, zone, now, dsh);
+                Instant dayStart = d.atStartOfDay(zone)
+                    .plusHours(Math.max(0, Math.min(23, dsh))).toInstant();
+                Instant blockStart = parseHHmm(block.startTime(), dayStart, zone);
+                Instant blockEnd = parseHHmm(block.endTime(), dayStart, zone);
+                if (blockEnd.isBefore(blockStart)) blockEnd = blockEnd.plusSeconds(86_400);
+                String[] td = insight.generateForWindow(block.name(), blockStart, blockEnd);
+                service.upsertAiInsight(r.blockKey(), d, block, td[0], td[1], td[2]);
+            } catch (Exception ignored) {
+                // One failure shouldn't block the batch; user can retry per-block.
+            }
+        }
+        return ResponseEntity.ok(service.listForDate(d, zone, now, dsh, "all"));
+    }
+
     @PostMapping("/{key}/generate")
     public ResponseEntity<SessionReviewResponse> generate(
             @PathVariable String key,

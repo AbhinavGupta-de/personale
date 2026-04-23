@@ -233,6 +233,7 @@ struct SessionReviewUpdateRequest: Encodable {
     var task: String?
     var project: String?
     var client: String?
+    var category: String?
 }
 
 // MARK: - Session Insights (M16)
@@ -443,6 +444,23 @@ class APIClient {
             throw URLError(.badServerResponse)
         }
         return try decoder.decode(SessionReviewResponse.self, from: data)
+    }
+
+    /// Batch: regenerate every block on the day that has no AI draft yet.
+    func generateMissingReviewInsights(date: String) async throws -> [SessionReviewResponse] {
+        let dsh = AppSettings.shared.dayStartHour
+        var urlReq = URLRequest(url: baseURL.appendingPathComponent("/api/reviews/generate-missing")
+            .appending(queryItems: [
+                URLQueryItem(name: "date", value: date),
+                URLQueryItem(name: "dayStartHour", value: String(dsh))
+            ]))
+        urlReq.httpMethod = "POST"
+        urlReq.timeoutInterval = 120
+        let (data, response) = try await session.data(for: urlReq)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try decoder.decode([SessionReviewResponse].self, from: data)
     }
 
     func generateReviewInsight(key: String, date: String) async throws -> SessionReviewResponse {
