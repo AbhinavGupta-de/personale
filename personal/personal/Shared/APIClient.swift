@@ -318,6 +318,22 @@ class APIClient {
         try await delete("/api/categories/\(encoded)")
     }
 
+    /// Upsert a single bundleId → category mapping (used by on-device
+    /// auto-classifier). Writes through to `category_mappings`.
+    struct MappingUpsert: Encodable {
+        let bundleId: String
+        let category: String
+    }
+    struct MappingUpsertAck: Decodable {
+        let bundleId: String
+        let category: String
+    }
+    func upsertCategoryMapping(bundleId: String, category: String) async throws {
+        let _: MappingUpsertAck = try await body(
+            "/api/settings/categories/mapping", method: "PUT",
+            body: MappingUpsert(bundleId: bundleId, category: category))
+    }
+
     // MARK: - Tracking Rules (M13)
 
     func fetchTrackingRules() async throws -> [TrackingRuleResponse] {

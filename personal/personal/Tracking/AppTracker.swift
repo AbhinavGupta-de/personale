@@ -123,6 +123,20 @@ class AppTracker: ObservableObject {
         return categoryMap[bid] ?? "Other"
     }
 
+    /// Request on-device classification when we encounter a new bundle id.
+    /// Fire-and-forget; CategoryClassifier is idempotent per bundle per session.
+    private func maybeClassify(appName: String, bundleId: String) {
+        guard categoryMap[bundleId] == nil else { return }
+        let known = Array(Set(categoryMap.values)).sorted()
+        let allowed = known.isEmpty
+            ? ["Code", "Reading", "Writing", "Design", "Communication", "Browsing", "Media", "Utilities", "Other"]
+            : known
+        Task { @MainActor in
+            CategoryClassifier.shared.classifyIfNeeded(
+                appName: appName, bundleId: bundleId, allowed: allowed)
+        }
+    }
+
     // MARK: - Idle Detection
 
     private func startIdlePolling() {
@@ -209,6 +223,11 @@ class AppTracker: ObservableObject {
 
         // Resolve category for idle threshold
         currentCategory = resolveCategory(for: bid)
+
+        // If this bundle is unknown to the server, kick off on-device classification.
+        if categoryMap[bid] == nil {
+            maybeClassify(appName: name, bundleId: bid)
+        }
 
         // Capture window title if Accessibility is granted
         let windowTitle = captureWindowTitle(for: app)
