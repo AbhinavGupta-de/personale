@@ -18,6 +18,7 @@ class ActivityViewModel: ObservableObject {
     @Published var viewMode: ViewMode = .day
     @Published var weekSessions: [String: [FocusSessionResponse]] = [:]
     @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
+    @Published var availableCategoryNames: [String] = []
 
     var dayStartHour: Int { AppSettings.shared.dayStartHour }
 
@@ -278,6 +279,12 @@ class ActivityViewModel: ObservableObject {
                 activeFetchDate == date
             else { return }
             self.reviewsByKey = Dictionary(uniqueKeysWithValues: reviews.map { ($0.blockKey, $0) })
+        }
+        Task {
+            if availableCategoryNames.isEmpty,
+               let cats = try? await api.fetchCategorySettings() {
+                self.availableCategoryNames = cats.map(\.name)
+            }
         }
 
         // Prefetch adjacent
