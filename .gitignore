@@ -18,8 +18,15 @@ server/build/
 .idea/
 *.iml
 
-# Environment
+# Environment & secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+application-local.yaml
+application-local.properties
 
 # Internal planning docs
 plans/
