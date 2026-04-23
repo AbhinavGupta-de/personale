@@ -43,6 +43,7 @@ struct ProductivityPage: View {
                 // Date navigator
                 DateNavigator(
                     dateText: viewModel.displayPeriod,
+                    activeView: .constant("Day"),
                     isToday: viewModel.isCurrentPeriod,
                     isLoading: viewModel.isLoading,
                     onPrevious: { viewModel.goToPreviousPeriod() },

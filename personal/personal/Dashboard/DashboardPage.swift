@@ -12,6 +12,7 @@ struct DashboardPage: View {
             VStack(spacing: AppMetrics.cardGap) {
                 DateNavigator(
                     dateText: viewModel.displayDate,
+                    activeView: .constant("Day"),
                     isToday: viewModel.isToday,
                     isLoading: viewModel.isLoading,
                     onPrevious: { viewModel.goToPreviousDay() },

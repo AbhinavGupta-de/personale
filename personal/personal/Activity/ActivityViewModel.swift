@@ -5,13 +5,38 @@ import SwiftUI
 
 @MainActor
 class ActivityViewModel: ObservableObject {
-    @Published var selectedDate: Date = Date()
+    enum ViewMode: String { case day = "Day"; case week = "Week" }
+
+    @Published var selectedDate: Date = ActivityViewModel.effectiveToday(
+        dayStartHour: AppSettings.shared.dayStartHour)
     @Published var isLoading = false
     @Published var sessions: [FocusSessionResponse] = []
     @Published var selectedSession: FocusSessionResponse?
     @Published var showSessionDetail = false
     @Published var dayStats: DailyStatsResponse?
     @Published var categoryBreakdown: [CategoryBreakdownResponse] = []
+    @Published var viewMode: ViewMode = .day
+    @Published var weekSessions: [String: [FocusSessionResponse]] = [:]
+    @Published var nextDaySessions: [FocusSessionResponse] = []
+
+    var dayStartHour: Int { AppSettings.shared.dayStartHour }
+
+    /// The calendar date whose "day window" currently contains `now`.
+    /// If now is before `dayStartHour`, we're still inside the previous
+    /// calendar date's window (e.g. 4am with dayStartHour=6 → yesterday).
+    static func effectiveToday(dayStartHour: Int, now: Date = Date()) -> Date {
+        let cal = Calendar.current
+        let hour = cal.component(.hour, from: now)
+        let start = cal.startOfDay(for: now)
+        if hour < dayStartHour {
+            return cal.date(byAdding: .day, value: -1, to: start) ?? start
+        }
+        return start
+    }
+
+    var effectiveToday: Date {
+        Self.effectiveToday(dayStartHour: dayStartHour)
+    }
 
     private let api = APIClient.shared
     private var cache: [String: [FocusSessionResponse]] = [:]
@@ -33,7 +58,39 @@ class ActivityViewModel: ObservableObject {
     var displayDate: String { Self.displayFmt.string(from: selectedDate) }
 
     var isToday: Bool {
-        Calendar.current.isDateInToday(selectedDate)
+        Calendar.current.isDate(selectedDate, inSameDayAs: effectiveToday)
+    }
+
+    // MARK: - Week helpers
+
+    var weekStart: Date {
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: selectedDate)
+        return cal.date(from: comps) ?? selectedDate
+    }
+
+    var weekEnd: Date {
+        Calendar.current.date(byAdding: .day, value: 6, to: weekStart) ?? selectedDate
+    }
+
+    var weekDates: [Date] {
+        (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: weekStart) }
+    }
+
+    var displayWeek: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        return "\(fmt.string(from: weekStart)) – \(fmt.string(from: weekEnd))"
+    }
+
+    var displayPeriod: String {
+        viewMode == .day ? displayDate : displayWeek
+    }
+
+    var isCurrentPeriod: Bool {
+        viewMode == .day
+            ? isToday
+            : Calendar.current.isDate(selectedDate, equalTo: Date(), toGranularity: .weekOfYear)
     }
 
     // MARK: - Navigation
@@ -51,7 +108,7 @@ class ActivityViewModel: ObservableObject {
 
     func goToNextDay() {
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-        if tomorrow <= Date() {
+        if tomorrow <= effectiveToday {
             selectedDate = tomorrow
             selectedSession = nil
             showSessionDetail = false
@@ -60,10 +117,77 @@ class ActivityViewModel: ObservableObject {
     }
 
     func goToToday() {
-        selectedDate = Date()
+        selectedDate = effectiveToday
         selectedSession = nil
         showSessionDetail = false
         navigateToCurrentDate()
+    }
+
+    // MARK: - Week-aware navigation (used by DateNavigator)
+
+    func goToPrevious() {
+        switch viewMode {
+        case .day:
+            goToPreviousDay()
+        case .week:
+            selectedDate = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: selectedDate) ?? selectedDate
+            fetchWeek()
+        }
+    }
+
+    func goToNext() {
+        switch viewMode {
+        case .day:
+            goToNextDay()
+        case .week:
+            let next = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: selectedDate) ?? selectedDate
+            if next <= effectiveToday {
+                selectedDate = next
+                fetchWeek()
+            }
+        }
+    }
+
+    func goToCurrent() {
+        switch viewMode {
+        case .day:
+            goToToday()
+        case .week:
+            selectedDate = effectiveToday
+            fetchWeek()
+        }
+    }
+
+    func switchViewMode(_ mode: ViewMode) {
+        viewMode = mode
+        if mode == .week { fetchWeek() }
+    }
+
+    private func fetchWeek() {
+        // Fetch 8 days so each day's overflow-into-next is covered.
+        for i in 0...7 {
+            guard let date = Calendar.current.date(byAdding: .day, value: i, to: weekStart),
+                  date <= Date()
+            else { continue }
+            let key = Self.dateFmt.string(from: date)
+            if weekSessions[key] != nil { continue }
+            Task {
+                if let r = try? await api.fetchSessions(date: key) {
+                    self.weekSessions[key] = r
+                }
+            }
+        }
+    }
+
+    /// Display-ready sessions for a specific day in week view, applying the
+    /// dayStartHour overflow merge.
+    func weekDisplaySessions(for date: Date) -> [FocusSessionResponse] {
+        let key = Self.dateFmt.string(from: date)
+        let sessions = weekSessions[key] ?? []
+        let next = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+        let nextKey = Self.dateFmt.string(from: next)
+        let nextSessions = weekSessions[nextKey] ?? []
+        return displaySessions(for: date, daySessions: sessions, nextSessions: nextSessions)
     }
 
     private func navigateToCurrentDate() {
@@ -80,7 +204,31 @@ class ActivityViewModel: ObservableObject {
 
     func selectSession(_ session: FocusSessionResponse) {
         selectedSession = session
-        showSessionDetail = true
+    }
+
+    func clearSelectedSession() {
+        selectedSession = nil
+    }
+
+    // MARK: - Session rating (M8 stub — UserDefaults-backed)
+
+    func rating(for session: FocusSessionResponse) -> Int {
+        UserDefaults.standard.integer(forKey: "rating-\(session.id)")
+    }
+
+    func setRating(_ rating: Int, for session: FocusSessionResponse) {
+        UserDefaults.standard.set(rating, forKey: "rating-\(session.id)")
+        objectWillChange.send()
+    }
+
+    // MARK: - Quality Score (M8 stub — refined in M10)
+
+    func qualityScore(for session: FocusSessionResponse) -> Int {
+        // Heuristic stub: deduct points for fragmented categories
+        // (proxy for interrupters until SessionMergeService exposes them).
+        let categoryCount = session.categories.count
+        let deduction = max(0, (categoryCount - 1) * 8)
+        return max(0, 100 - deduction)
     }
 
     private func fetchSessions() {
@@ -95,6 +243,24 @@ class ActivityViewModel: ObservableObject {
             self.sessions = result
             self.cache[date] = result
             self.isLoading = false
+        }
+
+        // Fetch next day for overflow sessions (2am on day X+1 belongs to day X's window
+        // when dayStartHour > 0).
+        if let nextDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) {
+            let nextStr = Self.dateFmt.string(from: nextDate)
+            if let cached = cache[nextStr] {
+                self.nextDaySessions = cached
+            } else {
+                self.nextDaySessions = []
+                Task {
+                    guard let r = try? await api.fetchSessions(date: nextStr),
+                        activeFetchDate == date
+                    else { return }
+                    self.nextDaySessions = r
+                    self.cache[nextStr] = r
+                }
+            }
         }
 
         // Fetch day-level data for Daily Summary
@@ -114,7 +280,7 @@ class ActivityViewModel: ObservableObject {
         // Prefetch adjacent
         for offset in [-1, 1] {
             guard let adjDate = Calendar.current.date(byAdding: .day, value: offset, to: selectedDate),
-                adjDate <= Date()
+                adjDate <= effectiveToday
             else { continue }
             let adjStr = Self.dateFmt.string(from: adjDate)
             guard cache[adjStr] == nil else { continue }
@@ -126,10 +292,49 @@ class ActivityViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Day-window session merging
+
+    /// Sessions to render for the currently selected day, taking `dayStartHour`
+    /// into account. A "day" runs from dayStartHour(selectedDate) to
+    /// dayStartHour(selectedDate + 1). Sessions starting before dayStartHour
+    /// on selectedDate belong to the previous day's window and are dropped.
+    /// Sessions starting before dayStartHour on the next calendar day belong
+    /// to this window and are added.
+    var displaySessions: [FocusSessionResponse] {
+        let startH = Double(dayStartHour)
+        let fromToday = sessions.filter { s in
+            guard let h = parseTimeToHour(s.startTime) else { return false }
+            return h >= startH
+        }
+        let fromTomorrow = nextDaySessions.filter { s in
+            guard let h = parseTimeToHour(s.startTime) else { return false }
+            return h < startH
+        }
+        return fromToday + fromTomorrow
+    }
+
+    /// Same filter applied to any `(date, sessions)` pair for week view.
+    func displaySessions(
+        for date: Date,
+        daySessions: [FocusSessionResponse],
+        nextSessions: [FocusSessionResponse]
+    ) -> [FocusSessionResponse] {
+        let startH = Double(dayStartHour)
+        let fromDay = daySessions.filter { s in
+            guard let h = parseTimeToHour(s.startTime) else { return false }
+            return h >= startH
+        }
+        let fromNext = nextSessions.filter { s in
+            guard let h = parseTimeToHour(s.startTime) else { return false }
+            return h < startH
+        }
+        return fromDay + fromNext
+    }
+
     // MARK: - Daily Summary computed data
 
     var totalFocusSeconds: Int {
-        sessions.reduce(0) { $0 + $1.durationSeconds }
+        displaySessions.reduce(0) { $0 + $1.durationSeconds }
     }
 
     var totalFocusDuration: String {
@@ -141,6 +346,34 @@ class ActivityViewModel: ObservableObject {
     var percentOfTarget: Double {
         let targetSecs = AppSettings.shared.targetHoursPerDay * 3600
         return targetSecs > 0 ? Double(totalFocusSeconds) / Double(targetSecs) * 100 : 0
+    }
+
+    // MARK: - Weekly Summary computed data
+
+    var weekTotalFocusSeconds: Int {
+        weekSessions.values.flatMap { $0 }.reduce(0) { $0 + $1.durationSeconds }
+    }
+
+    var weekTotalFocusDuration: String { formatDuration(weekTotalFocusSeconds) }
+
+    var weekEntryCount: Int {
+        weekSessions.values.map(\.count).reduce(0, +)
+    }
+
+    var weekCategoryBreakdown: [(category: String, totalSeconds: Int, percent: Int)] {
+        var totals: [String: Int] = [:]
+        for sessions in weekSessions.values {
+            for s in sessions {
+                for c in s.categories {
+                    totals[c.category, default: 0] += c.totalSeconds
+                }
+            }
+        }
+        let grand = totals.values.reduce(0, +)
+        guard grand > 0 else { return [] }
+        return totals
+            .map { (category: $0.key, totalSeconds: $0.value, percent: Int(round(Double($0.value) * 100 / Double(grand)))) }
+            .sorted { $0.totalSeconds > $1.totalSeconds }
     }
 
     // MARK: - Helpers
