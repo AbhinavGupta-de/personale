@@ -34,6 +34,7 @@ struct ActivityDetailPage: View {
                                 categoryColor: viewModel.categoryColor,
                                 parseTime: viewModel.parseTimeToHour,
                                 formatDuration: viewModel.formatDuration,
+                                labelFor: { viewModel.label(for: $0) },
                                 selectedSession: $viewModel.selectedSession
                             )
                             .frame(maxWidth: .infinity)
@@ -125,6 +126,7 @@ struct DayTimelineColumn: View {
     let parseTime: (String) -> Double?
     let categoryColor: (String) -> Color
     let formatDuration: (Int) -> String
+    var labelFor: (FocusSessionResponse) -> String = { $0.name }
     @Binding var selectedSession: FocusSessionResponse?
 
     @Environment(\.theme) private var theme
@@ -164,9 +166,10 @@ struct DayTimelineColumn: View {
                     .fill(color.opacity(isSelected ? 0.85 : 0.6))
                 if height >= 28 {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(session.name)
+                        Text(labelFor(session))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.white)
+                            .lineLimit(2)
                         if height >= 40 {
                             Text("\(session.startTime) - \(session.endTime)")
                                 .font(.system(size: 9))
@@ -284,6 +287,7 @@ struct DayTimelineCard: View {
     let categoryColor: (String) -> Color
     let parseTime: (String) -> Double?
     let formatDuration: (Int) -> String
+    var labelFor: (FocusSessionResponse) -> String = { $0.name }
     @Binding var selectedSession: FocusSessionResponse?
 
     @Environment(\.theme) private var theme
@@ -326,6 +330,7 @@ struct DayTimelineCard: View {
                         parseTime: parseTime,
                         categoryColor: categoryColor,
                         formatDuration: formatDuration,
+                        labelFor: labelFor,
                         selectedSession: $selectedSession
                     )
                     .frame(maxWidth: .infinity)

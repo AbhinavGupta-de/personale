@@ -82,7 +82,9 @@ struct DashboardPage: View {
 
                 TodaySessionsStrip(
                     sessions: viewModel.focusSessions,
-                    formatDuration: viewModel.formatDuration
+                    formatDuration: viewModel.formatDuration,
+                    reviewsByKey: viewModel.reviewsByKey,
+                    dateString: viewModel.dateString
                 )
 
                 WebsitesCard(
