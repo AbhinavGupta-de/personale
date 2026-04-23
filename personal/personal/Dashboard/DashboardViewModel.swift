@@ -5,8 +5,14 @@ import SwiftUI
 
 @MainActor
 class DashboardViewModel: ObservableObject {
-    @Published var selectedDate: Date = Date()
+    @Published var selectedDate: Date = ActivityViewModel.effectiveToday(
+        dayStartHour: AppSettings.shared.dayStartHour)
     @Published var isLoading = false
+
+    var dayStartHour: Int { AppSettings.shared.dayStartHour }
+    var effectiveToday: Date {
+        ActivityViewModel.effectiveToday(dayStartHour: dayStartHour)
+    }
 
     // Live data (nil = not yet loaded, use mock fallback)
     @Published var dayStats: DailyStatsResponse?
@@ -15,6 +21,9 @@ class DashboardViewModel: ObservableObject {
     @Published var categoryBreakdown: [CategoryBreakdownResponse]?
     @Published var workblockEntries: [WorkblockEntryResponse]?
     @Published var domainStats: DomainStatsResponse?
+    @Published var focusSessions: [FocusSessionResponse] = []
+    @Published var categories: [CategoryResponse] = []
+    @Published var streakDays: Int = 0
 
     // Break timer — ticks every second, computed client-side from existing data
     @Published var secondsSinceLastBreak: Int = 0
@@ -56,7 +65,7 @@ class DashboardViewModel: ObservableObject {
     var displayDate: String { Self.displayFmt.string(from: selectedDate) }
 
     var isToday: Bool {
-        Calendar.current.isDateInToday(selectedDate)
+        Calendar.current.isDate(selectedDate, inSameDayAs: effectiveToday)
     }
 
     // MARK: - Converted data for cards
@@ -307,15 +316,24 @@ class DashboardViewModel: ObservableObject {
     func goToNextDay() {
         let tomorrow =
             Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-        if tomorrow <= Date() {
+        if tomorrow <= effectiveToday {
             selectedDate = tomorrow
             navigateToCurrentDate()
         }
     }
 
     func goToToday() {
-        selectedDate = Date()
+        selectedDate = effectiveToday
         navigateToCurrentDate()
+    }
+
+    // MARK: - Helpers
+
+    func formatDuration(_ seconds: Int) -> String {
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        if h > 0 { return "\(h) hr \(m) min" }
+        return "\(m) min"
     }
 
     private func navigateToCurrentDate() {
@@ -337,6 +355,7 @@ class DashboardViewModel: ObservableObject {
             categoryBreakdown = nil
             workblockEntries = nil
             domainStats = nil
+            focusSessions = []
             isLoading = true
         }
 
@@ -402,6 +421,21 @@ class DashboardViewModel: ObservableObject {
             self.domainStats = d
             self.cache[date, default: DayCache()].domainStats = d
         }
+        Task {
+            guard let s = try? await api.fetchSessions(date: date),
+                activeFetchDate == date
+            else { return }
+            self.focusSessions = s
+        }
+        Task {
+            // Categories rarely change — load once per navigation and keep.
+            if let c = try? await api.fetchCategorySettings(), activeFetchDate == date {
+                self.categories = c
+            }
+        }
+        Task {
+            await self.recomputeStreak()
+        }
 
         // Prefetch adjacent days in background
         prefetchAdjacent()
@@ -412,7 +446,7 @@ class DashboardViewModel: ObservableObject {
         let next = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate)!
 
         for date in [prev, next] {
-            guard date <= Date() else { continue }
+            guard date <= effectiveToday else { continue }
             let dateStr = Self.dateFmt.string(from: date)
             guard cache[dateStr] == nil else { continue }
 
@@ -446,6 +480,37 @@ class DashboardViewModel: ObservableObject {
     }
 
     // MARK: - Helpers
+
+    /// Consecutive days (counting backwards from effectiveToday) where
+    /// total tracked ≥ targetHoursPerDay. Pulls range and walks backwards.
+    private func recomputeStreak() async {
+        let cal = Calendar.current
+        let end = effectiveToday
+        guard let start = cal.date(byAdding: .day, value: -30, to: end) else { return }
+        let fromStr = Self.dateFmt.string(from: start)
+        let toStr = Self.dateFmt.string(from: end)
+        guard let range = try? await api.fetchRange(from: fromStr, to: toStr) else { return }
+
+        let targetSecs = AppSettings.shared.targetHoursPerDay * 3600
+        // Map date-string → totalTrackedSeconds
+        let dayTotals = Dictionary(uniqueKeysWithValues:
+            range.days.map { ($0.date, $0.totalTrackedSeconds) })
+
+        var count = 0
+        var cursor = end
+        while true {
+            let key = Self.dateFmt.string(from: cursor)
+            let total = dayTotals[key] ?? 0
+            if total >= targetSecs {
+                count += 1
+                guard let prev = cal.date(byAdding: .day, value: -1, to: cursor) else { break }
+                cursor = prev
+            } else {
+                break
+            }
+        }
+        self.streakDays = count
+    }
 
     private func parseTimeToHour(_ time: String) -> Double? {
         let parts = time.split(separator: ":")

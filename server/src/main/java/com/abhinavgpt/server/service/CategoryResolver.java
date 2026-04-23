@@ -1,8 +1,11 @@
 package com.abhinavgpt.server.service;
 
+import com.abhinavgpt.server.entity.TrackingRule;
 import com.abhinavgpt.server.repository.CategoryMappingRepository;
 import com.abhinavgpt.server.repository.CategoryThresholdRepository;
 import com.abhinavgpt.server.repository.DomainCategoryMappingRepository;
+import com.abhinavgpt.server.repository.TrackingRuleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -36,26 +39,42 @@ public class CategoryResolver {
     private final CategoryMappingRepository bundleRepo;
     private final DomainCategoryMappingRepository domainRepo;
     private final CategoryThresholdRepository thresholdRepo;
+    private final TrackingRuleRepository ruleRepo;
 
     private volatile Snapshot<String> bundles;
     private volatile Snapshot<String> domains;
     private volatile Snapshot<Integer> thresholds;
+    private volatile Snapshot<String> ruleOverrides;
 
+    @Autowired
     public CategoryResolver(CategoryMappingRepository bundleRepo,
                             DomainCategoryMappingRepository domainRepo,
-                            CategoryThresholdRepository thresholdRepo) {
+                            CategoryThresholdRepository thresholdRepo,
+                            TrackingRuleRepository ruleRepo) {
         this.bundleRepo = bundleRepo;
         this.domainRepo = domainRepo;
         this.thresholdRepo = thresholdRepo;
+        this.ruleRepo = ruleRepo;
+    }
+
+    /** Legacy 3-arg ctor retained for existing tests that don't care about rules. */
+    public CategoryResolver(CategoryMappingRepository bundleRepo,
+                            DomainCategoryMappingRepository domainRepo,
+                            CategoryThresholdRepository thresholdRepo) {
+        this(bundleRepo, domainRepo, thresholdRepo, null);
     }
 
     public String categoryForBundle(String bundleId) {
         if (bundleId == null) return DEFAULT_CATEGORY;
+        String override = ruleOverride("macos", bundleId);
+        if (override != null) return override;
         return bundleMap().getOrDefault(bundleId, DEFAULT_CATEGORY);
     }
 
     public String categoryForDomain(String domain) {
         if (domain == null) return BROWSER_CATEGORY;
+        String override = ruleOverride("browser", domain);
+        if (override != null) return override;
         Map<String, String> cache = domainMap();
         String cat = cache.get(domain);
         if (cat != null) return cat;
@@ -64,8 +83,16 @@ public class CategoryResolver {
         if (dot > 0 && domain.indexOf('.', dot + 1) > 0) {
             cat = cache.get(domain.substring(dot + 1));
             if (cat != null) return cat;
+            override = ruleOverride("browser", domain.substring(dot + 1));
+            if (override != null) return override;
         }
         return BROWSER_CATEGORY;
+    }
+
+    private String ruleOverride(String source, String key) {
+        if (ruleRepo == null || key == null) return null;
+        Map<String, String> overrides = ruleOverridesMap();
+        return overrides.get(source + ":" + key.toLowerCase());
     }
 
     public boolean isBrowserBundle(String bundleId) {
@@ -105,6 +132,25 @@ public class CategoryResolver {
                 return fresh;
             });
             domains = snap;
+        }
+        return snap.data();
+    }
+
+    private Map<String, String> ruleOverridesMap() {
+        Snapshot<String> snap = ruleOverrides;
+        if (snap == null || !snap.isFresh()) {
+            snap = loadSnapshot(() -> {
+                Map<String, String> fresh = new HashMap<>();
+                if (ruleRepo != null) {
+                    for (TrackingRule r : ruleRepo.findAll()) {
+                        if (r.getSource() != null && r.getAppName() != null && r.getCategory() != null) {
+                            fresh.put(r.getSource() + ":" + r.getAppName().toLowerCase(), r.getCategory());
+                        }
+                    }
+                }
+                return fresh;
+            });
+            ruleOverrides = snap;
         }
         return snap.data();
     }

@@ -34,6 +34,63 @@ class AppSettings: ObservableObject {
         }
     }
 
+    // MARK: - Distraction Blocker (M14)
+
+    enum BlockerType: String { case popup, notification }
+
+    @Published var blockerType: BlockerType {
+        didSet { UserDefaults.standard.set(blockerType.rawValue, forKey: "blockerType") }
+    }
+
+    @Published var distractionCategories: Set<String> {
+        didSet {
+            let array = Array(distractionCategories)
+            UserDefaults.standard.set(array, forKey: "distractionCategories")
+        }
+    }
+
+    /// Accumulated seconds in a distraction category within a focus session
+    /// before the blocker triggers.
+    @Published var blockerThresholdSeconds: Int {
+        didSet { UserDefaults.standard.set(blockerThresholdSeconds, forKey: "blockerThresholdSeconds") }
+    }
+
+    @Published var urgeSurfing: Bool {
+        didSet { UserDefaults.standard.set(urgeSurfing, forKey: "urgeSurfing") }
+    }
+
+    // MARK: - Breaks (M15)
+
+    @Published var autoDetectBreaks: Bool {
+        didSet { UserDefaults.standard.set(autoDetectBreaks, forKey: "autoDetectBreaks") }
+    }
+
+    @Published var defaultBreakMinutes: Int {
+        didSet { UserDefaults.standard.set(defaultBreakMinutes, forKey: "defaultBreakMinutes") }
+    }
+
+    @Published var maxBreakMinutes: Int {
+        didSet { UserDefaults.standard.set(maxBreakMinutes, forKey: "maxBreakMinutes") }
+    }
+
+    @Published var fullScreenBreakMode: Bool {
+        didSet { UserDefaults.standard.set(fullScreenBreakMode, forKey: "fullScreenBreakMode") }
+    }
+
+    @Published var smartBreakNotifications: Bool {
+        didSet { UserDefaults.standard.set(smartBreakNotifications, forKey: "smartBreakNotifications") }
+    }
+
+    @Published var smartBreakIntervalMinutes: Int {
+        didSet { UserDefaults.standard.set(smartBreakIntervalMinutes, forKey: "smartBreakIntervalMinutes") }
+    }
+
+    // MARK: - Daily Recap (research pick)
+
+    @Published var dailyRecapEnabled: Bool {
+        didSet { UserDefaults.standard.set(dailyRecapEnabled, forKey: "dailyRecapEnabled") }
+    }
+
     static let defaultServerURL = "http://localhost:8696"
 
     static let defaultThresholds: [String: TimeInterval] = [
@@ -84,6 +141,34 @@ class AppSettings: ObservableObject {
 
         let storedTarget = UserDefaults.standard.object(forKey: "targetHoursPerDay") as? Int
         self.targetHoursPerDay = storedTarget ?? 8
+
+        // Blocker (M14)
+        let blockerRaw = UserDefaults.standard.string(forKey: "blockerType")
+        self.blockerType = BlockerType(rawValue: blockerRaw ?? "") ?? .popup
+        let distraction = UserDefaults.standard.stringArray(forKey: "distractionCategories")
+            ?? ["Media", "Entertainment", "Gaming"]
+        self.distractionCategories = Set(distraction)
+        self.blockerThresholdSeconds =
+            (UserDefaults.standard.object(forKey: "blockerThresholdSeconds") as? Int) ?? 120
+        self.urgeSurfing =
+            (UserDefaults.standard.object(forKey: "urgeSurfing") as? Bool) ?? false
+
+        // Breaks (M15)
+        self.autoDetectBreaks =
+            (UserDefaults.standard.object(forKey: "autoDetectBreaks") as? Bool) ?? true
+        self.defaultBreakMinutes =
+            (UserDefaults.standard.object(forKey: "defaultBreakMinutes") as? Int) ?? 5
+        self.maxBreakMinutes =
+            (UserDefaults.standard.object(forKey: "maxBreakMinutes") as? Int) ?? 30
+        self.fullScreenBreakMode =
+            (UserDefaults.standard.object(forKey: "fullScreenBreakMode") as? Bool) ?? false
+        self.smartBreakNotifications =
+            (UserDefaults.standard.object(forKey: "smartBreakNotifications") as? Bool) ?? false
+        self.smartBreakIntervalMinutes =
+            (UserDefaults.standard.object(forKey: "smartBreakIntervalMinutes") as? Int) ?? 45
+
+        self.dailyRecapEnabled =
+            (UserDefaults.standard.object(forKey: "dailyRecapEnabled") as? Bool) ?? true
     }
 
     var serverBaseURL: URL {

@@ -45,9 +45,10 @@ public class StatsService {
     private record DayContext(LocalDate date, Instant startOfDay, Instant endOfDay,
                               List<AppSession> sessions) {}
 
-    private DayContext loadDay(LocalDate date, ZoneId zone) {
-        Instant startOfDay = date.atStartOfDay(zone).toInstant();
-        Instant endOfDay = date.plusDays(1).atStartOfDay(zone).toInstant();
+    private DayContext loadDay(LocalDate date, ZoneId zone, int dayStartHour) {
+        int shift = Math.max(0, Math.min(23, dayStartHour));
+        Instant startOfDay = date.atStartOfDay(zone).plusHours(shift).toInstant();
+        Instant endOfDay = date.plusDays(1).atStartOfDay(zone).plusHours(shift).toInstant();
         List<AppSession> sessions = sessionRepo.findSessionsOverlapping(startOfDay, endOfDay);
         return new DayContext(date, startOfDay, endOfDay, sessions);
     }
@@ -61,8 +62,8 @@ public class StatsService {
 
     // ── Daily per-app totals ──
 
-    public DailyStatsResponse getTimePerApp(LocalDate date, ZoneId zone, Instant now) {
-        DayContext ctx = loadDay(date, zone);
+    public DailyStatsResponse getTimePerApp(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
 
         Map<String, long[]> timeByBundle = new LinkedHashMap<>();
         Map<String, String> nameByBundle = new LinkedHashMap<>();
@@ -93,14 +94,21 @@ public class StatsService {
         return new DailyStatsResponse(ctx.date().toString(), apps, total, idleCount);
     }
 
-    public DailyStatsResponse getTimePerAppToday(ZoneId zone, Instant now) {
-        return getTimePerApp(LocalDate.ofInstant(now, zone), zone, now);
+    public DailyStatsResponse getTimePerAppToday(ZoneId zone, Instant now, int dayStartHour) {
+        return getTimePerApp(effectiveDate(now, zone, dayStartHour), zone, now, dayStartHour);
+    }
+
+    /** The logical date whose [dayStartHour, dayStartHour+24h) window contains `now`. */
+    private static LocalDate effectiveDate(Instant now, ZoneId zone, int dayStartHour) {
+        LocalDateTime ldt = LocalDateTime.ofInstant(now, zone);
+        int shift = Math.max(0, Math.min(23, dayStartHour));
+        return ldt.getHour() < shift ? ldt.toLocalDate().minusDays(1) : ldt.toLocalDate();
     }
 
     // ── Timeline ──
 
-    public List<TimelineEntry> getTimeline(LocalDate date, ZoneId zone, Instant now) {
-        DayContext ctx = loadDay(date, zone);
+    public List<TimelineEntry> getTimeline(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm").withZone(zone);
 
         return mergedBlocks(ctx, now).stream()
@@ -115,8 +123,8 @@ public class StatsService {
 
     // ── Activity log ──
 
-    public List<ActivityLogEntry> getActivityLog(LocalDate date, ZoneId zone, Instant now) {
-        DayContext ctx = loadDay(date, zone);
+    public List<ActivityLogEntry> getActivityLog(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(zone);
         List<BrowserEvent> browserEvents = browserEventRepo.findByTimestampBetween(
             ctx.startOfDay(), ctx.endOfDay());
@@ -159,8 +167,8 @@ public class StatsService {
 
     // ── Workblocks ──
 
-    public List<WorkblockEntry> getWorkblocks(LocalDate date, ZoneId zone, Instant now) {
-        DayContext ctx = loadDay(date, zone);
+    public List<WorkblockEntry> getWorkblocks(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("H:mm").withZone(zone);
 
         return mergedBlocks(ctx, now).stream()
@@ -174,8 +182,8 @@ public class StatsService {
 
     // ── Focus sessions (merged blocks with per-app + top-domain detail) ──
 
-    public List<FocusSessionEntry> getFocusSessions(LocalDate date, ZoneId zone, Instant now) {
-        DayContext ctx = loadDay(date, zone);
+    public List<FocusSessionEntry> getFocusSessions(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm").withZone(zone);
         List<BrowserEvent> dayBrowserEvents = browserEventRepo.findByTimestampBetween(
             ctx.startOfDay(), ctx.endOfDay());
@@ -253,8 +261,8 @@ public class StatsService {
 
     // ── Category breakdown ──
 
-    public List<CategoryBreakdownEntry> getCategoryBreakdown(LocalDate date, ZoneId zone, Instant now) {
-        DayContext ctx = loadDay(date, zone);
+    public List<CategoryBreakdownEntry> getCategoryBreakdown(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
         List<BrowserEvent> browserEvents = browserEventRepo.findByTimestampBetween(
             ctx.startOfDay(), ctx.endOfDay());
 
@@ -297,10 +305,81 @@ public class StatsService {
             .toList();
     }
 
+    // ── Interruptors: small raw sessions that fragment longer ones ──
+
+    /** Small (< 2 min) app sessions that likely interrupted longer focus work. */
+    public List<InterruptorEntry> getInterruptors(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
+        final long SHORT_THRESHOLD = 120; // 2 min
+
+        Map<String, long[]> byApp = new LinkedHashMap<>();       // [count, totalSeconds]
+        Map<String, String> nameByKey = new LinkedHashMap<>();
+        Map<String, String> bundleByKey = new LinkedHashMap<>();
+        Map<String, String> catByKey = new LinkedHashMap<>();
+
+        for (AppSession s : ctx.sessions()) {
+            Instant effStart = SessionMergeService.effectiveStart(s, ctx.startOfDay());
+            Instant effEnd = SessionMergeService.effectiveEnd(s, ctx.endOfDay(), now);
+            long secs = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
+            if (secs == 0 || secs >= SHORT_THRESHOLD) continue;
+
+            String key = s.getBundleId() != null ? s.getBundleId() : s.getAppName();
+            long[] agg = byApp.computeIfAbsent(key, k -> new long[2]);
+            agg[0] += 1;
+            agg[1] += secs;
+            nameByKey.putIfAbsent(key, s.getAppName());
+            bundleByKey.putIfAbsent(key, s.getBundleId());
+            catByKey.putIfAbsent(key, categoryResolver.categoryForBundle(s.getBundleId()));
+        }
+
+        return byApp.entrySet().stream()
+            .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
+            .limit(10)
+            .map(e -> new InterruptorEntry(
+                nameByKey.get(e.getKey()),
+                bundleByKey.get(e.getKey()),
+                catByKey.get(e.getKey()),
+                (int) e.getValue()[0],
+                (int) e.getValue()[1]))
+            .toList();
+    }
+
+    /** Range rollup: interruptor count + seconds aggregated across days. */
+    public List<InterruptorEntry> getInterruptorsRange(LocalDate from, LocalDate to,
+                                                       ZoneId zone, Instant now, int dayStartHour) {
+        Map<String, long[]> byApp = new LinkedHashMap<>();
+        Map<String, String> nameByKey = new LinkedHashMap<>();
+        Map<String, String> bundleByKey = new LinkedHashMap<>();
+        Map<String, String> catByKey = new LinkedHashMap<>();
+
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            for (InterruptorEntry e : getInterruptors(d, zone, now, dayStartHour)) {
+                String key = e.bundleId() != null ? e.bundleId() : e.appName();
+                long[] agg = byApp.computeIfAbsent(key, k -> new long[2]);
+                agg[0] += e.count();
+                agg[1] += e.totalSeconds();
+                nameByKey.putIfAbsent(key, e.appName());
+                bundleByKey.putIfAbsent(key, e.bundleId());
+                catByKey.putIfAbsent(key, e.category());
+            }
+        }
+
+        return byApp.entrySet().stream()
+            .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
+            .limit(10)
+            .map(e -> new InterruptorEntry(
+                nameByKey.get(e.getKey()),
+                bundleByKey.get(e.getKey()),
+                catByKey.get(e.getKey()),
+                (int) e.getValue()[0],
+                (int) e.getValue()[1]))
+            .toList();
+    }
+
     // ── Domain stats: per-category with app + domain sources ──
 
-    public DomainStatsResponse getDomainStats(LocalDate date, ZoneId zone, Instant now) {
-        DayContext ctx = loadDay(date, zone);
+    public DomainStatsResponse getDomainStats(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
         List<BrowserEvent> browserEvents = browserEventRepo.findByTimestampBetween(
             ctx.startOfDay(), ctx.endOfDay());
 
@@ -367,11 +446,11 @@ public class StatsService {
 
     // ── Range queries ──
 
-    public RangeResponse getRange(LocalDate from, LocalDate to, ZoneId zone, Instant now) {
+    public RangeResponse getRange(LocalDate from, LocalDate to, ZoneId zone, Instant now, int dayStartHour) {
         List<RangeDayBreakdown> days = new ArrayList<>();
 
         for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
-            DayContext ctx = loadDay(date, zone);
+            DayContext ctx = loadDay(date, zone, dayStartHour);
 
             Map<String, Long> timeByCategory = new LinkedHashMap<>();
             for (AppSession session : ctx.sessions()) {
@@ -396,8 +475,8 @@ public class StatsService {
         return new RangeResponse(from.toString(), to.toString(), days);
     }
 
-    public RangeSummaryResponse getRangeSummary(LocalDate from, LocalDate to, ZoneId zone, Instant now) {
-        RangeResponse range = getRange(from, to, zone, now);
+    public RangeSummaryResponse getRangeSummary(LocalDate from, LocalDate to, ZoneId zone, Instant now, int dayStartHour) {
+        RangeResponse range = getRange(from, to, zone, now, dayStartHour);
 
         long totalTracked = 0;
         int daysWithData = 0;

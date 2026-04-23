@@ -23,23 +23,56 @@ CREATE TABLE IF NOT EXISTS category_mappings (
     category    TEXT NOT NULL
 );
 
--- M4: per-category idle thresholds (how long a gap before a session is split)
+-- M4 + M12: per-category config (idle threshold + tracking flags)
 -- Reading allows long pauses (thinking, scrolling); Communication needs snappy cuts.
 CREATE TABLE IF NOT EXISTS category_thresholds (
     category               TEXT PRIMARY KEY,
-    idle_threshold_seconds INT  NOT NULL
+    idle_threshold_seconds INT  NOT NULL,
+    focus                  BOOLEAN NOT NULL DEFAULT TRUE,
+    work_hours             BOOLEAN NOT NULL DEFAULT TRUE,
+    idle_detection         BOOLEAN NOT NULL DEFAULT TRUE,
+    distraction_blocker    BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-INSERT INTO category_thresholds (category, idle_threshold_seconds) VALUES
-    ('Code',          600),   -- 10 min: natural thinking pauses
-    ('Reading',       900),   -- 15 min: long scroll/read sessions
-    ('Writing',       600),   -- 10 min: think, draft, revise
-    ('Design',        600),   -- 10 min: contemplate, iterate
-    ('Communication', 180),   -- 3 min: chats are snappy
-    ('Browsing',      300),   -- 5 min: tab-switching noise
-    ('Media',         600),   -- 10 min: passive consumption
-    ('Utilities',     180),   -- 3 min: quick task tools
-    ('Other',         300)    -- 5 min: default
+-- M12 backfill for existing deployments
+ALTER TABLE category_thresholds ADD COLUMN IF NOT EXISTS focus               BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE category_thresholds ADD COLUMN IF NOT EXISTS work_hours          BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE category_thresholds ADD COLUMN IF NOT EXISTS idle_detection      BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE category_thresholds ADD COLUMN IF NOT EXISTS distraction_blocker BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Category goals: 0 = no goal. goal_is_max=true means target is ceiling (stay under),
+-- false means floor (stay above). Added Apr 2026 from research.
+ALTER TABLE category_thresholds ADD COLUMN IF NOT EXISTS daily_goal_seconds  INT     NOT NULL DEFAULT 0;
+ALTER TABLE category_thresholds ADD COLUMN IF NOT EXISTS goal_is_max         BOOLEAN NOT NULL DEFAULT FALSE;
+
+INSERT INTO category_thresholds (category, idle_threshold_seconds, focus, work_hours, idle_detection, distraction_blocker) VALUES
+    -- Core focus categories
+    ('Code',          600, TRUE,  TRUE,  TRUE,  FALSE),
+    ('Reading',       900, TRUE,  TRUE,  TRUE,  FALSE),
+    ('Writing',       600, TRUE,  TRUE,  TRUE,  FALSE),
+    ('Design',        600, TRUE,  TRUE,  TRUE,  FALSE),
+    ('Documenting',   600, TRUE,  TRUE,  TRUE,  FALSE),
+    ('Learning',      600, TRUE,  TRUE,  TRUE,  FALSE),
+    -- Work-adjacent
+    ('Communication', 180, FALSE, TRUE,  TRUE,  FALSE),
+    ('Email',         240, FALSE, TRUE,  TRUE,  FALSE),
+    ('Messaging',     120, FALSE, TRUE,  TRUE,  FALSE),
+    ('Meetings',      180, FALSE, TRUE,  FALSE, FALSE),
+    ('In Person Meetings', 180, FALSE, TRUE, FALSE, FALSE),
+    ('Customer Support',   180, FALSE, TRUE, TRUE, FALSE),
+    ('Hiring',        300, FALSE, TRUE,  TRUE,  FALSE),
+    ('Marketing',     300, FALSE, TRUE,  TRUE,  FALSE),
+    ('Admin',         300, FALSE, TRUE,  TRUE,  FALSE),
+    ('Finance',       300, FALSE, TRUE,  TRUE,  FALSE),
+    -- Non-work / utilities
+    ('Browsing',      300, FALSE, FALSE, TRUE,  FALSE),
+    ('Media',         600, FALSE, FALSE, FALSE, TRUE),
+    ('Entertainment', 600, FALSE, FALSE, FALSE, TRUE),
+    ('Gaming',        600, FALSE, FALSE, FALSE, TRUE),
+    ('Utilities',     180, FALSE, FALSE, TRUE,  FALSE),
+    ('Break',         600, FALSE, FALSE, FALSE, FALSE),
+    ('Miscellaneous', 300, FALSE, FALSE, TRUE,  FALSE),
+    ('Other',         300, FALSE, FALSE, TRUE,  FALSE)
 ON CONFLICT (category) DO NOTHING;
 
 -- Seed common macOS app categories
@@ -71,7 +104,7 @@ INSERT INTO category_mappings (bundle_id, category) VALUES
     ('com.google.Chrome.canary',          'Browsing'),
     ('company.thebrowser.Browser',        'Browsing'),
     ('com.brave.Browser',                 'Browsing'),
-    ('org.mozilla.firefox',               'Browsing'),
+    ('org.mozilla.firefox',               'Reading'),
     ('com.vivaldi.Vivaldi',               'Browsing'),
     ('com.operasoftware.Opera',           'Browsing'),
     ('org.chromium.Chromium',             'Browsing'),
@@ -112,6 +145,45 @@ INSERT INTO category_mappings (bundle_id, category) VALUES
     ('com.apple.iBooksX',                 'Reading'),
     ('com.apple.Preview',                 'Reading')
 ON CONFLICT (bundle_id) DO NOTHING;
+
+-- M16: AI-generated insights attached to a pomodoro session (title + description).
+CREATE TABLE IF NOT EXISTS pomodoro_session_insights (
+    session_id      BIGINT PRIMARY KEY,
+    title           TEXT    NOT NULL,
+    description     TEXT    NOT NULL,
+    model           TEXT    NOT NULL,
+    generated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- M11: Pomodoro sessions — user-initiated focus intervals with a goal string.
+CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+    id              BIGSERIAL PRIMARY KEY,
+    goal            TEXT    NOT NULL,
+    started_at      TIMESTAMPTZ NOT NULL,
+    ended_at        TIMESTAMPTZ,
+    target_seconds  INT     NOT NULL,
+    status          TEXT    NOT NULL   -- 'running' | 'completed' | 'discarded'
+);
+CREATE INDEX IF NOT EXISTS idx_pomodoro_started_at ON pomodoro_sessions (started_at);
+
+-- M13: Tracking rules — per-app / per-domain overrides with keyword filters
+-- and behavior flags (blocking, title/URL capture toggles).
+CREATE TABLE IF NOT EXISTS tracking_rules (
+    id                  BIGSERIAL PRIMARY KEY,
+    source              TEXT    NOT NULL,   -- 'macos' | 'browser'
+    app_name            TEXT    NOT NULL,   -- bundle id (macos) or domain (browser)
+    keywords            TEXT,               -- comma-separated, optional
+    category            TEXT    NOT NULL,
+    always_block        BOOLEAN NOT NULL DEFAULT FALSE,
+    block_breaks        BOOLEAN NOT NULL DEFAULT FALSE,
+    block_meetings      BOOLEAN NOT NULL DEFAULT FALSE,
+    block_focus         BOOLEAN NOT NULL DEFAULT FALSE,
+    track_titles        BOOLEAN NOT NULL DEFAULT TRUE,
+    track_full_urls     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_tracking_rules_source_app
+    ON tracking_rules (source, app_name);
 
 -- Browser navigation events (enriches "Browsing" app sessions with per-site detail)
 CREATE TABLE IF NOT EXISTS browser_events (

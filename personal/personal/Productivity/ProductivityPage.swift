@@ -3,34 +3,36 @@ import SwiftUI
 
 // MARK: - Productivity Page
 
+enum ProductivityTab: String, CaseIterable {
+    case focus = "Focus"
+    case breaks = "Breaks"
+    case meetings = "Meetings"
+    case goals = "Goals"
+}
+
 struct ProductivityPage: View {
     @Environment(\.theme) private var theme
     @StateObject private var viewModel = ProductivityViewModel()
+    @State private var activeTab: ProductivityTab = .focus
 
     var body: some View {
         ScrollView {
             VStack(spacing: AppMetrics.cardGap) {
-                // Header: title + period mode tabs
+                // Header: title + section tabs
                 HStack(spacing: 12) {
                     Text("Productivity")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(theme.foreground)
 
                     HStack(spacing: 2) {
-                        ForEach(PeriodMode.allCases, id: \.self) { mode in
-                            Button { viewModel.switchPeriodMode(mode) } label: {
-                                Text(mode.rawValue)
+                        ForEach(ProductivityTab.allCases, id: \.self) { tab in
+                            Button { activeTab = tab } label: {
+                                Text(tab.rawValue)
                                     .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(
-                                        viewModel.periodMode == mode
-                                            ? theme.foreground : theme.mutedForeground
-                                    )
+                                    .foregroundStyle(activeTab == tab ? theme.foreground : theme.mutedForeground)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
-                                    .background(
-                                        viewModel.periodMode == mode
-                                            ? theme.secondary : Color.clear
-                                    )
+                                    .background(activeTab == tab ? theme.secondary : Color.clear)
                                     .clipShape(RoundedRectangle(cornerRadius: 4))
                             }
                             .buttonStyle(.plain)
@@ -38,9 +40,24 @@ struct ProductivityPage: View {
                     }
 
                     Spacer()
+
+                    // Period toggle
+                    HStack(spacing: 2) {
+                        ForEach(PeriodMode.allCases, id: \.self) { mode in
+                            Button { viewModel.switchPeriodMode(mode) } label: {
+                                Text(mode.rawValue)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(viewModel.periodMode == mode ? theme.foreground : theme.mutedForeground)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(viewModel.periodMode == mode ? theme.secondary : Color.clear)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
 
-                // Date navigator
                 DateNavigator(
                     dateText: viewModel.displayPeriod,
                     activeView: .constant("Day"),
@@ -51,27 +68,266 @@ struct ProductivityPage: View {
                     onToday: { viewModel.goToCurrentPeriod() }
                 )
 
-                // Stacked bar chart
-                BreakdownChartCard(data: viewModel.chartDays)
-
-                // Bottom row: 3 cards
-                HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                    WorkCategoriesCard(
-                        categories: viewModel.summaryData?.categoryBreakdown ?? [],
-                        formatDuration: viewModel.formatDuration
-                    )
-
-                    BreakdownDonutsCard(data: viewModel.donutData, formatDuration: viewModel.formatDuration)
-
-                    WorkHoursStatsCard(
-                        avgPerDay: viewModel.avgPerDayFormatted,
-                        avgPerWeek: viewModel.avgPerWeekFormatted
-                    )
+                switch activeTab {
+                case .focus:
+                    focusContent
+                case .breaks:
+                    breaksContent
+                case .meetings, .goals:
+                    comingSoon(title: activeTab.rawValue)
                 }
             }
             .padding(AppMetrics.contentPadding)
         }
         .onAppear { viewModel.load() }
+    }
+
+    @ViewBuilder
+    private var focusContent: some View {
+        FocusScoreRow(
+            averageScore: viewModel.averageFocusScore,
+            perDayScores: viewModel.focusScorePerDay,
+            topInterruptors: viewModel.topInterruptors
+        )
+
+        BreakdownChartCard(data: viewModel.chartDays)
+
+        HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+            WorkCategoriesCard(
+                categories: viewModel.summaryData?.categoryBreakdown ?? [],
+                formatDuration: viewModel.formatDuration
+            )
+            BreakdownDonutsCard(data: viewModel.donutData, formatDuration: viewModel.formatDuration)
+            WorkHoursStatsCard(
+                avgPerDay: viewModel.avgPerDayFormatted,
+                avgPerWeek: viewModel.avgPerWeekFormatted
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var breaksContent: some View {
+        BreaksListCard()
+    }
+
+    @ViewBuilder
+    private func comingSoon(title: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 24))
+                .foregroundStyle(theme.mutedForeground.opacity(0.6))
+            Text("\(title) — coming soon")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(theme.mutedForeground)
+        }
+        .frame(maxWidth: .infinity, minHeight: 360)
+        .dashboardCard()
+    }
+}
+
+// MARK: - Focus Score Row (M10)
+
+struct FocusScoreRow: View {
+    let averageScore: Int
+    let perDayScores: [(label: String, score: Int)]
+    let topInterruptors: [(name: String, count: Int)]
+
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+            averageCard
+            perDayCard
+            interruptorsCard
+        }
+    }
+
+    private var averageCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionTitle(text: "Avg Focus Score")
+                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+            Spacer(minLength: 0)
+            ZStack {
+                CircularProgress(value: Double(averageScore), size: 120, strokeWidth: 10,
+                                 color: theme.chartPurple)
+                VStack(spacing: 0) {
+                    Text("\(averageScore)")
+                        .font(.system(size: 28, weight: .bold).monospacedDigit())
+                        .foregroundStyle(theme.foreground)
+                    Text("score")
+                        .font(.system(size: 9))
+                        .foregroundStyle(theme.mutedForeground)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            Spacer(minLength: 0)
+        }
+        .frame(width: 220, height: 240)
+        .dashboardCard()
+    }
+
+    private var perDayCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionTitle(text: "Focus Score / Day")
+                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+
+            if perDayScores.isEmpty {
+                emptyState("No data")
+            } else {
+                GeometryReader { geo in
+                    let maxScore: Double = 100
+                    let barWidth = max(3, (geo.size.width - 32) / CGFloat(perDayScores.count) - 3)
+                    HStack(alignment: .bottom, spacing: 3) {
+                        ForEach(Array(perDayScores.enumerated()), id: \.offset) { _, day in
+                            VStack(spacing: 4) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(theme.chartPurple)
+                                    .frame(height: CGFloat(day.score) / maxScore * 160)
+                                Text(day.label)
+                                    .font(.system(size: 8).monospacedDigit())
+                                    .foregroundStyle(theme.mutedForeground)
+                            }
+                            .frame(width: barWidth)
+                            .help("\(day.score)%")
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .frame(height: 190)
+            }
+        }
+        .frame(height: 240)
+        .frame(maxWidth: .infinity)
+        .dashboardCard()
+    }
+
+    private var interruptorsCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionTitle(text: "Top Interruptors")
+                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+            if topInterruptors.isEmpty {
+                emptyState("No interruptions logged")
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(Array(topInterruptors.prefix(6).enumerated()), id: \.offset) { _, item in
+                        HStack {
+                            Text(item.name)
+                                .font(.system(size: 11))
+                                .foregroundStyle(theme.foreground)
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(item.count)×")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(theme.mutedForeground)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+        .frame(width: 260, height: 240)
+        .dashboardCard()
+    }
+
+    @ViewBuilder
+    private func emptyState(_ msg: String) -> some View {
+        Text(msg)
+            .font(.system(size: 11))
+            .foregroundStyle(theme.mutedForeground)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+}
+
+// MARK: - Breaks List Card (M15)
+
+struct BreaksListCard: View {
+    @Environment(\.theme) private var theme
+    @ObservedObject private var svc = BreakDetectionService.shared
+
+    private var completedBreaks: [BreakRecord] {
+        svc.breaks.filter { $0.classification == .breakSession }
+    }
+    private var awaySessions: [BreakRecord] {
+        svc.breaks.filter { $0.classification == .away }
+    }
+    private var avgBreakSeconds: Int {
+        guard !completedBreaks.isEmpty else { return 0 }
+        return completedBreaks.map(\.durationSeconds).reduce(0, +) / completedBreaks.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppMetrics.cardGap) {
+            HStack(spacing: AppMetrics.cardGap) {
+                statCard(title: "Breaks Taken", value: "\(completedBreaks.count)")
+                statCard(title: "Avg Length", value: formatDuration(avgBreakSeconds))
+                statCard(title: "Away Sessions", value: "\(awaySessions.count)")
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                SectionTitle(text: "Today's Breaks")
+                    .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+
+                if svc.breaks.isEmpty {
+                    Text("No breaks recorded yet")
+                        .font(.system(size: 12))
+                        .foregroundStyle(theme.mutedForeground)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 30)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(svc.breaks) { b in
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(b.classification == .breakSession ? theme.success : theme.warning)
+                                    .frame(width: 6, height: 6)
+                                Text(b.classification.rawValue)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(theme.foreground)
+                                    .frame(width: 60, alignment: .leading)
+                                Text("\(formatTime(b.startedAt)) – \(formatTime(b.endedAt))")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(theme.mutedForeground)
+                                Spacer()
+                                Text(formatDuration(b.durationSeconds))
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(theme.foreground)
+                            }
+                            .padding(.horizontal, 16).padding(.vertical, 6)
+                            Divider().opacity(0.2)
+                        }
+                    }
+                    .padding(.bottom, 6)
+                }
+            }
+            .dashboardCard()
+        }
+    }
+
+    private func statCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.8)
+                .foregroundStyle(theme.mutedForeground)
+            Text(value)
+                .font(.system(size: 22, weight: .bold).monospacedDigit())
+                .foregroundStyle(theme.foreground)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .dashboardCard()
+    }
+
+    private func formatDuration(_ seconds: Int) -> String {
+        let m = seconds / 60, s = seconds % 60
+        if m == 0 { return "\(s)s" }
+        return s > 0 ? "\(m)m \(s)s" : "\(m)m"
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
+        return fmt.string(from: date)
     }
 }
 

@@ -15,7 +15,11 @@ struct SettingsPage: View {
 
                 generalSection
                 workDaySection
+                categoriesSection
+                trackingRulesSection
                 trackingSection
+                distractionBlockerSection
+                breaksSection
                 dataSection
                 aboutSection
             }
@@ -80,6 +84,27 @@ struct SettingsPage: View {
                     .toggleStyle(.switch)
                     .controlSize(.small)
                 }
+
+                Divider().opacity(0.4)
+
+                // Daily recap notification
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Daily Recap Notification")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(theme.foreground)
+                        Text("Summary of yesterday's tracked time, fired 1 hour after your day starts")
+                            .font(.system(size: 11))
+                            .foregroundStyle(theme.mutedForeground)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $settings.dailyRecapEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .onChange(of: settings.dailyRecapEnabled) { _, _ in
+                            DailyRecapService.shared.reschedule()
+                        }
+                }
             }
         }
     }
@@ -114,6 +139,22 @@ struct SettingsPage: View {
                     Spacer()
                 }
             }
+        }
+    }
+
+    // MARK: - Categories (M12)
+
+    private var categoriesSection: some View {
+        settingsCard(title: "Categories") {
+            CategoriesSettingsCard()
+        }
+    }
+
+    // MARK: - Tracking Rules (M13)
+
+    private var trackingRulesSection: some View {
+        settingsCard(title: "Tracking Rules") {
+            TrackingRulesCard()
         }
     }
 
@@ -169,6 +210,20 @@ struct SettingsPage: View {
         }
     }
 
+    // MARK: - Distraction Blocker (M14) / Breaks (M15)
+
+    private var distractionBlockerSection: some View {
+        settingsCard(title: "Distraction Blocker") {
+            DistractionBlockerCard()
+        }
+    }
+
+    private var breaksSection: some View {
+        settingsCard(title: "Breaks") {
+            BreaksSettingsCard()
+        }
+    }
+
     // MARK: - Data
 
     private var dataSection: some View {
@@ -184,16 +239,29 @@ struct SettingsPage: View {
                         .foregroundStyle(theme.mutedForeground)
                 }
 
-                Button("Force Sync") {
-                    appTracker.eventClient.triggerFlush()
+                HStack(spacing: 8) {
+                    Button("Force Sync") {
+                        appTracker.eventClient.triggerFlush()
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(theme.primaryForeground)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(theme.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .buttonStyle(.plain)
+
+                    Button("Export Last 30 Days (CSV)") {
+                        Task { await CSVExport.exportLast30Days() }
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(theme.foreground)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(theme.secondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .buttonStyle(.plain)
                 }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(theme.primaryForeground)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(theme.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .buttonStyle(.plain)
             }
         }
     }

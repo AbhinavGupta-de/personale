@@ -86,8 +86,12 @@ struct HourRuler: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<24, id: \.self) { i in
+        // 25 labels at positions 0..24 * hourHeight so the ruler closes at the
+        // same dayStartHour (6 AM → 6 AM) instead of stopping at 5 AM.
+        ZStack(alignment: .topLeading) {
+            Color.clear.frame(height: 24 * hourHeight)
+
+            ForEach(0...24, id: \.self) { i in
                 let hour = (dayStartHour + i) % 24
                 HStack(spacing: 0) {
                     Text(formatHourLabel(hour))
@@ -99,7 +103,7 @@ struct HourRuler: View {
                         .frame(height: 1)
                         .frame(maxWidth: .infinity)
                 }
-                .frame(height: hourHeight, alignment: .top)
+                .offset(y: CGFloat(i) * hourHeight)
             }
         }
     }

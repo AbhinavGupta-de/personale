@@ -17,7 +17,6 @@ class ActivityViewModel: ObservableObject {
     @Published var categoryBreakdown: [CategoryBreakdownResponse] = []
     @Published var viewMode: ViewMode = .day
     @Published var weekSessions: [String: [FocusSessionResponse]] = [:]
-    @Published var nextDaySessions: [FocusSessionResponse] = []
 
     var dayStartHour: Int { AppSettings.shared.dayStartHour }
 
@@ -164,10 +163,10 @@ class ActivityViewModel: ObservableObject {
     }
 
     private func fetchWeek() {
-        // Fetch 8 days so each day's overflow-into-next is covered.
-        for i in 0...7 {
+        // Backend windows each day by dayStartHour, so one fetch per day is enough.
+        for i in 0..<7 {
             guard let date = Calendar.current.date(byAdding: .day, value: i, to: weekStart),
-                  date <= Date()
+                  date <= effectiveToday
             else { continue }
             let key = Self.dateFmt.string(from: date)
             if weekSessions[key] != nil { continue }
@@ -179,15 +178,9 @@ class ActivityViewModel: ObservableObject {
         }
     }
 
-    /// Display-ready sessions for a specific day in week view, applying the
-    /// dayStartHour overflow merge.
+    /// Sessions to render for a specific day in week view.
     func weekDisplaySessions(for date: Date) -> [FocusSessionResponse] {
-        let key = Self.dateFmt.string(from: date)
-        let sessions = weekSessions[key] ?? []
-        let next = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
-        let nextKey = Self.dateFmt.string(from: next)
-        let nextSessions = weekSessions[nextKey] ?? []
-        return displaySessions(for: date, daySessions: sessions, nextSessions: nextSessions)
+        weekSessions[Self.dateFmt.string(from: date)] ?? []
     }
 
     private func navigateToCurrentDate() {
@@ -245,25 +238,7 @@ class ActivityViewModel: ObservableObject {
             self.isLoading = false
         }
 
-        // Fetch next day for overflow sessions (2am on day X+1 belongs to day X's window
-        // when dayStartHour > 0).
-        if let nextDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) {
-            let nextStr = Self.dateFmt.string(from: nextDate)
-            if let cached = cache[nextStr] {
-                self.nextDaySessions = cached
-            } else {
-                self.nextDaySessions = []
-                Task {
-                    guard let r = try? await api.fetchSessions(date: nextStr),
-                        activeFetchDate == date
-                    else { return }
-                    self.nextDaySessions = r
-                    self.cache[nextStr] = r
-                }
-            }
-        }
-
-        // Fetch day-level data for Daily Summary
+        // Day-level data for Daily Summary.
         Task {
             guard let stats = try? await api.fetchDayStats(date: date),
                 activeFetchDate == date
@@ -292,44 +267,11 @@ class ActivityViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Day-window session merging
+    // MARK: - Display sessions
 
-    /// Sessions to render for the currently selected day, taking `dayStartHour`
-    /// into account. A "day" runs from dayStartHour(selectedDate) to
-    /// dayStartHour(selectedDate + 1). Sessions starting before dayStartHour
-    /// on selectedDate belong to the previous day's window and are dropped.
-    /// Sessions starting before dayStartHour on the next calendar day belong
-    /// to this window and are added.
-    var displaySessions: [FocusSessionResponse] {
-        let startH = Double(dayStartHour)
-        let fromToday = sessions.filter { s in
-            guard let h = parseTimeToHour(s.startTime) else { return false }
-            return h >= startH
-        }
-        let fromTomorrow = nextDaySessions.filter { s in
-            guard let h = parseTimeToHour(s.startTime) else { return false }
-            return h < startH
-        }
-        return fromToday + fromTomorrow
-    }
-
-    /// Same filter applied to any `(date, sessions)` pair for week view.
-    func displaySessions(
-        for date: Date,
-        daySessions: [FocusSessionResponse],
-        nextSessions: [FocusSessionResponse]
-    ) -> [FocusSessionResponse] {
-        let startH = Double(dayStartHour)
-        let fromDay = daySessions.filter { s in
-            guard let h = parseTimeToHour(s.startTime) else { return false }
-            return h >= startH
-        }
-        let fromNext = nextSessions.filter { s in
-            guard let h = parseTimeToHour(s.startTime) else { return false }
-            return h < startH
-        }
-        return fromDay + fromNext
-    }
+    /// Sessions for the currently selected day. Backend already windows to
+    /// `[dayStartHour, dayStartHour + 24h)` so no client-side filtering needed.
+    var displaySessions: [FocusSessionResponse] { sessions }
 
     // MARK: - Daily Summary computed data
 

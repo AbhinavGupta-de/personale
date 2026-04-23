@@ -19,6 +19,14 @@ struct personalApp: App {
             #if os(macOS)
             AppShell()
                 .environmentObject(appTracker)
+                .onAppear {
+                    DistractionBlockerService.shared.wire(
+                        appTracker: appTracker,
+                        pomodoro: PomodoroViewModel.shared
+                    )
+                    BreakDetectionService.shared.wire(appTracker: appTracker)
+                    DailyRecapService.shared.start()
+                }
             #else
             Text("Personale")
             #endif
