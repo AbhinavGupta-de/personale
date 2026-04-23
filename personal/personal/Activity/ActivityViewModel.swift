@@ -17,6 +17,7 @@ class ActivityViewModel: ObservableObject {
     @Published var categoryBreakdown: [CategoryBreakdownResponse] = []
     @Published var viewMode: ViewMode = .day
     @Published var weekSessions: [String: [FocusSessionResponse]] = [:]
+    @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
 
     var dayStartHour: Int { AppSettings.shared.dayStartHour }
 
@@ -214,6 +215,26 @@ class ActivityViewModel: ObservableObject {
         objectWillChange.send()
     }
 
+    // MARK: - Review lookup (title/description per block)
+
+    /// Returns the review record for a session, if any. Matches on the same
+    /// block_key formula used server-side: sha256(date|start|end|category).
+    func review(for session: FocusSessionResponse, on date: Date? = nil) -> SessionReviewResponse? {
+        let d = date ?? selectedDate
+        let dateStr = Self.dateFmt.string(from: d)
+        let key = ReviewKey.make(
+            date: dateStr,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            category: session.name)
+        return reviewsByKey[key]
+    }
+
+    func label(for session: FocusSessionResponse, on date: Date? = nil) -> String {
+        let r = review(for: session, on: date)
+        return bestLabel(title: r?.title, aiTitle: r?.aiTitle, category: session.name)
+    }
+
     // MARK: - Quality Score (M8 stub — refined in M10)
 
     func qualityScore(for session: FocusSessionResponse) -> Int {
@@ -250,6 +271,13 @@ class ActivityViewModel: ObservableObject {
                 activeFetchDate == date
             else { return }
             self.categoryBreakdown = cats
+        }
+        // Reviews: map block_key → review for title/description lookup in the UI.
+        Task {
+            guard let reviews = try? await api.fetchReviews(date: date, status: "all"),
+                activeFetchDate == date
+            else { return }
+            self.reviewsByKey = Dictionary(uniqueKeysWithValues: reviews.map { ($0.blockKey, $0) })
         }
 
         // Prefetch adjacent

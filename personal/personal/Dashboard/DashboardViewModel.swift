@@ -24,6 +24,7 @@ class DashboardViewModel: ObservableObject {
     @Published var focusSessions: [FocusSessionResponse] = []
     @Published var categories: [CategoryResponse] = []
     @Published var streakDays: Int = 0
+    @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
 
     // Break timer — ticks every second, computed client-side from existing data
     @Published var secondsSinceLastBreak: Int = 0
@@ -444,6 +445,12 @@ class DashboardViewModel: ObservableObject {
                 activeFetchDate == date
             else { return }
             self.focusSessions = s
+        }
+        Task {
+            guard let reviews = try? await api.fetchReviews(date: date, status: "all"),
+                activeFetchDate == date
+            else { return }
+            self.reviewsByKey = Dictionary(uniqueKeysWithValues: reviews.map { ($0.blockKey, $0) })
         }
         Task {
             // Categories rarely change — load once per navigation and keep.

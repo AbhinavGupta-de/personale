@@ -238,6 +238,8 @@ struct WebsitesCard: View {
 struct TodaySessionsStrip: View {
     let sessions: [FocusSessionResponse]
     let formatDuration: (Int) -> String
+    var reviewsByKey: [String: SessionReviewResponse] = [:]
+    var dateString: String = ""
 
     @Environment(\.theme) private var theme
 
@@ -258,7 +260,20 @@ struct TodaySessionsStrip: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 10) {
                         ForEach(sessions) { session in
-                            SessionMiniCard(session: session, formatDuration: formatDuration)
+                            let key = ReviewKey.make(
+                                date: dateString,
+                                startTime: session.startTime,
+                                endTime: session.endTime,
+                                category: session.name)
+                            let review = reviewsByKey[key]
+                            SessionMiniCard(
+                                session: session,
+                                formatDuration: formatDuration,
+                                label: bestLabel(
+                                    title: review?.title,
+                                    aiTitle: review?.aiTitle,
+                                    category: session.name)
+                            )
                         }
                     }
                     .padding(.horizontal, 16)
@@ -273,6 +288,7 @@ struct TodaySessionsStrip: View {
 private struct SessionMiniCard: View {
     let session: FocusSessionResponse
     let formatDuration: (Int) -> String
+    var label: String = ""
 
     @Environment(\.theme) private var theme
 
@@ -282,9 +298,10 @@ private struct SessionMiniCard: View {
                 Circle()
                     .fill(CategoryColors.color(for: session.name))
                     .frame(width: 8, height: 8)
-                Text(session.name)
+                Text(label.isEmpty ? session.name : label)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(theme.foreground)
+                    .lineLimit(2)
             }
             Text("\(session.startTime) – \(session.endTime)")
                 .font(.system(size: 10, design: .monospaced))
