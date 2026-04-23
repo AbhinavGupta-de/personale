@@ -21,71 +21,111 @@ public class StatsController {
     }
 
     @GetMapping("/today")
-    public ResponseEntity<DailyStatsResponse> getToday() {
+    public ResponseEntity<DailyStatsResponse> getToday(
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getTimePerAppToday(ZoneId.systemDefault(), Instant.now()));
+            statsService.getTimePerAppToday(ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/day")
-    public ResponseEntity<DailyStatsResponse> getDay(@RequestParam String date) {
-        LocalDate day = LocalDate.parse(date);
+    public ResponseEntity<DailyStatsResponse> getDay(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getTimePerApp(day, ZoneId.systemDefault(), Instant.now()));
+            statsService.getTimePerApp(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/timeline")
-    public ResponseEntity<List<TimelineEntry>> getTimeline(@RequestParam String date) {
-        LocalDate day = LocalDate.parse(date);
+    public ResponseEntity<List<TimelineEntry>> getTimeline(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getTimeline(day, ZoneId.systemDefault(), Instant.now()));
+            statsService.getTimeline(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/activity")
-    public ResponseEntity<List<ActivityLogEntry>> getActivity(@RequestParam String date) {
-        LocalDate day = LocalDate.parse(date);
+    public ResponseEntity<List<ActivityLogEntry>> getActivity(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getActivityLog(day, ZoneId.systemDefault(), Instant.now()));
+            statsService.getActivityLog(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/categories")
-    public ResponseEntity<List<CategoryBreakdownEntry>> getCategories(@RequestParam String date) {
-        LocalDate day = LocalDate.parse(date);
+    public ResponseEntity<List<CategoryBreakdownEntry>> getCategories(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getCategoryBreakdown(day, ZoneId.systemDefault(), Instant.now()));
+            statsService.getCategoryBreakdown(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/workblocks")
-    public ResponseEntity<List<WorkblockEntry>> getWorkblocks(@RequestParam String date) {
-        LocalDate day = LocalDate.parse(date);
+    public ResponseEntity<List<WorkblockEntry>> getWorkblocks(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getWorkblocks(day, ZoneId.systemDefault(), Instant.now()));
+            statsService.getWorkblocks(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/sessions")
-    public ResponseEntity<List<FocusSessionEntry>> getSessions(@RequestParam String date) {
-        LocalDate day = LocalDate.parse(date);
+    public ResponseEntity<List<FocusSessionEntry>> getSessions(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getFocusSessions(day, ZoneId.systemDefault(), Instant.now()));
+            statsService.getFocusSessions(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/range")
-    public ResponseEntity<RangeResponse> getRange(@RequestParam String from, @RequestParam String to) {
+    public ResponseEntity<RangeResponse> getRange(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
             statsService.getRange(LocalDate.parse(from), LocalDate.parse(to),
-                ZoneId.systemDefault(), Instant.now()));
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/range/summary")
-    public ResponseEntity<RangeSummaryResponse> getRangeSummary(@RequestParam String from, @RequestParam String to) {
+    public ResponseEntity<RangeSummaryResponse> getRangeSummary(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
             statsService.getRangeSummary(LocalDate.parse(from), LocalDate.parse(to),
-                ZoneId.systemDefault(), Instant.now()));
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
+    }
+
+    @GetMapping("/interruptors")
+    public ResponseEntity<List<InterruptorEntry>> getInterruptors(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
+        return ResponseEntity.ok(
+            statsService.getInterruptors(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
+    }
+
+    @GetMapping("/interruptors/range")
+    public ResponseEntity<List<InterruptorEntry>> getInterruptorsRange(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
+        return ResponseEntity.ok(
+            statsService.getInterruptorsRange(LocalDate.parse(from), LocalDate.parse(to),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
     @GetMapping("/domains")
-    public ResponseEntity<DomainStatsResponse> getDomains(@RequestParam String date) {
-        LocalDate day = LocalDate.parse(date);
+    public ResponseEntity<DomainStatsResponse> getDomains(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
         return ResponseEntity.ok(
-            statsService.getDomainStats(day, ZoneId.systemDefault(), Instant.now()));
+            statsService.getDomainStats(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 }
