@@ -266,7 +266,7 @@ struct PomodoroPage: View {
     private var currentSessionTab: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionTitle(text: "Goal")
-            TextField("Enter a goal for this session…", text: $vm.goal, axis: .vertical)
+            TextField("I will [task] so that [outcome]…", text: $vm.goal, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .foregroundStyle(theme.foreground)
@@ -274,6 +274,20 @@ struct PomodoroPage: View {
                 .background(theme.secondary)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .lineLimit(3...6)
+
+            // Implementation-intention nudge (Gollwitzer 1999).
+            // Soft-validates: short goals don't get the full intention effect.
+            if !vm.isRunning && vm.goal.trimmingCharacters(in: .whitespaces).count < 15 {
+                HStack(spacing: 6) {
+                    Image(systemName: "lightbulb")
+                        .font(.system(size: 10))
+                        .foregroundStyle(theme.accent)
+                    Text("Tip: write an intention, not just a topic. \"Draft the migration spec\" beats \"work on DB\".")
+                        .font(.system(size: 10))
+                        .foregroundStyle(theme.mutedForeground)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
 
             Divider().opacity(0.3)
 

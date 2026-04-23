@@ -26,6 +26,10 @@ struct personalApp: App {
                     )
                     BreakDetectionService.shared.wire(appTracker: appTracker)
                     DailyRecapService.shared.start()
+                    EyeStrainNudgeService.shared.wire(
+                        appTracker: appTracker,
+                        pomodoro: PomodoroViewModel.shared
+                    )
                 }
             #else
             Text("Personale")
