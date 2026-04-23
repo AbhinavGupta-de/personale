@@ -91,6 +91,16 @@ class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(dailyRecapEnabled, forKey: "dailyRecapEnabled") }
     }
 
+    // MARK: - Eye-strain (20-20-20 rule)
+
+    @Published var eyeStrainNudgesEnabled: Bool {
+        didSet { UserDefaults.standard.set(eyeStrainNudgesEnabled, forKey: "eyeStrainNudgesEnabled") }
+    }
+
+    @Published var eyeStrainIntervalMinutes: Int {
+        didSet { UserDefaults.standard.set(eyeStrainIntervalMinutes, forKey: "eyeStrainIntervalMinutes") }
+    }
+
     static let defaultServerURL = "http://localhost:8696"
 
     static let defaultThresholds: [String: TimeInterval] = [
@@ -169,6 +179,11 @@ class AppSettings: ObservableObject {
 
         self.dailyRecapEnabled =
             (UserDefaults.standard.object(forKey: "dailyRecapEnabled") as? Bool) ?? true
+
+        self.eyeStrainNudgesEnabled =
+            (UserDefaults.standard.object(forKey: "eyeStrainNudgesEnabled") as? Bool) ?? false
+        self.eyeStrainIntervalMinutes =
+            (UserDefaults.standard.object(forKey: "eyeStrainIntervalMinutes") as? Int) ?? 20
     }
 
     var serverBaseURL: URL {

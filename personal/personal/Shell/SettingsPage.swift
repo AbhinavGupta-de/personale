@@ -105,6 +105,27 @@ struct SettingsPage: View {
                             DailyRecapService.shared.reschedule()
                         }
                 }
+
+                Divider().opacity(0.4)
+
+                // 20-20-20 eye-strain nudge
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("20-20-20 Eye Strain Nudge")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(theme.foreground)
+                        Text("Every 20 min of active work, look 20 ft away for 20 sec. Suppressed during focus sessions.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(theme.mutedForeground)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $settings.eyeStrainNudgesEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .onChange(of: settings.eyeStrainNudgesEnabled) { _, _ in
+                            EyeStrainNudgeService.shared.reschedule()
+                        }
+                }
             }
         }
     }

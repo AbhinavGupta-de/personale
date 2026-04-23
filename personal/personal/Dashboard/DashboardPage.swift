@@ -20,6 +20,19 @@ struct DashboardPage: View {
                         onNext: { viewModel.goToNextDay() },
                         onToday: { viewModel.goToToday() }
                     )
+                    if let freshStart = viewModel.freshStartLabel {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 11))
+                                .foregroundStyle(theme.primary)
+                            Text(freshStart)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(theme.foreground)
+                        }
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(theme.primary.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
                     if viewModel.streakDays > 0 {
                         HStack(spacing: 4) {
                             Image(systemName: "flame.fill")

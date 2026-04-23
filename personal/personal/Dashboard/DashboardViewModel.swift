@@ -64,6 +64,24 @@ class DashboardViewModel: ObservableObject {
     var dateString: String { Self.dateFmt.string(from: selectedDate) }
     var displayDate: String { Self.displayFmt.string(from: selectedDate) }
 
+    /// "Fresh Start Effect" framing (Dai/Milkman/Riis 2014): when the selected
+    /// day is a Monday or the 1st of the month, surface a reset copy — cheap
+    /// but shown to boost goal re-engagement.
+    var freshStartLabel: String? {
+        let cal = Calendar.current
+        let weekday = cal.component(.weekday, from: selectedDate)
+        let day = cal.component(.day, from: selectedDate)
+        if day == 1 {
+            let fmt = DateFormatter(); fmt.dateFormat = "MMMM"
+            return "\(fmt.string(from: selectedDate)) — fresh start"
+        }
+        if weekday == 2 { // Monday (Sunday = 1)
+            let weekOfYear = cal.component(.weekOfYear, from: selectedDate)
+            return "Week \(weekOfYear) — reset"
+        }
+        return nil
+    }
+
     var isToday: Bool {
         Calendar.current.isDate(selectedDate, inSameDayAs: effectiveToday)
     }
