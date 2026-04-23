@@ -35,6 +35,9 @@ struct ActivityDetailPage: View {
                                 parseTime: viewModel.parseTimeToHour,
                                 formatDuration: viewModel.formatDuration,
                                 labelFor: { viewModel.label(for: $0) },
+                                dateString: viewModel.dateString,
+                                reviewsByKey: viewModel.reviewsByKey,
+                                availableCategories: viewModel.availableCategoryNames,
                                 selectedSession: $viewModel.selectedSession
                             )
                             .frame(maxWidth: .infinity)
@@ -127,6 +130,9 @@ struct DayTimelineColumn: View {
     let categoryColor: (String) -> Color
     let formatDuration: (Int) -> String
     var labelFor: (FocusSessionResponse) -> String = { $0.name }
+    var dateString: String = ""
+    var reviewsByKey: [String: SessionReviewResponse] = [:]
+    var availableCategories: [String] = []
     @Binding var selectedSession: FocusSessionResponse?
 
     @Environment(\.theme) private var theme
@@ -190,7 +196,19 @@ struct DayTimelineColumn: View {
             get: { isSelected },
             set: { if !$0 { selectedSession = nil } }
         ), arrowEdge: .leading) {
-            SessionPopoverCard(session: session, formatDuration: formatDuration)
+            let key = ReviewKey.make(
+                date: dateString,
+                startTime: session.startTime,
+                endTime: session.endTime,
+                category: session.name)
+            InlineReviewPopover(
+                session: session,
+                dateString: dateString,
+                availableCategories: availableCategories,
+                initialReview: reviewsByKey[key],
+                formatDuration: formatDuration,
+                onDismiss: { selectedSession = nil }
+            )
         }
     }
 }
@@ -204,6 +222,9 @@ struct SessionsStripColumn: View {
     let parseTime: (String) -> Double?
     let categoryColor: (String) -> Color
     let formatDuration: (Int) -> String
+    var dateString: String = ""
+    var reviewsByKey: [String: SessionReviewResponse] = [:]
+    var availableCategories: [String] = []
     @Binding var selectedSession: FocusSessionResponse?
 
     @Environment(\.theme) private var theme
@@ -247,7 +268,19 @@ struct SessionsStripColumn: View {
             get: { isSelected },
             set: { if !$0 { selectedSession = nil } }
         ), arrowEdge: .trailing) {
-            SessionPopoverCard(session: session, formatDuration: formatDuration)
+            let key = ReviewKey.make(
+                date: dateString,
+                startTime: session.startTime,
+                endTime: session.endTime,
+                category: session.name)
+            InlineReviewPopover(
+                session: session,
+                dateString: dateString,
+                availableCategories: availableCategories,
+                initialReview: reviewsByKey[key],
+                formatDuration: formatDuration,
+                onDismiss: { selectedSession = nil }
+            )
         }
     }
 }
@@ -288,6 +321,9 @@ struct DayTimelineCard: View {
     let parseTime: (String) -> Double?
     let formatDuration: (Int) -> String
     var labelFor: (FocusSessionResponse) -> String = { $0.name }
+    var dateString: String = ""
+    var reviewsByKey: [String: SessionReviewResponse] = [:]
+    var availableCategories: [String] = []
     @Binding var selectedSession: FocusSessionResponse?
 
     @Environment(\.theme) private var theme
@@ -320,6 +356,9 @@ struct DayTimelineCard: View {
                         parseTime: parseTime,
                         categoryColor: categoryColor,
                         formatDuration: formatDuration,
+                        dateString: dateString,
+                        reviewsByKey: reviewsByKey,
+                        availableCategories: availableCategories,
                         selectedSession: $selectedSession
                     )
                     .frame(width: 24)
@@ -331,6 +370,9 @@ struct DayTimelineCard: View {
                         categoryColor: categoryColor,
                         formatDuration: formatDuration,
                         labelFor: labelFor,
+                        dateString: dateString,
+                        reviewsByKey: reviewsByKey,
+                        availableCategories: availableCategories,
                         selectedSession: $selectedSession
                     )
                     .frame(maxWidth: .infinity)
