@@ -279,7 +279,7 @@ struct PlaceholderColumn: View {
     }
 }
 
-// MARK: - Day Timeline Card (3-column Rize layout)
+// MARK: - Day Timeline Card (3-column day view)
 
 struct DayTimelineCard: View {
     let sessions: [FocusSessionResponse]
@@ -478,7 +478,7 @@ struct WeeklySummaryCard: View {
     }
 }
 
-// MARK: - Session Popover Card (Rize-style — appears on click next to session block)
+// MARK: - Session Popover Card (appears on click next to session block)
 
 struct SessionPopoverCard: View {
     let session: FocusSessionResponse

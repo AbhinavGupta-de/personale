@@ -112,14 +112,14 @@ enum MockData {
         .init(time: "18:01:10", app: "Airtable", detail: "Tasks"),
         .init(time: "18:00:03", app: "Slack", detail: "General"),
         .init(time: "17:57:29", app: "Superhuman", detail: "Inbox - unread"),
-        .init(time: "17:56:14", app: "Chrome", detail: "rize.io/settings/notific..."),
-        .init(time: "17:53:01", app: "Chrome", detail: "rize.io/settings"),
+        .init(time: "17:56:14", app: "Chrome", detail: "example.com/settings/notific..."),
+        .init(time: "17:53:01", app: "Chrome", detail: "example.com/settings"),
         .init(time: "17:53:12", app: "Slack", detail: "Product Team"),
-        .init(time: "17:49:58", app: "Sketch", detail: "Rize (Master)"),
+        .init(time: "17:49:58", app: "Sketch", detail: "Designs (Master)"),
         .init(time: "17:49:40", app: "Webstorm", detail: "product.js"),
-        .init(time: "17:49:15", app: "Sketch", detail: "Rize (Master)"),
+        .init(time: "17:49:15", app: "Sketch", detail: "Designs (Master)"),
         .init(time: "17:47:21", app: "Webstorm", detail: "index.js"),
-        .init(time: "17:35:14", app: "Sketch", detail: "Rize (Master)"),
+        .init(time: "17:35:14", app: "Sketch", detail: "Designs (Master)"),
     ]
 
     static let projects: [Project] = [
