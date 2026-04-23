@@ -12,7 +12,9 @@ final class ReviewViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var generatingFor: String?
+    @Published var batchGenerating = false
     @Published var selectedDate: Date
+    @Published var availableCategories: [String] = []
 
     private let api = APIClient.shared
 
@@ -56,9 +58,30 @@ final class ReviewViewModel: ObservableObject {
             do {
                 blocks = try await api.fetchReviews(date: dateString, status: "all")
                 if selectedKey == nil { selectedKey = filtered.first?.blockKey }
+
+                // Kick off AI drafts for any block that doesn't have one yet.
+                // Fire-and-forget; UI will refresh when the batch comes back.
+                let needsDraft = blocks.contains { $0.aiTitle == nil || $0.aiTitle?.isEmpty == true }
+                if needsDraft { await self.generateMissing() }
             } catch {
                 errorMessage = "Failed to load reviews: \(error.localizedDescription)"
             }
+        }
+        Task {
+            if let cats = try? await api.fetchCategorySettings() {
+                availableCategories = cats.map(\.name)
+            }
+        }
+    }
+
+    private func generateMissing() async {
+        batchGenerating = true
+        defer { batchGenerating = false }
+        do {
+            let refreshed = try await api.generateMissingReviewInsights(date: dateString)
+            blocks = refreshed
+        } catch {
+            errorMessage = "Batch generate failed: \(error.localizedDescription)"
         }
     }
 
@@ -163,6 +186,15 @@ struct ReviewPage: View {
             .clipShape(RoundedRectangle(cornerRadius: 7))
 
             Spacer()
+
+            if vm.batchGenerating {
+                HStack(spacing: 5) {
+                    ProgressView().controlSize(.mini)
+                    Text("Generating AI drafts…")
+                        .font(.system(size: 11)).foregroundStyle(theme.mutedForeground)
+                }
+                .padding(.trailing, 10)
+            }
 
             Text(vm.displayDate)
                 .font(.system(size: 13, weight: .medium))
@@ -318,17 +350,40 @@ private struct ReviewEditor: View {
     @State private var task: String = ""
     @State private var project: String = ""
     @State private var client: String = ""
+    @State private var category: String = ""
 
     private var categoryBadge: some View {
-        HStack(spacing: 5) {
-            Circle().fill(CategoryColors.color(for: block.category)).frame(width: 6, height: 6)
-            Text(block.category.uppercased())
-                .font(.system(size: 10, weight: .semibold)).tracking(0.5)
+        Menu {
+            ForEach(vm.availableCategories, id: \.self) { cat in
+                Button {
+                    category = cat
+                    vm.save(SessionReviewUpdateRequest(
+                        title: nil, description: nil, task: nil, project: nil, client: nil,
+                        category: cat
+                    ), key: block.blockKey)
+                } label: {
+                    HStack {
+                        Text(cat)
+                        if cat == category {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Circle().fill(CategoryColors.color(for: category)).frame(width: 6, height: 6)
+                Text(category.uppercased())
+                    .font(.system(size: 10, weight: .semibold)).tracking(0.5)
+                Image(systemName: "chevron.down").font(.system(size: 8)).opacity(0.5)
+            }
+            .foregroundStyle(theme.foreground)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(theme.secondary.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 5))
         }
-        .foregroundStyle(theme.foreground)
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(theme.secondary.opacity(0.6))
-        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .menuStyle(.borderlessButton)
+        .fixedSize()
     }
 
     private func fmt(_ s: Int) -> String {
@@ -438,6 +493,8 @@ private struct ReviewEditor: View {
         }
         .onAppear { populate() }
         .onChange(of: block.blockKey) { _, _ in populate() }
+        .onChange(of: block.aiTitle) { _, _ in populate() }
+        .onChange(of: block.title) { _, _ in populate() }
     }
 
     @ViewBuilder
@@ -461,6 +518,7 @@ private struct ReviewEditor: View {
         task = block.task ?? ""
         project = block.project ?? ""
         client = block.client ?? ""
+        category = block.category
     }
 
     private func save() {
@@ -469,7 +527,8 @@ private struct ReviewEditor: View {
             description: description.isEmpty ? nil : description,
             task: task.isEmpty ? nil : task,
             project: project.isEmpty ? nil : project,
-            client: client.isEmpty ? nil : client
+            client: client.isEmpty ? nil : client,
+            category: category == block.category ? nil : category
         )
         vm.save(req, key: block.blockKey)
     }

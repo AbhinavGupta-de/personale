@@ -27,6 +27,7 @@ public class SessionReview implements Persistable<String> {
     private String aiDescription;
     private String aiModel;
     private Instant aiGeneratedAt;
+    private String overrideCategory;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -69,6 +70,8 @@ public class SessionReview implements Persistable<String> {
     public void setAiModel(String aiModel) { this.aiModel = aiModel; }
     public Instant getAiGeneratedAt() { return aiGeneratedAt; }
     public void setAiGeneratedAt(Instant aiGeneratedAt) { this.aiGeneratedAt = aiGeneratedAt; }
+    public String getOverrideCategory() { return overrideCategory; }
+    public void setOverrideCategory(String overrideCategory) { this.overrideCategory = overrideCategory; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
