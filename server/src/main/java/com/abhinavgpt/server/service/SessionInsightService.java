@@ -69,6 +69,47 @@ public class SessionInsightService {
         return insightRepo.findById(sessionId).map(this::toResponse);
     }
 
+    /** Generate a title/description for a window [start, end). Returns (title, description). */
+    public String[] generateForWindow(String goal, Instant start, Instant end) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                "ANTHROPIC_API_KEY not configured");
+        }
+        String summary = buildActivitySummary(start, end);
+        String prompt = buildPrompt(goal, summary);
+        String json = """
+            {
+              "model": "%s",
+              "max_tokens": 300,
+              "messages": [{"role": "user", "content": %s}]
+            }
+            """.formatted(model, jsonEscape(prompt));
+        HttpRequest req = HttpRequest.newBuilder(URI.create(API_URL))
+            .timeout(Duration.ofSeconds(20))
+            .header("Content-Type", "application/json")
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", "2023-06-01")
+            .POST(HttpRequest.BodyPublishers.ofString(json))
+            .build();
+        HttpResponse<String> res;
+        try {
+            res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                "Anthropic request failed: " + e.getMessage());
+        }
+        if (res.statusCode() < 200 || res.statusCode() >= 300) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                "Anthropic returned " + res.statusCode() + ": " + res.body());
+        }
+        String content = extractText(res.body());
+        String title = extractTag(content, "title", 80);
+        String description = extractTag(content, "description", 400);
+        if (title.isEmpty()) title = goal == null ? "Focus session" : goal;
+        if (description.isEmpty()) description = "No summary available.";
+        return new String[]{title, description, model};
+    }
+
     public SessionInsightResponse generate(Long sessionId) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,

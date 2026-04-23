@@ -202,6 +202,39 @@ struct PomodoroSessionResponse: Decodable, Identifiable {
     let status: String          // running | completed | discarded
 }
 
+// MARK: - Session Reviews (Time Entry Review)
+
+struct SessionReviewResponse: Decodable, Identifiable {
+    let blockKey: String
+    let date: String
+    let startTime: String
+    let endTime: String
+    let durationSeconds: Int
+    let category: String
+    let title: String?
+    let description: String?
+    let task: String?
+    let project: String?
+    let client: String?
+    let status: String              // pending | approved | rejected
+    let aiTitle: String?
+    let aiDescription: String?
+    let aiGeneratedAt: String?
+    let apps: [AppTimeEntry]
+    let categories: [CategoryBreakdownResponse]
+    let topDomains: [DomainTimeResponse]?
+
+    var id: String { blockKey }
+}
+
+struct SessionReviewUpdateRequest: Encodable {
+    var title: String?
+    var description: String?
+    var task: String?
+    var project: String?
+    var client: String?
+}
+
 // MARK: - Session Insights (M16)
 
 struct SessionInsightResponse: Decodable {
@@ -381,6 +414,53 @@ class APIClient {
         if http.statusCode == 404 { return nil }
         guard http.statusCode == 200 else { throw URLError(.badServerResponse) }
         return try decoder.decode(SessionInsightResponse.self, from: data)
+    }
+
+    // MARK: - Session Reviews
+
+    func fetchReviews(date: String, status: String = "all") async throws -> [SessionReviewResponse] {
+        try await get("/api/reviews",
+            params: ["date": date, "status": status].merging(dayStartParam) { a, _ in a })
+    }
+
+    func updateReview(key: String, date: String, req: SessionReviewUpdateRequest) async throws -> SessionReviewResponse {
+        let dsh = AppSettings.shared.dayStartHour
+        let path = "/api/reviews/\(key)?date=\(date)&dayStartHour=\(dsh)"
+        return try await body(path, method: "PUT", body: req)
+    }
+
+    func setReviewStatus(key: String, date: String, status: String) async throws -> SessionReviewResponse {
+        let dsh = AppSettings.shared.dayStartHour
+        var urlReq = URLRequest(url: baseURL.appendingPathComponent("/api/reviews/\(key)/status")
+            .appending(queryItems: [
+                URLQueryItem(name: "status", value: status),
+                URLQueryItem(name: "date", value: date),
+                URLQueryItem(name: "dayStartHour", value: String(dsh))
+            ]))
+        urlReq.httpMethod = "POST"
+        let (data, response) = try await session.data(for: urlReq)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try decoder.decode(SessionReviewResponse.self, from: data)
+    }
+
+    func generateReviewInsight(key: String, date: String) async throws -> SessionReviewResponse {
+        let dsh = AppSettings.shared.dayStartHour
+        var urlReq = URLRequest(url: baseURL.appendingPathComponent("/api/reviews/\(key)/generate")
+            .appending(queryItems: [
+                URLQueryItem(name: "date", value: date),
+                URLQueryItem(name: "dayStartHour", value: String(dsh))
+            ]))
+        urlReq.httpMethod = "POST"
+        urlReq.timeoutInterval = 30
+        let (data, response) = try await session.data(for: urlReq)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw NSError(domain: "review-insight", code: (response as? HTTPURLResponse)?.statusCode ?? 0,
+                          userInfo: [NSLocalizedDescriptionKey: body])
+        }
+        return try decoder.decode(SessionReviewResponse.self, from: data)
     }
 
     func generateInsight(sessionId: Int64) async throws -> SessionInsightResponse {
