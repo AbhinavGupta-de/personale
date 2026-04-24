@@ -426,8 +426,22 @@ class APIClient {
 
     func updateReview(key: String, date: String, req: SessionReviewUpdateRequest) async throws -> SessionReviewResponse {
         let dsh = AppSettings.shared.dayStartHour
-        let path = "/api/reviews/\(key)?date=\(date)&dayStartHour=\(dsh)"
-        return try await body(path, method: "PUT", body: req)
+        var urlReq = URLRequest(url: baseURL.appendingPathComponent("/api/reviews/\(key)")
+            .appending(queryItems: [
+                URLQueryItem(name: "date", value: date),
+                URLQueryItem(name: "dayStartHour", value: String(dsh))
+            ]))
+        urlReq.httpMethod = "PUT"
+        urlReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlReq.httpBody = try JSONEncoder().encode(req)
+        let (data, response) = try await session.data(for: urlReq)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let b = String(data: data, encoding: .utf8) ?? ""
+            throw NSError(domain: "review-update",
+                          code: (response as? HTTPURLResponse)?.statusCode ?? 0,
+                          userInfo: [NSLocalizedDescriptionKey: b])
+        }
+        return try decoder.decode(SessionReviewResponse.self, from: data)
     }
 
     func setReviewStatus(key: String, date: String, status: String) async throws -> SessionReviewResponse {
