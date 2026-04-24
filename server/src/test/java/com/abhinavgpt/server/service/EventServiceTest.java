@@ -33,7 +33,7 @@ class EventServiceTest {
     @Test
     void saveEvent_mapsFieldsCorrectly() {
         AppSwitchEvent event = new AppSwitchEvent(
-            "Safari", "com.apple.Safari", "Google", "2026-03-07T10:00:00Z");
+            "Safari", "com.apple.Safari", "Google", null, "2026-03-07T10:00:00Z");
         when(repository.findActiveSession()).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -53,7 +53,7 @@ class EventServiceTest {
     @Test
     void saveEvent_parsesIso8601Timestamp() {
         AppSwitchEvent event = new AppSwitchEvent(
-            "Terminal", "com.apple.Terminal", null, "2026-03-07T14:30:00Z");
+            "Terminal", "com.apple.Terminal", null, null, "2026-03-07T14:30:00Z");
         when(repository.findActiveSession()).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -67,7 +67,7 @@ class EventServiceTest {
     @Test
     void saveEvent_returnsPersistedSession() {
         AppSwitchEvent event = new AppSwitchEvent(
-            "Safari", "com.apple.Safari", null, "2026-03-07T10:00:00Z");
+            "Safari", "com.apple.Safari", null, null, "2026-03-07T10:00:00Z");
         when(repository.findActiveSession()).thenReturn(Optional.empty());
         AppSession expected = new AppSession("Safari", "com.apple.Safari", null, Instant.now());
         expected.setId(1L);
@@ -81,7 +81,7 @@ class EventServiceTest {
     @Test
     void saveEvent_invalidTimestamp_throwsException() {
         AppSwitchEvent event = new AppSwitchEvent(
-            "Safari", "com.apple.Safari", null, "not-a-timestamp");
+            "Safari", "com.apple.Safari", null, null, "not-a-timestamp");
 
         assertThatThrownBy(() -> eventService.saveEvent(event))
             .isInstanceOf(java.time.format.DateTimeParseException.class);
@@ -96,7 +96,7 @@ class EventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AppSwitchEvent event = new AppSwitchEvent(
-            "Terminal", "com.apple.Terminal", null, "2026-03-07T10:30:00Z");
+            "Terminal", "com.apple.Terminal", null, null, "2026-03-07T10:30:00Z");
 
         eventService.saveEvent(event);
 
@@ -119,7 +119,7 @@ class EventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         AppSwitchEvent event = new AppSwitchEvent(
-            "Safari", "com.apple.Safari", null, "2026-03-07T10:00:00Z");
+            "Safari", "com.apple.Safari", null, null, "2026-03-07T10:00:00Z");
 
         eventService.saveEvent(event);
 

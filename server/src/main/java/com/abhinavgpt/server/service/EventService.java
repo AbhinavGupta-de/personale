@@ -90,6 +90,7 @@ public class EventService {
             event.windowTitle(),
             eventTime
         );
+        session.setEnrichedContext(event.enrichedContext());
         try {
             return repository.save(session);
         } catch (DuplicateKeyException e) {

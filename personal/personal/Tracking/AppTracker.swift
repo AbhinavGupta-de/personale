@@ -231,13 +231,15 @@ class AppTracker: ObservableObject {
 
         // Capture window title if Accessibility is granted
         let windowTitle = captureWindowTitle(for: app)
+        let enriched = WindowContextExtractor.extract(app: app)
 
-        print("[\(timestamp)] Switched to: \(name) (\(bid)) [\(currentCategory)]\(windowTitle.map { " — \($0)" } ?? "")")
+        print("[\(timestamp)] Switched to: \(name) (\(bid)) [\(currentCategory)]\(windowTitle.map { " — \($0)" } ?? "")\(enriched.map { " ⎘ \($0)" } ?? "")")
 
         eventClient.sendAppSwitch(
             appName: name,
             bundleId: bid,
             windowTitle: windowTitle,
+            enrichedContext: enriched,
             timestamp: timestamp
         )
 

@@ -13,6 +13,7 @@ public class AppSession {
     private String appName;
     private String bundleId;
     private String windowTitle;
+    private String enrichedContext;
     private Instant startedAt;
     private Instant endedAt;
 
@@ -36,6 +37,9 @@ public class AppSession {
 
     public String getWindowTitle() { return windowTitle; }
     public void setWindowTitle(String windowTitle) { this.windowTitle = windowTitle; }
+
+    public String getEnrichedContext() { return enrichedContext; }
+    public void setEnrichedContext(String enrichedContext) { this.enrichedContext = enrichedContext; }
 
     public Instant getStartedAt() { return startedAt; }
     public void setStartedAt(Instant startedAt) { this.startedAt = startedAt; }

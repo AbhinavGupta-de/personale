@@ -183,6 +183,10 @@ public class SessionInsightService {
         List<AppSession> sessions = appSessionRepo.findSessionsOverlapping(start, end);
         Map<String, long[]> perApp = new HashMap<>();       // [seconds, count]
         Map<String, String> titles = new HashMap<>();
+        // Per-app set of distinct enriched-context strings (e.g. "repo: personale,
+        // branch: feat/foo" from Xcode AX; "Ghostty · ~/code/personale · gradle test"
+        // from Ghostty tab title). Cap at 5 per app to keep the prompt compact.
+        Map<String, java.util.LinkedHashSet<String>> contextsPerApp = new HashMap<>();
         for (AppSession s : sessions) {
             Instant effStart = s.getStartedAt().isBefore(start) ? start : s.getStartedAt();
             Instant effEnd = s.getEndedAt() == null ? end
@@ -195,6 +199,11 @@ public class SessionInsightService {
             agg[1] += 1;
             if (s.getWindowTitle() != null && titles.get(app) == null) {
                 titles.put(app, s.getWindowTitle());
+            }
+            if (s.getEnrichedContext() != null && !s.getEnrichedContext().isBlank()) {
+                contextsPerApp
+                    .computeIfAbsent(app, k -> new java.util.LinkedHashSet<>())
+                    .add(s.getEnrichedContext().trim());
             }
         }
 
@@ -217,13 +226,23 @@ public class SessionInsightService {
         perApp.entrySet().stream()
             .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
             .limit(10)
-            .forEach(e -> sb.append("- ").append(e.getKey())
-                .append(" — ").append(e.getValue()[0]).append("s, ")
-                .append(e.getValue()[1]).append(" sessions")
-                .append(titles.containsKey(e.getKey())
-                    ? " (sample window title: \"" + clip(titles.get(e.getKey()), 80) + "\")"
-                    : "")
-                .append("\n"));
+            .forEach(e -> {
+                sb.append("- ").append(e.getKey())
+                    .append(" — ").append(e.getValue()[0]).append("s, ")
+                    .append(e.getValue()[1]).append(" sessions");
+                if (titles.containsKey(e.getKey())) {
+                    sb.append(" (sample window title: \"")
+                        .append(clip(titles.get(e.getKey()), 80)).append("\")");
+                }
+                var ctx = contextsPerApp.get(e.getKey());
+                if (ctx != null && !ctx.isEmpty()) {
+                    sb.append("\n    context: ");
+                    sb.append(ctx.stream().limit(5)
+                        .map(s -> "[" + clip(s, 100) + "]")
+                        .collect(java.util.stream.Collectors.joining("; ")));
+                }
+                sb.append("\n");
+            });
 
         if (!perDomain.isEmpty()) {
             sb.append("\nBrowser domains visited (visit count + page titles):\n");
