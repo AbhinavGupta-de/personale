@@ -185,11 +185,28 @@ let lastDomain: string | null = null;
 let lastEventTime = 0;
 const DEBOUNCE_MS = 1000;
 
+/**
+ * Tracks whether the *browser app itself* currently has macOS focus.
+ * `chrome.windows.get(id).focused` only indicates which window is topmost
+ * within Chromium — it still reports true when the user has Cmd-Tabbed away
+ * to another macOS app. `chrome.windows.onFocusChanged` with WINDOW_ID_NONE
+ * is the signal that Chromium lost OS focus entirely; flip the gate then so
+ * background tab updates don't bleed into the next app's tracked session.
+ */
+let browserHasOSFocus = true;
+
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  browserHasOSFocus = windowId !== chrome.windows.WINDOW_ID_NONE;
+});
+
 async function handleTabChange(tab: chrome.tabs.Tab): Promise<void> {
   if (!settings.enabled) return;
   if (!tab.url) return;
 
-  // Only record if this browser window is actually focused
+  // Gate 1: browser app must have macOS focus.
+  if (!browserHasOSFocus) return;
+
+  // Gate 2: this specific window must be the topmost within the browser.
   try {
     const win = await chrome.windows.get(tab.windowId);
     if (!win.focused) return;
@@ -253,7 +270,17 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 loadSettings().then(async () => {
   triggerFlush();
   cleanupOldSynced();
-  // Capture current tab on wake — catches what happened while worker was suspended
+  // Seed browser-focus state from the current window system rather than
+  // assuming true — prevents a spurious event on wake if the user is in
+  // another app when the service worker boots.
+  try {
+    const focused = await chrome.windows.getLastFocused();
+    browserHasOSFocus = focused.focused ?? false;
+  } catch { browserHasOSFocus = false; }
+
+  // Capture current tab on wake — catches what happened while worker was
+  // suspended. handleTabChange now gates on browserHasOSFocus so this is
+  // safe to call; it's a no-op if the browser isn't frontmost.
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) handleTabChange(tab);
