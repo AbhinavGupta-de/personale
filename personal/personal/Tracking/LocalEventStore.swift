@@ -43,6 +43,7 @@ final class LocalEventStore {
                 app_name TEXT,
                 bundle_id TEXT,
                 window_title TEXT,
+                enriched_context TEXT,
                 session_started_at TEXT,
                 timestamp TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -57,28 +58,32 @@ final class LocalEventStore {
                 print("[LocalEventStore] Failed to create table: \(msg)")
                 sqlite3_free(errMsg)
             }
+            // Best-effort column add for DBs created before enriched_context
+            // existed. Duplicate-column errors are expected and swallowed.
+            sqlite3_exec(db, "ALTER TABLE pending_events ADD COLUMN enriched_context TEXT", nil, nil, nil)
         }
     }
 
     // MARK: - Insert
 
-    func insertAppSwitch(appName: String, bundleId: String?, windowTitle: String?, timestamp: String) {
+    func insertAppSwitch(appName: String, bundleId: String?, windowTitle: String?,
+                         enrichedContext: String?, timestamp: String) {
         insert(type: "app_switch", appName: appName, bundleId: bundleId, windowTitle: windowTitle,
-               sessionStartedAt: nil, timestamp: timestamp)
+               enrichedContext: enrichedContext, sessionStartedAt: nil, timestamp: timestamp)
     }
 
     func insertSessionClose(timestamp: String, bundleId: String?, sessionStartedAt: String?) {
         insert(type: "session_close", appName: nil, bundleId: bundleId, windowTitle: nil,
-               sessionStartedAt: sessionStartedAt, timestamp: timestamp)
+               enrichedContext: nil, sessionStartedAt: sessionStartedAt, timestamp: timestamp)
     }
 
     private func insert(type: String, appName: String?, bundleId: String?, windowTitle: String?,
-                        sessionStartedAt: String?, timestamp: String) {
+                        enrichedContext: String?, sessionStartedAt: String?, timestamp: String) {
         queue.async { [weak self] in
             guard let db = self?.db else { return }
             let sql = """
-                INSERT INTO pending_events (type, app_name, bundle_id, window_title, session_started_at, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO pending_events (type, app_name, bundle_id, window_title, enriched_context, session_started_at, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """
             var stmt: OpaquePointer?
             guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -91,8 +96,9 @@ final class LocalEventStore {
             Self.bindOptionalText(stmt, index: 2, value: appName)
             Self.bindOptionalText(stmt, index: 3, value: bundleId)
             Self.bindOptionalText(stmt, index: 4, value: windowTitle)
-            Self.bindOptionalText(stmt, index: 5, value: sessionStartedAt)
-            sqlite3_bind_text(stmt, 6, (timestamp as NSString).utf8String, -1, nil)
+            Self.bindOptionalText(stmt, index: 5, value: enrichedContext)
+            Self.bindOptionalText(stmt, index: 6, value: sessionStartedAt)
+            sqlite3_bind_text(stmt, 7, (timestamp as NSString).utf8String, -1, nil)
 
             if sqlite3_step(stmt) != SQLITE_DONE {
                 print("[LocalEventStore] Failed to insert event")
@@ -108,6 +114,7 @@ final class LocalEventStore {
         let appName: String?
         let bundleId: String?
         let windowTitle: String?
+        let enrichedContext: String?
         let sessionStartedAt: String?
         let timestamp: String
     }
@@ -115,7 +122,7 @@ final class LocalEventStore {
     func fetchUnsynced(limit: Int = 50) -> [PendingEvent] {
         queue.sync {
             guard let db = db else { return [] }
-            let sql = "SELECT id, type, app_name, bundle_id, window_title, session_started_at, timestamp FROM pending_events WHERE synced = 0 ORDER BY id ASC LIMIT ?"
+            let sql = "SELECT id, type, app_name, bundle_id, window_title, enriched_context, session_started_at, timestamp FROM pending_events WHERE synced = 0 ORDER BY id ASC LIMIT ?"
             var stmt: OpaquePointer?
             guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
             defer { sqlite3_finalize(stmt) }
@@ -130,8 +137,9 @@ final class LocalEventStore {
                     appName: Self.optionalColumn(stmt, index: 2),
                     bundleId: Self.optionalColumn(stmt, index: 3),
                     windowTitle: Self.optionalColumn(stmt, index: 4),
-                    sessionStartedAt: Self.optionalColumn(stmt, index: 5),
-                    timestamp: String(cString: sqlite3_column_text(stmt, 6))
+                    enrichedContext: Self.optionalColumn(stmt, index: 5),
+                    sessionStartedAt: Self.optionalColumn(stmt, index: 6),
+                    timestamp: String(cString: sqlite3_column_text(stmt, 7))
                 )
                 events.append(event)
             }

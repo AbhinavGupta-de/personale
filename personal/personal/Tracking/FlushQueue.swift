@@ -114,6 +114,7 @@ final class FlushQueue {
                 appName: event.appName ?? "Unknown",
                 bundleId: event.bundleId,
                 windowTitle: event.windowTitle,
+                enrichedContext: event.enrichedContext,
                 timestamp: event.timestamp
             )
             body = try? encoder.encode(payload)
@@ -188,6 +189,7 @@ struct AppSwitchPayload: Encodable {
     let appName: String
     let bundleId: String?
     let windowTitle: String?
+    let enrichedContext: String?
     let timestamp: String
 }
 

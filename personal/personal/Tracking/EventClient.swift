@@ -30,8 +30,10 @@ class EventClient: ObservableObject {
         store.deleteOldSyncedEvents()
     }
 
-    func sendAppSwitch(appName: String, bundleId: String?, windowTitle: String?, timestamp: String) {
-        store.insertAppSwitch(appName: appName, bundleId: bundleId, windowTitle: windowTitle, timestamp: timestamp)
+    func sendAppSwitch(appName: String, bundleId: String?, windowTitle: String?,
+                       enrichedContext: String?, timestamp: String) {
+        store.insertAppSwitch(appName: appName, bundleId: bundleId, windowTitle: windowTitle,
+                              enrichedContext: enrichedContext, timestamp: timestamp)
         flushQueue.triggerFlush()
     }
 
