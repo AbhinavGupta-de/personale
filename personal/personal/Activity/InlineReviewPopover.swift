@@ -240,7 +240,7 @@ struct InlineReviewPopover: View {
                 status = r.status
             }
             errorMessage = nil
-            onDismiss()
+            DispatchQueue.main.async { onDismiss() }
         } catch {
             errorMessage = "Save failed: \(error.localizedDescription)"
         }
@@ -252,7 +252,7 @@ struct InlineReviewPopover: View {
         do {
             let r = try await api.setReviewStatus(key: blockKey, date: dateString, status: new)
             status = r.status
-            onDismiss()
+            DispatchQueue.main.async { onDismiss() }
         } catch {
             errorMessage = "Status failed: \(error.localizedDescription)"
         }
@@ -265,8 +265,10 @@ struct InlineReviewPopover: View {
             let r = try await api.generateReviewInsight(key: blockKey, date: dateString)
             aiTitle = r.aiTitle
             aiDescription = r.aiDescription
-            if title.isEmpty, let t = r.aiTitle { title = t }
-            if description.isEmpty, let d = r.aiDescription { description = d }
+            // Regen is explicit intent — replace current draft with fresh AI output.
+            if let t = r.aiTitle { title = t }
+            if let d = r.aiDescription { description = d }
+            errorMessage = nil
         } catch {
             errorMessage = "Generate failed: \(error.localizedDescription)"
         }

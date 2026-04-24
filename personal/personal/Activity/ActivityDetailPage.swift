@@ -207,7 +207,13 @@ struct DayTimelineColumn: View {
                 availableCategories: availableCategories,
                 initialReview: reviewsByKey[key],
                 formatDuration: formatDuration,
-                onDismiss: { selectedSession = nil }
+                onDismiss: {
+                    // Defer past the current view update to avoid the
+                    // "Publishing changes from within view updates" warning
+                    // that SwiftUI emits when a popover's dismiss triggers
+                    // a @Published binding write during the same frame.
+                    DispatchQueue.main.async { selectedSession = nil }
+                }
             )
         }
     }
@@ -279,7 +285,13 @@ struct SessionsStripColumn: View {
                 availableCategories: availableCategories,
                 initialReview: reviewsByKey[key],
                 formatDuration: formatDuration,
-                onDismiss: { selectedSession = nil }
+                onDismiss: {
+                    // Defer past the current view update to avoid the
+                    // "Publishing changes from within view updates" warning
+                    // that SwiftUI emits when a popover's dismiss triggers
+                    // a @Published binding write during the same frame.
+                    DispatchQueue.main.async { selectedSession = nil }
+                }
             )
         }
     }
