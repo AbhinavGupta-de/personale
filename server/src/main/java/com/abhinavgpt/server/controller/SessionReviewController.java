@@ -59,13 +59,26 @@ public class SessionReviewController {
     public ResponseEntity<List<SessionReviewResponse>> generateMissing(
             @RequestParam String date,
             @RequestParam(defaultValue = "0") int dayStartHour) {
+        return ResponseEntity.ok(generateMany(date, dayStartHour, /*forceAll*/ false));
+    }
+
+    /** Force-regenerate every block on the day, replacing existing AI drafts.
+     *  Use when prompt logic improves and old summaries are stale. */
+    @PostMapping("/regenerate-all")
+    public ResponseEntity<List<SessionReviewResponse>> regenerateAll(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
+        return ResponseEntity.ok(generateMany(date, dayStartHour, /*forceAll*/ true));
+    }
+
+    private List<SessionReviewResponse> generateMany(String date, int dayStartHour, boolean forceAll) {
         LocalDate d = LocalDate.parse(date);
         ZoneId zone = ZoneId.systemDefault();
         Instant now = Instant.now();
         int dsh = dayStartHour;
         List<SessionReviewResponse> current = service.listForDate(d, zone, now, dsh, "all");
         for (SessionReviewResponse r : current) {
-            if (r.aiTitle() != null && !r.aiTitle().isBlank()) continue;
+            if (!forceAll && r.aiTitle() != null && !r.aiTitle().isBlank()) continue;
             try {
                 FocusSessionEntry block = service.findBlock(r.blockKey(), d, zone, now, dsh);
                 Instant dayStart = d.atStartOfDay(zone)
@@ -79,7 +92,7 @@ public class SessionReviewController {
                 // One failure shouldn't block the batch; user can retry per-block.
             }
         }
-        return ResponseEntity.ok(service.listForDate(d, zone, now, dsh, "all"));
+        return service.listForDate(d, zone, now, dsh, "all");
     }
 
     @PostMapping("/{key}/generate")

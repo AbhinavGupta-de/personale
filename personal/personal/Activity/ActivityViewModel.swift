@@ -19,6 +19,10 @@ class ActivityViewModel: ObservableObject {
     @Published var weekSessions: [String: [FocusSessionResponse]] = [:]
     @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
     @Published var availableCategoryNames: [String] = []
+    /// Dates we've already triggered batch AI generation for in this session.
+    /// generate-missing skips already-drafted blocks server-side, but we still
+    /// debounce client-side to avoid burning a request per 30s refresh tick.
+    private var draftsRequestedDates: Set<String> = []
 
     var dayStartHour: Int { AppSettings.shared.dayStartHour }
 
@@ -274,11 +278,23 @@ class ActivityViewModel: ObservableObject {
             self.categoryBreakdown = cats
         }
         // Reviews: map block_key → review for title/description lookup in the UI.
+        // Also triggers AI-draft generation for blocks that don't have one yet,
+        // so the title shows up without the user needing to visit Review first.
         Task {
             guard let reviews = try? await api.fetchReviews(date: date, status: "all"),
                 activeFetchDate == date
             else { return }
             self.reviewsByKey = Dictionary(uniqueKeysWithValues: reviews.map { ($0.blockKey, $0) })
+
+            let needsDraft = reviews.contains { $0.aiTitle == nil || ($0.aiTitle?.isEmpty ?? true) }
+            if needsDraft && !self.draftsRequestedDates.contains(date) {
+                self.draftsRequestedDates.insert(date)
+                if let refreshed = try? await self.api.generateMissingReviewInsights(date: date),
+                   self.activeFetchDate == date {
+                    self.reviewsByKey = Dictionary(
+                        uniqueKeysWithValues: refreshed.map { ($0.blockKey, $0) })
+                }
+            }
         }
         Task {
             if availableCategoryNames.isEmpty,

@@ -462,14 +462,24 @@ class APIClient {
 
     /// Batch: regenerate every block on the day that has no AI draft yet.
     func generateMissingReviewInsights(date: String) async throws -> [SessionReviewResponse] {
+        try await batchRegen(date: date, path: "/api/reviews/generate-missing")
+    }
+
+    /// Force-regenerate every block on the day, replacing existing AI drafts.
+    /// Use when the prompt has improved and old summaries are stale.
+    func regenerateAllReviewInsights(date: String) async throws -> [SessionReviewResponse] {
+        try await batchRegen(date: date, path: "/api/reviews/regenerate-all")
+    }
+
+    private func batchRegen(date: String, path: String) async throws -> [SessionReviewResponse] {
         let dsh = AppSettings.shared.dayStartHour
-        var urlReq = URLRequest(url: baseURL.appendingPathComponent("/api/reviews/generate-missing")
+        var urlReq = URLRequest(url: baseURL.appendingPathComponent(path)
             .appending(queryItems: [
                 URLQueryItem(name: "date", value: date),
                 URLQueryItem(name: "dayStartHour", value: String(dsh))
             ]))
         urlReq.httpMethod = "POST"
-        urlReq.timeoutInterval = 120
+        urlReq.timeoutInterval = 180
         let (data, response) = try await session.data(for: urlReq)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw URLError(.badServerResponse)

@@ -85,6 +85,20 @@ final class ReviewViewModel: ObservableObject {
         }
     }
 
+    func regenerateAll() {
+        batchGenerating = true
+        Task {
+            defer { Task { @MainActor in self.batchGenerating = false } }
+            do {
+                let refreshed = try await api.regenerateAllReviewInsights(date: dateString)
+                blocks = refreshed
+                errorMessage = nil
+            } catch {
+                errorMessage = "Regenerate-all failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
     func goToPreviousDay() { shiftDay(-1) }
     func goToNextDay() { shiftDay(1) }
 
@@ -193,6 +207,22 @@ struct ReviewPage: View {
                     Text("Generating AI drafts…")
                         .font(.system(size: 11)).foregroundStyle(theme.mutedForeground)
                 }
+                .padding(.trailing, 10)
+            } else {
+                Button {
+                    vm.regenerateAll()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.clockwise.circle").font(.system(size: 10))
+                        Text("Regen all").font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(theme.primary)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(theme.primary.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain)
+                .help("Re-generate AI drafts for every block on this day, even if one already exists. Use after the prompt has improved.")
                 .padding(.trailing, 10)
             }
 

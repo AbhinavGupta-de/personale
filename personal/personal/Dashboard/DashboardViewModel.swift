@@ -25,6 +25,7 @@ class DashboardViewModel: ObservableObject {
     @Published var categories: [CategoryResponse] = []
     @Published var streakDays: Int = 0
     @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
+    private var draftsRequestedDates: Set<String> = []
 
     // Break timer — ticks every second, computed client-side from existing data
     @Published var secondsSinceLastBreak: Int = 0
@@ -451,6 +452,16 @@ class DashboardViewModel: ObservableObject {
                 activeFetchDate == date
             else { return }
             self.reviewsByKey = Dictionary(uniqueKeysWithValues: reviews.map { ($0.blockKey, $0) })
+
+            let needsDraft = reviews.contains { $0.aiTitle == nil || ($0.aiTitle?.isEmpty ?? true) }
+            if needsDraft && !self.draftsRequestedDates.contains(date) {
+                self.draftsRequestedDates.insert(date)
+                if let refreshed = try? await self.api.generateMissingReviewInsights(date: date),
+                   self.activeFetchDate == date {
+                    self.reviewsByKey = Dictionary(
+                        uniqueKeysWithValues: refreshed.map { ($0.blockKey, $0) })
+                }
+            }
         }
         Task {
             // Categories rarely change — load once per navigation and keep.
