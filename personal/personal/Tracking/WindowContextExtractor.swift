@@ -20,9 +20,38 @@ enum WindowContextExtractor {
             return ghosttyContext(app: app)
         case "com.apple.dt.Xcode":
             return xcodeContext(app: app)
+        case "com.tinyspeck.slackmacgap":
+            return slackContext(app: app)
         default:
             return nil
         }
+    }
+
+    // MARK: - Slack
+    //
+    // Slack's frontmost-window AX title follows "#channel – Workspace – Slack"
+    // (em dash) or "Channel-name (Channel) – Workspace – Slack". Parse the
+    // first segment as the active channel/DM and pass workspace alongside.
+
+    private static func slackContext(app: NSRunningApplication) -> String? {
+        let ax = AXUIElementCreateApplication(app.processIdentifier)
+        var winValue: AnyObject?
+        guard AXUIElementCopyAttributeValue(ax, kAXFocusedWindowAttribute as CFString, &winValue) == .success,
+              let win = winValue as! AXUIElement? else { return nil }
+        var titleValue: AnyObject?
+        guard AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleValue) == .success,
+              let title = titleValue as? String, !title.isEmpty else { return nil }
+
+        // Split on em-dash variants. Slack uses U+2013 EN DASH between segments.
+        let parts = title.components(separatedBy: CharacterSet(charactersIn: "–—-"))
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard parts.count >= 2 else { return "Slack · \(title)" }
+        let channel = parts[0]
+        let workspace = parts.count >= 3 ? parts[1] : ""
+        return workspace.isEmpty
+            ? "Slack · \(channel)"
+            : "Slack · \(channel) (workspace: \(workspace))"
     }
 
     // MARK: - Ghostty
