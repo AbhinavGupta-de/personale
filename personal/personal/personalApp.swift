@@ -30,6 +30,7 @@ struct personalApp: App {
                         appTracker: appTracker,
                         pomodoro: PomodoroViewModel.shared
                     )
+                    SafariBrowserCapture.shared.wire(appTracker: appTracker)
                 }
             #else
             Text("Personale")
