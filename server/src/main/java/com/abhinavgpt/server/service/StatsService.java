@@ -320,6 +320,40 @@ public class StatsService {
             .toList();
     }
 
+    /// Per-hour app-switch counts for the day. A "switch" = adjacent sessions
+    /// with different bundle ids. Useful focus-quality signal: high switches/hour
+    /// = fragmented attention. No external lib.
+    public List<ContextSwitchHour> getContextSwitchesPerHour(LocalDate date, ZoneId zone, Instant now, int dayStartHour) {
+        DayContext ctx = loadDay(date, zone, dayStartHour);
+        int shift = Math.max(0, Math.min(23, dayStartHour));
+
+        // Sort sessions by start; collect adjacent-pair switch points.
+        List<AppSession> sorted = ctx.sessions().stream()
+            .sorted(Comparator.comparing(AppSession::getStartedAt))
+            .toList();
+
+        int[] perHour = new int[24];
+        String prevKey = null;
+        for (AppSession s : sorted) {
+            if (s.getBundleId() == null) continue;
+            String key = s.getBundleId();
+            if (prevKey != null && !prevKey.equals(key)) {
+                Instant effStart = SessionMergeService.effectiveStart(s, ctx.startOfDay());
+                int hourOfDay = effStart.atZone(zone).getHour();
+                int slot = (hourOfDay - shift + 24) % 24;
+                perHour[slot]++;
+            }
+            prevKey = key;
+        }
+
+        List<ContextSwitchHour> rows = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            int hourLabel = (shift + i) % 24;
+            rows.add(new ContextSwitchHour(hourLabel, perHour[i]));
+        }
+        return rows;
+    }
+
     // ── Interruptors: small raw sessions that fragment longer ones ──
 
     /** Small (< 2 min) app sessions that likely interrupted longer focus work. */

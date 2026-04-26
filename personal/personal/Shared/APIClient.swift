@@ -125,6 +125,15 @@ struct CategorySource: Decodable, Identifiable {
     var id: String { "\(type)-\(name)" }
 }
 
+// MARK: - Context switches per hour
+
+struct ContextSwitchHour: Decodable, Identifiable {
+    let hour: Int
+    let switches: Int
+
+    var id: Int { hour }
+}
+
 // MARK: - Interruptors (M10 polish)
 
 struct InterruptorResponse: Decodable, Identifiable {
@@ -321,6 +330,11 @@ class APIClient {
 
     func fetchInterruptors(date: String) async throws -> [InterruptorResponse] {
         try await get("/api/stats/interruptors", params: ["date": date].merging(dayStartParam) { a, _ in a })
+    }
+
+    func fetchContextSwitches(date: String) async throws -> [ContextSwitchHour] {
+        try await get("/api/stats/context-switches",
+                      params: ["date": date].merging(dayStartParam) { a, _ in a })
     }
 
     func fetchInterruptorsRange(from: String, to: String) async throws -> [InterruptorResponse] {
