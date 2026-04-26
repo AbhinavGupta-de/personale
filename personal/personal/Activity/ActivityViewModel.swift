@@ -19,10 +19,20 @@ class ActivityViewModel: ObservableObject {
     @Published var weekSessions: [String: [FocusSessionResponse]] = [:]
     @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
     @Published var availableCategoryNames: [String] = []
+    @Published var contextSwitches: [ContextSwitchHour] = []
     /// Dates we've already triggered batch AI generation for in this session.
     /// generate-missing skips already-drafted blocks server-side, but we still
     /// debounce client-side to avoid burning a request per 30s refresh tick.
     private var draftsRequestedDates: Set<String> = []
+
+    var totalContextSwitches: Int {
+        contextSwitches.reduce(0) { $0 + $1.switches }
+    }
+    var peakSwitchHour: (hour: Int, count: Int)? {
+        guard let max = contextSwitches.max(by: { $0.switches < $1.switches }),
+              max.switches > 0 else { return nil }
+        return (max.hour, max.switches)
+    }
 
     var dayStartHour: Int { AppSettings.shared.dayStartHour }
 
@@ -301,6 +311,11 @@ class ActivityViewModel: ObservableObject {
                let cats = try? await api.fetchCategorySettings() {
                 self.availableCategoryNames = cats.map(\.name)
             }
+        }
+        Task {
+            guard let cs = try? await api.fetchContextSwitches(date: date),
+                  activeFetchDate == date else { return }
+            self.contextSwitches = cs
         }
 
         // Prefetch adjacent

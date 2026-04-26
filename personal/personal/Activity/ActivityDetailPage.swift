@@ -1026,8 +1026,56 @@ struct DailySummaryCard: View {
             header
             workHoursCard
             productivityMetricsCard
+            contextSwitchCard
             topCategoriesCard
         }
+    }
+
+    // MARK: - Context Switches
+
+    private var contextSwitchCard: some View {
+        let total = viewModel.totalContextSwitches
+        let peak = viewModel.peakSwitchHour
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Context Switches")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(theme.foreground)
+                Spacer()
+                Text("\(total) today")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(theme.mutedForeground)
+            }
+            // Sparkline of switches per hour
+            GeometryReader { geo in
+                let maxV = max(1, viewModel.contextSwitches.map(\.switches).max() ?? 1)
+                HStack(alignment: .bottom, spacing: 1) {
+                    ForEach(viewModel.contextSwitches) { row in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(row.switches > 0 ? theme.chartPurple.opacity(
+                                0.35 + 0.65 * Double(row.switches) / Double(maxV))
+                                  : theme.secondary.opacity(0.4))
+                            .frame(height: max(2, geo.size.height
+                                * CGFloat(Double(row.switches) / Double(maxV))))
+                            .help("\(row.hour):00 — \(row.switches) switches")
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            }
+            .frame(height: 36)
+
+            if let peak {
+                Text("Peak: \(String(format: "%02d:00", peak.hour)) (\(peak.count) switches)")
+                    .font(.system(size: 10))
+                    .foregroundStyle(theme.mutedForeground)
+            } else if total == 0 {
+                Text("Single-app focus all day. Nice.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(theme.mutedForeground)
+            }
+        }
+        .padding(14)
+        .dashboardCard()
     }
 
     // MARK: - Header

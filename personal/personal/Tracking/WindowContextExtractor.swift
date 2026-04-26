@@ -22,9 +22,62 @@ enum WindowContextExtractor {
             return xcodeContext(app: app)
         case "com.tinyspeck.slackmacgap":
             return slackContext(app: app)
+        case "com.jetbrains.intellij",
+             "com.jetbrains.intellij.ce",
+             "com.jetbrains.goland",
+             "com.jetbrains.pycharm",
+             "com.jetbrains.WebStorm",
+             "com.jetbrains.rider",
+             "com.jetbrains.AppCode",
+             "com.jetbrains.fleet":
+            return jetBrainsContext(app: app)
         default:
             return nil
         }
+    }
+
+    // MARK: - JetBrains family
+    //
+    // IntelliJ et al. set their AX window title to a stable
+    //   "ProjectName – path/to/file.ext"  (en-dash separator)
+    // and when Settings → Appearance includes branch in title, you get
+    //   "ProjectName [branch] – path/to/file.ext".
+    // The exact app-name suffix varies by edition; we trust the dash split.
+
+    private static func jetBrainsContext(app: NSRunningApplication) -> String? {
+        let ax = AXUIElementCreateApplication(app.processIdentifier)
+        var winValue: AnyObject?
+        guard AXUIElementCopyAttributeValue(ax, kAXFocusedWindowAttribute as CFString, &winValue) == .success,
+              let win = winValue as! AXUIElement? else { return nil }
+        var titleValue: AnyObject?
+        guard AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleValue) == .success,
+              let title = titleValue as? String, !title.isEmpty else { return nil }
+
+        // Split on en/em dashes; first segment is the project (possibly with a
+        // [branch] suffix), second segment is the active file path.
+        let parts = title.components(separatedBy: CharacterSet(charactersIn: "–—"))
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard !parts.isEmpty else { return nil }
+
+        var project = parts[0]
+        var branch: String? = nil
+        if let bracketStart = project.firstIndex(of: "["),
+           let bracketEnd = project.firstIndex(of: "]"),
+           bracketStart < bracketEnd {
+            branch = String(project[project.index(after: bracketStart)..<bracketEnd])
+                .trimmingCharacters(in: .whitespaces)
+            project = String(project[..<bracketStart]).trimmingCharacters(in: .whitespaces)
+        }
+
+        let appName = app.localizedName ?? "JetBrains IDE"
+        var pieces: [String] = [appName + " · " + project]
+        if let b = branch, !b.isEmpty { pieces.append("@ " + b) }
+        if parts.count > 1 {
+            let file = (parts[1] as NSString).lastPathComponent
+            pieces.append("· " + file)
+        }
+        return pieces.joined(separator: " ")
     }
 
     // MARK: - Slack

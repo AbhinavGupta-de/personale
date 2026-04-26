@@ -110,6 +110,15 @@ public class StatsController {
                 ZoneId.systemDefault(), Instant.now(), dayStartHour));
     }
 
+    @GetMapping("/context-switches")
+    public ResponseEntity<List<ContextSwitchHour>> getContextSwitches(
+            @RequestParam String date,
+            @RequestParam(defaultValue = "0") int dayStartHour) {
+        return ResponseEntity.ok(
+            statsService.getContextSwitchesPerHour(LocalDate.parse(date),
+                ZoneId.systemDefault(), Instant.now(), dayStartHour));
+    }
+
     @GetMapping("/interruptors/range")
     public ResponseEntity<List<InterruptorEntry>> getInterruptorsRange(
             @RequestParam String from,
