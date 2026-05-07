@@ -134,6 +134,82 @@ struct ContextSwitchHour: Decodable, Identifiable {
     var id: Int { hour }
 }
 
+// MARK: - Insights (M17)
+
+struct InsightsOverviewResponse: Decodable {
+    let from: String
+    let to: String
+    let daysWithData: Int
+    let totalTrackedSeconds: Int
+    let totalProductiveSeconds: Int
+    let totalContextSwitches: Int
+    let heatmap: [HeatmapCell]
+    let dayOfWeek: [DayOfWeekStat]
+    let dailyTrend: [DailyTrendPoint]
+    let topDistractions: [DistractionEntry]
+    let longestFocusSessions: [LongestFocusEntry]
+    let categoryBreakdown: [CategoryBreakdownResponse]
+    let categoryBreakdownPriorPeriod: [CategoryBreakdownResponse]
+    let streaks: StreakStats
+
+    struct HeatmapCell: Decodable, Identifiable {
+        let weekday: Int       // 1=Mon..7=Sun
+        let hour: Int          // 0..23
+        let productiveSeconds: Int
+        let totalSeconds: Int
+        var id: Int { weekday * 100 + hour }
+    }
+    struct DayOfWeekStat: Decodable, Identifiable {
+        let weekday: Int
+        let avgProductiveSeconds: Int
+        let avgTotalSeconds: Int
+        let days: Int
+        var id: Int { weekday }
+    }
+    struct DailyTrendPoint: Decodable, Identifiable {
+        let date: String
+        let productiveSeconds: Int
+        let totalSeconds: Int
+        let contextSwitches: Int
+        let sessionCount: Int
+        let avgSessionSeconds: Int
+        var id: String { date }
+    }
+    struct DistractionEntry: Decodable, Identifiable {
+        let appName: String
+        let bundleId: String?
+        let category: String
+        let totalSeconds: Int
+        let sessionCount: Int
+        var id: String { bundleId ?? appName }
+    }
+    struct LongestFocusEntry: Decodable, Identifiable {
+        let date: String
+        let startTime: String
+        let endTime: String
+        let durationSeconds: Int
+        let category: String
+        let label: String
+        var id: String { "\(date)-\(startTime)-\(label)" }
+    }
+    struct StreakStats: Decodable {
+        let currentStreak: Int
+        let longestStreak: Int
+        let thresholdSeconds: Int
+    }
+}
+
+struct InsightsNarrativeResponse: Decodable {
+    let from: String
+    let to: String
+    let summary: String
+    let patterns: [String]
+    let wins: [String]
+    let watchouts: [String]
+    let model: String
+    let generatedAt: String
+}
+
 // MARK: - Interruptors (M10 polish)
 
 struct InterruptorResponse: Decodable, Identifiable {
@@ -344,6 +420,33 @@ class APIClient {
 
     func fetchDomainStats(date: String) async throws -> DomainStatsResponse {
         try await get("/api/stats/domains", params: ["date": date].merging(dayStartParam) { a, _ in a })
+    }
+
+    // MARK: - Insights (M17)
+
+    func fetchInsightsOverview(from: String, to: String) async throws -> InsightsOverviewResponse {
+        try await get("/api/insights/overview",
+                      params: ["from": from, "to": to].merging(dayStartParam) { a, _ in a })
+    }
+
+    func generateInsightsNarrative(from: String, to: String) async throws -> InsightsNarrativeResponse {
+        let dsh = AppSettings.shared.dayStartHour
+        var urlReq = URLRequest(url: baseURL.appendingPathComponent("/api/insights/narrative")
+            .appending(queryItems: [
+                URLQueryItem(name: "from", value: from),
+                URLQueryItem(name: "to", value: to),
+                URLQueryItem(name: "dayStartHour", value: String(dsh))
+            ]))
+        urlReq.httpMethod = "POST"
+        urlReq.timeoutInterval = 60
+        let (data, response) = try await session.data(for: urlReq)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw NSError(domain: "insights-narrative",
+                          code: (response as? HTTPURLResponse)?.statusCode ?? 0,
+                          userInfo: [NSLocalizedDescriptionKey: body])
+        }
+        return try decoder.decode(InsightsNarrativeResponse.self, from: data)
     }
 
     // MARK: - Category Settings (M12)
