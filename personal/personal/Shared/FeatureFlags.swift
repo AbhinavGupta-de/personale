@@ -13,6 +13,7 @@ enum SidebarFeatures {
     static let showTeam = false           // M9
     static let showPomodoro = true        // M11
     static let showReview = true          // Time Entry Review page
+    static let showInsights = true        // M17 — AI insights dashboard
 }
 
 // MARK: - Dashboard Feature Flags

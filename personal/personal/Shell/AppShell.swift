@@ -10,6 +10,7 @@ enum AppRoute: String, CaseIterable {
     case review
     case pomodoro
     case productivity
+    case insights
     case settings
 }
 
@@ -35,6 +36,8 @@ struct AppShell: View {
                             PomodoroPage()
                         case .productivity:
                             ProductivityPage()
+                        case .insights:
+                            InsightsPage()
                         case .settings:
                             SettingsPage()
                         case .dashboard:
@@ -80,6 +83,9 @@ struct Sidebar: View {
         }
         if SidebarFeatures.showProductivity {
             items.append(SidebarItem(id: "productivity", icon: "chart.bar", label: "Productivity", route: .productivity))
+        }
+        if SidebarFeatures.showInsights {
+            items.append(SidebarItem(id: "insights", icon: "sparkles", label: "Insights", route: .insights))
         }
         return items
     }
