@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,14 +24,44 @@ public class EventService {
         this.repository = repository;
     }
 
+    // Cap recovered orphan sessions at this duration past their start.
+    // Real focus sessions rarely exceed 4h without an app switch; anything
+    // beyond is almost certainly a crashed Swift app that never closed.
+    private static final Duration MAX_ACTIVE_SESSION = Duration.ofHours(4);
+    // Fallback duration applied to an orphan when we have no signal of real activity.
+    private static final Duration ORPHAN_RECOVERY_DURATION = Duration.ofMinutes(5);
+
+    private static Instant cappedEnd(Instant startedAt, Instant proposedEnd) {
+        if (proposedEnd.isBefore(startedAt)) return startedAt;
+        Instant ceiling = startedAt.plus(MAX_ACTIVE_SESSION);
+        return proposedEnd.isAfter(ceiling) ? startedAt.plus(ORPHAN_RECOVERY_DURATION) : proposedEnd;
+    }
+
     @PostConstruct
     @Transactional
     public void closeOrphanedSessions() {
         repository.findActiveSession().ifPresent(orphan -> {
-            orphan.setEndedAt(orphan.getStartedAt());
+            Instant end = orphan.getStartedAt().plus(ORPHAN_RECOVERY_DURATION);
+            orphan.setEndedAt(end);
             repository.save(orphan);
-            log.info("Closed orphaned session: {} (started at {})",
-                orphan.getAppName(), orphan.getStartedAt());
+            log.info("Closed orphaned session on startup: {} (started {}, capped at {})",
+                orphan.getAppName(), orphan.getStartedAt(), end);
+        });
+    }
+
+    /** Runs every 5 min. Caps any active session older than MAX_ACTIVE_SESSION;
+     *  protects against Swift AppTracker crashing/sleeping without sending close. */
+    @Scheduled(fixedDelay = 5 * 60 * 1000L, initialDelay = 5 * 60 * 1000L)
+    @Transactional
+    public void capStaleActiveSessions() {
+        repository.findActiveSession().ifPresent(active -> {
+            Duration age = Duration.between(active.getStartedAt(), Instant.now());
+            if (age.compareTo(MAX_ACTIVE_SESSION) <= 0) return;
+            Instant end = active.getStartedAt().plus(ORPHAN_RECOVERY_DURATION);
+            active.setEndedAt(end);
+            repository.save(active);
+            log.warn("Auto-capped stale active session {} (started {}, age {}h) → ended {}",
+                active.getAppName(), active.getStartedAt(), age.toHours(), end);
         });
     }
 
@@ -47,8 +78,7 @@ public class EventService {
                     return;
                 }
             }
-            Instant endTime = closedAt.isBefore(active.getStartedAt())
-                ? active.getStartedAt() : closedAt;
+            Instant endTime = cappedEnd(active.getStartedAt(), closedAt);
             active.setEndedAt(endTime);
             repository.save(active);
             log.info("Closed active session: {} at {}", active.getAppName(), endTime);
@@ -76,9 +106,9 @@ public class EventService {
                 return active;
             }
 
-            // Close the currently active session (clamp to avoid negative duration)
-            Instant endTime = eventTime.isBefore(active.getStartedAt())
-                ? active.getStartedAt() : eventTime;
+            // Close the currently active session, capping orphan ages so a crashed
+            // tracker doesn't produce multi-day fake sessions on resume.
+            Instant endTime = cappedEnd(active.getStartedAt(), eventTime);
             active.setEndedAt(endTime);
             repository.save(active);
         }
@@ -97,8 +127,7 @@ public class EventService {
             // Another concurrent request created an active session; close it first, then retry
             log.warn("Concurrent active session detected, closing and retrying: {}", event.appName());
             repository.findActiveSession().ifPresent(stale -> {
-                Instant endTime = eventTime.isBefore(stale.getStartedAt())
-                    ? stale.getStartedAt() : eventTime;
+                Instant endTime = cappedEnd(stale.getStartedAt(), eventTime);
                 stale.setEndedAt(endTime);
                 repository.save(stale);
             });
