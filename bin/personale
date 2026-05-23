@@ -189,7 +189,17 @@ cmd_install() {
   launchctl bootout gui/$(id -u)/${APP_PLIST_LABEL} 2>/dev/null
   launchctl bootstrap gui/$(id -u) "$BACKEND_PLIST" && ok "Backend agent loaded"
   launchctl bootstrap gui/$(id -u) "$APP_PLIST" && ok "App agent loaded"
-  ok "Installed. Backend + app will start on next login (and now)."
+  echo ""
+  ok "Installed. On every login from now on:"
+  echo "    1. macOS launches both agents."
+  echo "    2. server/start.sh waits (up to 5 min) for Docker, auto-launching"
+  echo "       Docker.app or 'colima start' if either is installed."
+  echo "    3. Postgres comes up via docker compose."
+  echo "    4. Backend boots on :$BACKEND_PORT."
+  echo "    5. The Swift app launches in parallel and retries against the"
+  echo "       backend until it's ready (shows 'Connecting…' meanwhile)."
+  echo ""
+  echo "  Logs: tail -F $BACKEND_LOG"
 }
 
 cmd_uninstall() {
