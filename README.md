@@ -11,15 +11,20 @@ A local-first macOS productivity tracker. Passively monitors which applications 
 ## Quick Start
 
 ```bash
-# Start PostgreSQL
-cd server && docker compose up -d
+./personale setup     # one-time: deps check + secret-scan git hooks
+./personale up        # start Postgres + backend + open the app (builds if stale)
+./personale status    # see what's running
+./personale install   # autostart backend + app at login (optional)
+```
 
-# Start the backend (port 8696)
-./gradlew --no-daemon bootRun
+Run `./personale help` for the full subcommand list.
 
-# Build and run the macOS app from Xcode
-open ../personal/personal.xcodeproj
-# Cmd+R to run
+### Manual (no script)
+
+```bash
+cd server && docker compose up -d              # Postgres
+./gradlew --no-daemon bootRun                  # backend on :8696
+open ../personal/personal.xcodeproj            # Xcode → Cmd+R
 ```
 
 ## Browser Extension

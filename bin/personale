@@ -1,0 +1,300 @@
+#!/usr/bin/env bash
+# personale — single entrypoint for running the local stack.
+#
+# Subcommands:
+#   up         start postgres + backend + (build if stale) open the macOS app
+#   down       quit the macOS app and stop the backend (postgres stays up)
+#   status     show health of each component
+#   build      rebuild the Swift app and backend jar
+#   logs       tail the backend log
+#   install    register backend + app with launchd so they autostart at login
+#   uninstall  remove the launchd agents
+#   setup      one-time bootstrap: deps check + secret-scan hooks
+#   doctor     diagnose common breakage
+#   help       this message
+
+set -u
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SERVER_DIR="$REPO_ROOT/server"
+APP_PROJECT_DIR="$REPO_ROOT/personal"
+APP_BUILD_PRODUCT="$APP_PROJECT_DIR/build/Build/Products/Debug/personal.app"
+BACKEND_PORT="${PERSONALE_PORT:-8696}"
+BACKEND_HEALTH="http://localhost:${BACKEND_PORT}/actuator/health"
+BACKEND_LOG="/tmp/personale-backend.log"
+LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
+BACKEND_PLIST_LABEL="com.abhinavgpt.personale-backend"
+APP_PLIST_LABEL="abhinavgpt.personale"
+BACKEND_PLIST="$LAUNCH_AGENTS/${BACKEND_PLIST_LABEL}.plist"
+APP_PLIST="$LAUNCH_AGENTS/${APP_PLIST_LABEL}.plist"
+
+c_red()   { printf '\033[31m%s\033[0m' "$1"; }
+c_grn()   { printf '\033[32m%s\033[0m' "$1"; }
+c_yel()   { printf '\033[33m%s\033[0m' "$1"; }
+c_dim()   { printf '\033[2m%s\033[0m' "$1"; }
+info()    { printf '%s %s\n' "$(c_dim '›')" "$*"; }
+ok()      { printf '%s %s\n' "$(c_grn '✓')" "$*"; }
+warn()    { printf '%s %s\n' "$(c_yel '!')" "$*"; }
+fail()    { printf '%s %s\n' "$(c_red '✗')" "$*" >&2; }
+
+is_backend_up() { curl -fsS -o /dev/null --max-time 2 "$BACKEND_HEALTH"; }
+is_postgres_up() { (cd "$SERVER_DIR" && docker compose ps --status running 2>/dev/null | grep -q postgres); }
+is_app_running() { pgrep -fl "personal.app/Contents/MacOS/personal" >/dev/null 2>&1; }
+is_docker_up() { docker info >/dev/null 2>&1; }
+
+ensure_docker() {
+  if ! is_docker_up; then
+    fail "Docker is not running. Start Docker Desktop or Colima first."
+    return 1
+  fi
+}
+
+ensure_postgres() {
+  ensure_docker || return 1
+  if ! is_postgres_up; then
+    info "Starting Postgres..."
+    (cd "$SERVER_DIR" && docker compose up -d) >/dev/null
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      sleep 1
+      (cd "$SERVER_DIR" && docker compose exec -T postgres pg_isready -U personale >/dev/null 2>&1) && break
+    done
+  fi
+  ok "Postgres ready"
+}
+
+start_backend() {
+  if is_backend_up; then ok "Backend already up on :$BACKEND_PORT"; return 0; fi
+  ensure_postgres || return 1
+  info "Starting backend on :$BACKEND_PORT (log: $BACKEND_LOG)..."
+  (cd "$SERVER_DIR" && nohup ./gradlew --no-daemon -q bootRun >"$BACKEND_LOG" 2>&1 &)
+  for _ in $(seq 1 60); do
+    sleep 1
+    if is_backend_up; then ok "Backend up"; return 0; fi
+  done
+  fail "Backend didn't come up in 60s — see $BACKEND_LOG"
+  return 1
+}
+
+stop_backend() {
+  # Find java process that's running the bootRun classpath
+  local pids
+  pids=$(pgrep -f "abhinavgpt.server.ServerApplication" 2>/dev/null)
+  if [[ -z "$pids" ]]; then
+    # Fallback: kill whoever owns the port
+    pids=$(lsof -ti :$BACKEND_PORT -sTCP:LISTEN 2>/dev/null)
+  fi
+  if [[ -z "$pids" ]]; then ok "Backend not running"; return 0; fi
+  info "Stopping backend (pids: $pids)..."
+  kill $pids 2>/dev/null
+  sleep 2
+  pgrep -f "abhinavgpt.server.ServerApplication" >/dev/null 2>&1 && kill -9 $pids 2>/dev/null
+  ok "Backend stopped"
+}
+
+build_app() {
+  info "Building macOS app (xcodebuild)..."
+  (cd "$APP_PROJECT_DIR" && xcodebuild -project personal.xcodeproj -scheme personal \
+      -configuration Debug -derivedDataPath ./build build CODE_SIGNING_ALLOWED=NO -quiet) || {
+    fail "xcodebuild failed"; return 1; }
+  ok "App built: $APP_BUILD_PRODUCT"
+}
+
+build_backend() {
+  info "Building backend jar..."
+  (cd "$SERVER_DIR" && ./gradlew -q bootJar) || { fail "bootJar failed"; return 1; }
+  ok "Backend jar built"
+}
+
+# App is "stale" if any tracked .swift is newer than the built binary.
+app_is_stale() {
+  [[ ! -d "$APP_BUILD_PRODUCT" ]] && return 0
+  local binary="$APP_BUILD_PRODUCT/Contents/MacOS/personal"
+  [[ ! -f "$binary" ]] && return 0
+  local newer
+  newer=$(find "$APP_PROJECT_DIR/personal" -name '*.swift' -newer "$binary" -print -quit 2>/dev/null)
+  [[ -n "$newer" ]]
+}
+
+open_app() {
+  if is_app_running; then ok "App already running"; return 0; fi
+  if app_is_stale; then
+    warn "App build is stale — rebuilding"
+    build_app || return 1
+  fi
+  [[ -d "$APP_BUILD_PRODUCT" ]] || { fail "No built app at $APP_BUILD_PRODUCT — run: personale build"; return 1; }
+  open "$APP_BUILD_PRODUCT"
+  ok "App launched"
+}
+
+close_app() {
+  if ! is_app_running; then ok "App not running"; return 0; fi
+  info "Quitting app..."
+  osascript -e 'tell application "personal" to quit' 2>/dev/null || pkill -f "personal.app/Contents/MacOS/personal"
+  ok "App closed"
+}
+
+write_backend_plist() {
+  cat >"$BACKEND_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${BACKEND_PLIST_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVER_DIR}/start.sh</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>${BACKEND_LOG}</string>
+  <key>StandardErrorPath</key><string>${BACKEND_LOG}</string>
+  <key>WorkingDirectory</key><string>${SERVER_DIR}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
+EOF
+}
+
+write_app_plist() {
+  cat >"$APP_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${APP_PLIST_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${APP_BUILD_PRODUCT}/Contents/MacOS/personal</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><false/>
+</dict>
+</plist>
+EOF
+}
+
+cmd_install() {
+  mkdir -p "$LAUNCH_AGENTS"
+  [[ -d "$APP_BUILD_PRODUCT" ]] || { warn "App not built; running build first"; build_app || return 1; }
+  info "Writing launchd plists..."
+  write_backend_plist
+  write_app_plist
+  # bootout if already loaded (idempotent)
+  launchctl bootout gui/$(id -u)/${BACKEND_PLIST_LABEL} 2>/dev/null
+  launchctl bootout gui/$(id -u)/${APP_PLIST_LABEL} 2>/dev/null
+  launchctl bootstrap gui/$(id -u) "$BACKEND_PLIST" && ok "Backend agent loaded"
+  launchctl bootstrap gui/$(id -u) "$APP_PLIST" && ok "App agent loaded"
+  ok "Installed. Backend + app will start on next login (and now)."
+}
+
+cmd_uninstall() {
+  launchctl bootout gui/$(id -u)/${BACKEND_PLIST_LABEL} 2>/dev/null && ok "Backend agent unloaded"
+  launchctl bootout gui/$(id -u)/${APP_PLIST_LABEL} 2>/dev/null && ok "App agent unloaded"
+  rm -f "$BACKEND_PLIST" "$APP_PLIST"
+  ok "Plists removed"
+}
+
+cmd_setup() {
+  info "Checking dependencies..."
+  command -v docker >/dev/null || { fail "docker not found — install Docker Desktop or Colima"; return 1; }
+  command -v java >/dev/null || { fail "java not found"; return 1; }
+  command -v xcodebuild >/dev/null || { fail "xcodebuild not found — install Xcode"; return 1; }
+  ok "Dependencies OK"
+
+  info "Installing secret-scan git hooks..."
+  if command -v pre-commit >/dev/null && [[ -f "$REPO_ROOT/.pre-commit-config.yaml" ]]; then
+    (cd "$REPO_ROOT" && pre-commit install --hook-type pre-commit --hook-type pre-push) && ok "pre-commit hooks installed"
+  else
+    # Fallback: hand-rolled hook
+    local hook="$REPO_ROOT/.git/hooks/pre-commit"
+    cat >"$hook" <<'HOOK'
+#!/usr/bin/env bash
+# Reject commits containing common API key patterns.
+DIFF=$(git diff --cached -U0)
+if echo "$DIFF" | grep -E "sk-ant-[a-zA-Z0-9_-]{20,}|sk-[a-zA-Z0-9]{40,}|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{30,}|xox[baprs]-[a-zA-Z0-9-]{20,}" >/dev/null; then
+  echo "✗ secret pattern found in staged diff — commit blocked"
+  exit 1
+fi
+HOOK
+    chmod +x "$hook"
+    cp "$hook" "$REPO_ROOT/.git/hooks/pre-push"
+    ok "Fallback secret-scan hook installed at .git/hooks/{pre-commit,pre-push}"
+    info "For full coverage: 'brew install pre-commit gitleaks' then re-run 'personale setup'"
+  fi
+}
+
+cmd_status() {
+  is_docker_up   && ok "Docker:    up"            || fail "Docker:    down"
+  is_postgres_up && ok "Postgres:  up"            || fail "Postgres:  down"
+  if is_backend_up; then
+    ok "Backend:   up on :$BACKEND_PORT"
+  else
+    fail "Backend:   down"
+  fi
+  if is_app_running; then
+    ok "App:       running (pid $(pgrep -f "personal.app/Contents/MacOS/personal" | head -1))"
+  else
+    warn "App:       not running"
+  fi
+  if [[ -f "$BACKEND_PLIST" ]]; then ok "Autostart: installed"; else warn "Autostart: not installed (run: personale install)"; fi
+  if [[ -d "$APP_BUILD_PRODUCT" ]]; then
+    if app_is_stale; then warn "Build:     stale (Swift sources newer than binary)"; else ok "Build:     fresh"; fi
+  else
+    warn "Build:     missing (run: personale build)"
+  fi
+}
+
+cmd_doctor() {
+  cmd_status
+  echo ""
+  info "Recent backend log (last 20 lines):"
+  [[ -f "$BACKEND_LOG" ]] && tail -20 "$BACKEND_LOG" || warn "No log at $BACKEND_LOG"
+  echo ""
+  info "Stale open app_sessions (potential orphans):"
+  if is_postgres_up; then
+    (cd "$SERVER_DIR" && docker compose exec -T postgres psql -U personale -d personale -c \
+      "SELECT id, app_name, started_at, EXTRACT(EPOCH FROM (NOW() - started_at))/3600 AS hours_open FROM app_sessions WHERE ended_at IS NULL ORDER BY started_at;") 2>/dev/null
+  fi
+}
+
+cmd_logs() { tail -F "$BACKEND_LOG"; }
+
+cmd_up() {
+  start_backend || return 1
+  open_app
+  echo ""
+  cmd_status
+}
+
+cmd_down() {
+  close_app
+  stop_backend
+}
+
+cmd_build() {
+  build_backend
+  build_app
+}
+
+cmd_help() {
+  awk '/^# personale —/,/^# *help / { sub(/^# ?/, ""); print }' "$0"
+}
+
+case "${1:-help}" in
+  up)        cmd_up ;;
+  down)      cmd_down ;;
+  status)    cmd_status ;;
+  build)     cmd_build ;;
+  logs)      cmd_logs ;;
+  install)   cmd_install ;;
+  uninstall) cmd_uninstall ;;
+  setup)     cmd_setup ;;
+  doctor)    cmd_doctor ;;
+  help|-h|--help) cmd_help ;;
+  *) fail "Unknown command: $1"; cmd_help; exit 1 ;;
+esac
