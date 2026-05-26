@@ -15,7 +15,13 @@
 
 set -u
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Resolve symlinks (a top-level ./personale → bin/personale link is supported).
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [[ -L "$SCRIPT_PATH" ]]; do
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$SCRIPT_PATH"
+done
+REPO_ROOT="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
 SERVER_DIR="$REPO_ROOT/server"
 APP_PROJECT_DIR="$REPO_ROOT/personal"
 APP_BUILD_PRODUCT="$APP_PROJECT_DIR/build/Build/Products/Debug/personal.app"

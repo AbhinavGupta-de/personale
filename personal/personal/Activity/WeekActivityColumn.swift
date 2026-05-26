@@ -46,11 +46,11 @@ struct WeekActivityColumn: View {
             ZStack(alignment: .topLeading) {
                 Rectangle().fill(Color.clear).frame(height: 24 * hourHeight)
                 ForEach(sessions) { session in
-                    if let start = parseTime(session.startTime),
-                       let end = parseTime(session.endTime),
-                       end > start {
+                    if let start = parseTime(session.startTime) {
+                        // Use durationSeconds so midnight-crossing blocks render fully.
                         let top = yOffset(start)
-                        let height = CGFloat(end - start) * hourHeight
+                        let hours = Double(session.durationSeconds) / 3600.0
+                        let height = CGFloat(hours) * hourHeight
                         weekSessionBlock(session: session, height: max(height, 2))
                             .padding(.horizontal, 4)
                             .offset(y: top)
