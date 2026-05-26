@@ -232,7 +232,11 @@ struct InlineReviewPopover: View {
                 task: task.isEmpty ? nil : task,
                 project: project.isEmpty ? nil : project,
                 client: client.isEmpty ? nil : client,
-                category: category == session.name ? nil : category
+                // Always send the explicit choice. Sending nil when it
+                // matches session.name silently kept the previously-saved
+                // override, so switching back to the auto-category looked
+                // like a no-op.
+                category: category.isEmpty ? nil : category
             )
             _ = try await api.updateReview(key: blockKey, date: dateString, req: req)
             if autoApprove {

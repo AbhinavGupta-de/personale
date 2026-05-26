@@ -142,16 +142,27 @@ struct DayTimelineColumn: View {
         return CGFloat(shifted) * hourHeight
     }
 
+    /// User-overridden review category wins over the auto-detected one.
+    private func effectiveCategory(for session: FocusSessionResponse) -> String {
+        let key = ReviewKey.make(
+            date: dateString,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            category: session.name)
+        return reviewsByKey[key]?.category ?? session.name
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             Rectangle().fill(Color.clear).frame(height: 24 * hourHeight)
 
             ForEach(sessions) { session in
-                if let start = parseTime(session.startTime),
-                   let end = parseTime(session.endTime),
-                   end > start {
+                if let start = parseTime(session.startTime) {
+                    // Use authoritative durationSeconds rather than end-start so blocks
+                    // crossing midnight (e.g. 20:41 → 00:26) render at their true height.
                     let top = yOffset(start)
-                    let height = CGFloat(end - start) * hourHeight
+                    let hours = Double(session.durationSeconds) / 3600.0
+                    let height = CGFloat(hours) * hourHeight
                     sessionBlock(session: session, height: max(height, 3))
                         .offset(y: top)
                         .padding(.horizontal, 4)
@@ -162,7 +173,7 @@ struct DayTimelineColumn: View {
 
     @ViewBuilder
     private func sessionBlock(session: FocusSessionResponse, height: CGFloat) -> some View {
-        let color = categoryColor(session.name)
+        let color = categoryColor(effectiveCategory(for: session))
         let isSelected = selectedSession?.id == session.id
         Button {
             selectedSession = isSelected ? nil : session
@@ -240,15 +251,23 @@ struct SessionsStripColumn: View {
         return CGFloat(shifted) * hourHeight
     }
 
+    private func effectiveCategory(for session: FocusSessionResponse) -> String {
+        let key = ReviewKey.make(
+            date: dateString,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            category: session.name)
+        return reviewsByKey[key]?.category ?? session.name
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             Rectangle().fill(Color.clear).frame(height: 24 * hourHeight)
             ForEach(sessions) { session in
-                if let start = parseTime(session.startTime),
-                   let end = parseTime(session.endTime),
-                   end > start {
+                if let start = parseTime(session.startTime) {
                     let top = yOffset(start)
-                    let height = CGFloat(end - start) * hourHeight
+                    let hours = Double(session.durationSeconds) / 3600.0
+                    let height = CGFloat(hours) * hourHeight
                     stripBlock(session: session, height: max(height, 2))
                         .offset(y: top)
                         .padding(.horizontal, 2)
@@ -264,7 +283,7 @@ struct SessionsStripColumn: View {
             selectedSession = isSelected ? nil : session
         } label: {
             RoundedRectangle(cornerRadius: 3)
-                .fill(categoryColor(session.name).opacity(isSelected ? 1.0 : 0.85))
+                .fill(categoryColor(effectiveCategory(for: session)).opacity(isSelected ? 1.0 : 0.85))
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
         }
