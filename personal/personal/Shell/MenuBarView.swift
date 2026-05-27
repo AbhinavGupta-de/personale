@@ -85,7 +85,11 @@ struct MenuBarView: View {
 
     private func startRefreshing() {
         fetchStats()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+        // 5s is cheap (one GET against localhost) and makes the dropdown feel
+        // live each time the user opens it. With MenuBarExtra the view is
+        // long-lived, so onAppear only fires once — without a tight refresh
+        // the panel would stay stale.
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in
             fetchStats()
         }
     }
@@ -97,13 +101,11 @@ struct MenuBarView: View {
 
     private func fetchStats() {
         Task {
-            if let result = try? await APIClient.shared.fetchDayStats(
-                date: {
-                    let fmt = DateFormatter()
-                    fmt.dateFormat = "yyyy-MM-dd"
-                    return fmt.string(from: Date())
-                }()
-            ) {
+            // Use /api/stats/today (effective work day) — passing a calendar
+            // date to /api/stats/day combined with dayStartHour>0 returns 0
+            // results when the current local hour is before dayStartHour
+            // (work day hasn't started yet).
+            if let result = try? await APIClient.shared.fetchTodayStats() {
                 self.stats = result
             }
         }

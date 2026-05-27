@@ -376,6 +376,13 @@ class APIClient {
         try await get("/api/stats/day", params: ["date": date].merging(dayStartParam) { a, _ in a })
     }
 
+    /// Stats for the current *work* day. Honors dayStartHour: if we're before
+    /// the day-start hour, the backend returns yesterday's calendar date — so
+    /// the menu bar doesn't go blank at midnight.
+    func fetchTodayStats() async throws -> DailyStatsResponse {
+        try await get("/api/stats/today", params: dayStartParam)
+    }
+
     func fetchTimeline(date: String) async throws -> [TimelineEntryResponse] {
         try await get("/api/stats/timeline", params: ["date": date].merging(dayStartParam) { a, _ in a })
     }
