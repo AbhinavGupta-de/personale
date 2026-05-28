@@ -17,4 +17,10 @@ public interface AppSessionRepository extends CrudRepository<AppSession, Long> {
     @Query("SELECT * FROM app_sessions WHERE started_at < :endExclusive AND (ended_at >= :start OR ended_at IS NULL)")
     List<AppSession> findSessionsOverlapping(@Param("start") Instant start,
                                              @Param("endExclusive") Instant endExclusive);
+
+    @Query("SELECT COUNT(*) FROM app_sessions WHERE started_at >= :since")
+    long countSessionsStartedSince(@Param("since") Instant since);
+
+    @Query("SELECT MAX(ended_at) FROM app_sessions")
+    Optional<Instant> findMostRecentEndedAt();
 }

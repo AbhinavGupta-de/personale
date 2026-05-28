@@ -12,6 +12,7 @@ struct personalApp: App {
     #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appTracker = AppTracker()
+    @StateObject private var shiroWriter = ShiroStatusWriter()
     #endif
 
     var body: some Scene {
@@ -32,6 +33,7 @@ struct personalApp: App {
                     )
                     SafariBrowserCapture.shared.wire(appTracker: appTracker)
                 }
+                .task { shiroWriter.start() }
             #else
             Text("Personale")
             #endif
