@@ -125,6 +125,18 @@ struct CategorySource: Decodable, Identifiable {
     var id: String { "\(type)-\(name)" }
 }
 
+// MARK: - Current Activity (live status for Shiro)
+
+struct CurrentActivityResponse: Codable {
+    let category: String
+    let app: String
+    let state: String                  // away | idle | break | scattered | focused
+    let focusMinutes: Int
+    let contextSwitchesLastHour: Int
+    let dailyTargetPct: Double
+    let updatedAt: String
+}
+
 // MARK: - Context switches per hour
 
 struct ContextSwitchHour: Decodable, Identifiable {
@@ -418,6 +430,14 @@ class APIClient {
     func fetchContextSwitches(date: String) async throws -> [ContextSwitchHour] {
         try await get("/api/stats/context-switches",
                       params: ["date": date].merging(dayStartParam) { a, _ in a })
+    }
+
+    /// Live snapshot of the current work session — drives the Shiro desktop pet.
+    func fetchCurrentActivity() async throws -> CurrentActivityResponse {
+        try await get("/api/activity/current", params: [
+            "dayStartHour": String(AppSettings.shared.dayStartHour),
+            "targetHours": String(AppSettings.shared.targetHoursPerDay)
+        ])
     }
 
     func fetchInterruptorsRange(from: String, to: String) async throws -> [InterruptorResponse] {
