@@ -10,6 +10,7 @@
 #   install    register backend + app with launchd so they autostart at login
 #   uninstall  remove the launchd agents
 #   setup      one-time bootstrap: deps check + secret-scan hooks
+#   daylog     write yesterday's activity summary into the Obsidian daily note
 #   doctor     diagnose common breakage
 #   help       this message
 
@@ -31,8 +32,11 @@ BACKEND_LOG="/tmp/personale-backend.log"
 LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
 BACKEND_PLIST_LABEL="com.abhinavgpt.personale-backend"
 APP_PLIST_LABEL="abhinavgpt.personale"
+DAYLOG_PLIST_LABEL="com.abhinavgpt.personale-daylog"
 BACKEND_PLIST="$LAUNCH_AGENTS/${BACKEND_PLIST_LABEL}.plist"
 APP_PLIST="$LAUNCH_AGENTS/${APP_PLIST_LABEL}.plist"
+DAYLOG_PLIST="$LAUNCH_AGENTS/${DAYLOG_PLIST_LABEL}.plist"
+DAYLOG_LOG="/tmp/personale-daylog.log"
 
 c_red()   { printf '\033[31m%s\033[0m' "$1"; }
 c_grn()   { printf '\033[32m%s\033[0m' "$1"; }
@@ -184,17 +188,56 @@ write_app_plist() {
 EOF
 }
 
+write_daylog_plist() {
+  cat >"$DAYLOG_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${DAYLOG_PLIST_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${REPO_ROOT}/bin/personale</string>
+    <string>daylog</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>4</integer>
+    <key>Minute</key><integer>15</integer>
+  </dict>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>${DAYLOG_LOG}</string>
+  <key>StandardErrorPath</key><string>${DAYLOG_LOG}</string>
+  <key>WorkingDirectory</key><string>${REPO_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
+EOF
+}
+
+cmd_daylog() {
+  python3 "$REPO_ROOT/scripts/daylog_summary.py" "$@"
+}
+
 cmd_install() {
   mkdir -p "$LAUNCH_AGENTS"
   [[ -d "$APP_BUILD_PRODUCT" ]] || { warn "App not built; running build first"; build_app || return 1; }
   info "Writing launchd plists..."
   write_backend_plist
   write_app_plist
+  write_daylog_plist
   # bootout if already loaded (idempotent)
   launchctl bootout gui/$(id -u)/${BACKEND_PLIST_LABEL} 2>/dev/null
   launchctl bootout gui/$(id -u)/${APP_PLIST_LABEL} 2>/dev/null
+  launchctl bootout gui/$(id -u)/${DAYLOG_PLIST_LABEL} 2>/dev/null
   launchctl bootstrap gui/$(id -u) "$BACKEND_PLIST" && ok "Backend agent loaded"
   launchctl bootstrap gui/$(id -u) "$APP_PLIST" && ok "App agent loaded"
+  launchctl bootstrap gui/$(id -u) "$DAYLOG_PLIST" && ok "Daylog agent loaded (daily 04:15)"
   echo ""
   ok "Installed. On every login from now on:"
   echo "    1. macOS launches both agents."
@@ -204,6 +247,8 @@ cmd_install() {
   echo "    4. Backend boots on :$BACKEND_PORT."
   echo "    5. The Swift app launches in parallel and retries against the"
   echo "       backend until it's ready (shows 'Connecting…' meanwhile)."
+  echo "    6. Every day at 04:15 the daylog agent writes yesterday's activity"
+  echo "       summary into the Obsidian daily note (log: $DAYLOG_LOG)."
   echo ""
   echo "  Logs: tail -F $BACKEND_LOG"
 }
@@ -211,7 +256,8 @@ cmd_install() {
 cmd_uninstall() {
   launchctl bootout gui/$(id -u)/${BACKEND_PLIST_LABEL} 2>/dev/null && ok "Backend agent unloaded"
   launchctl bootout gui/$(id -u)/${APP_PLIST_LABEL} 2>/dev/null && ok "App agent unloaded"
-  rm -f "$BACKEND_PLIST" "$APP_PLIST"
+  launchctl bootout gui/$(id -u)/${DAYLOG_PLIST_LABEL} 2>/dev/null && ok "Daylog agent unloaded"
+  rm -f "$BACKEND_PLIST" "$APP_PLIST" "$DAYLOG_PLIST"
   ok "Plists removed"
 }
 
@@ -310,6 +356,7 @@ case "${1:-help}" in
   install)   cmd_install ;;
   uninstall) cmd_uninstall ;;
   setup)     cmd_setup ;;
+  daylog)    shift; cmd_daylog "$@" ;;
   doctor)    cmd_doctor ;;
   help|-h|--help) cmd_help ;;
   *) fail "Unknown command: $1"; cmd_help; exit 1 ;;
