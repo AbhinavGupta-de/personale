@@ -1,0 +1,47 @@
+/* ============================================================
+   Personale Design System — Spacing & Layout Tokens
+   Source: AppMetrics enum in Theme.swift
+   ============================================================ */
+
+:root {
+  /* ── Base Scale (4px grid) ──────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  6px;
+  --space-3:  8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;   /* = --card-gap */
+  --space-7: 16px;   /* = --card-padding-x */
+  --space-8: 20px;   /* = --content-padding */
+  --space-9: 24px;
+  --space-10: 32px;
+
+  /* ── Card Tokens ─────────────────────────────────────────── */
+  --card-gap:       14px;   /* gap between dashboard cards */
+  --card-padding-x: 16px;   /* card horizontal inner padding */
+  --card-padding-y: 14px;   /* card top inner padding */
+  --card-radius:     8px;   /* AppMetrics.cardCornerRadius */
+
+  /* ── Page Layout ─────────────────────────────────────────── */
+  --content-padding: 20px;  /* AppMetrics.contentPadding */
+
+  /* ── Fixed Layout Metrics (from AppShell.swift) ─────────── */
+  --sidebar-width:      52px;  /* icon-only sidebar */
+  --header-height:      42px;  /* top header bar */
+  --bottom-bar-height:  50px;  /* bottom focus bar */
+
+  /* ── Border Radii ────────────────────────────────────────── */
+  --radius-xs:   4px;    /* tab buttons, small controls */
+  --radius-sm:   6px;    /* buttons, inputs */
+  --radius-md:   8px;    /* cards (= --card-radius) */
+  --radius-pill: 9999px; /* capsule/badge shapes */
+
+  /* ── Component Sizes ─────────────────────────────────────── */
+  --progress-bar-height:  6px;  /* category/app progress bars */
+  --progress-bar-radius:  2px;
+  --timeline-bar-height: 36px;  /* horizontal daily timeline */
+  --sidebar-icon-size:   36px;  /* sidebar icon frame */
+  --avatar-size-sm:      24px;  /* header avatar */
+  --dot-size-sm:          6px;  /* category dot (list rows) */
+  --dot-size-md:          8px;  /* session mini-card dot */
+}

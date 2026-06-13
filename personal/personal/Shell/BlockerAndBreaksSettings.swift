@@ -15,7 +15,7 @@ struct DistractionBlockerCard: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Spacing.space6) {
             row(title: "Blocker Type",
                 help: "What to show when a distraction threshold is crossed") {
                 Picker("", selection: $settings.blockerType) {
@@ -51,15 +51,15 @@ struct DistractionBlockerCard: View {
 
             Divider().opacity(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Spacing.space2) {
                 Text("Distraction Categories")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(AppFont.text(FontSize.base, .medium))
                     .foregroundStyle(theme.foreground)
                 Text("Time spent in these categories during a focus session triggers the blocker")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
 
-                FlowLayout(spacing: 6) {
+                FlowLayout(spacing: Spacing.space2) {
                     ForEach(availableCategories, id: \.self) { cat in
                         categoryChip(cat)
                     }
@@ -67,7 +67,7 @@ struct DistractionBlockerCard: View {
             }
 
             Text("Note: engine + overlay ship in a follow-up; settings persist today.")
-                .font(.system(size: 10))
+                .font(AppFont.text(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground.opacity(0.7))
         }
         .onAppear { loadCategories() }
@@ -82,14 +82,14 @@ struct DistractionBlockerCard: View {
                 settings.distractionCategories.insert(name)
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.space1) {
                 if selected {
-                    Image(systemName: "checkmark").font(.system(size: 9, weight: .bold))
+                    Image(systemName: "checkmark").font(AppFont.text(FontSize.xs2, .bold))
                 }
-                Text(name).font(.system(size: 11))
+                Text(name).font(AppFont.text(FontSize.sm))
             }
             .foregroundStyle(selected ? theme.primaryForeground : theme.foreground)
-            .padding(.horizontal, 8).padding(.vertical, 4)
+            .padding(.horizontal, Spacing.space3).padding(.vertical, Spacing.space1)
             .background(selected ? theme.primary : theme.secondary)
             .clipShape(Capsule())
         }
@@ -108,8 +108,8 @@ struct DistractionBlockerCard: View {
     private func row<Content: View>(title: String, help: String, @ViewBuilder trailing: () -> Content) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(theme.foreground)
-                Text(help).font(.system(size: 10)).foregroundStyle(theme.mutedForeground)
+                Text(title).font(AppFont.text(FontSize.md, .medium)).foregroundStyle(theme.foreground)
+                Text(help).font(AppFont.text(FontSize.xs)).foregroundStyle(theme.mutedForeground)
             }
             Spacer()
             trailing()
@@ -128,7 +128,7 @@ struct BreaksSettingsCard: View {
     private let intervalOptions: [Int] = [30, 45, 60]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Spacing.space6) {
             row(title: "Automatic Break Detection",
                 help: "Auto-create Break sessions from gaps between focus sessions") {
                 Toggle("", isOn: $settings.autoDetectBreaks)
@@ -180,7 +180,7 @@ struct BreaksSettingsCard: View {
             }
 
             Text("Note: detection engine + overlay ship in a follow-up; settings persist today.")
-                .font(.system(size: 10))
+                .font(AppFont.text(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground.opacity(0.7))
         }
     }
@@ -189,9 +189,9 @@ struct BreaksSettingsCard: View {
     private func row<Content: View>(title: String, help: String, @ViewBuilder trailing: () -> Content) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(theme.foreground)
+                Text(title).font(AppFont.text(FontSize.md, .medium)).foregroundStyle(theme.foreground)
                 if !help.isEmpty {
-                    Text(help).font(.system(size: 10)).foregroundStyle(theme.mutedForeground)
+                    Text(help).font(AppFont.text(FontSize.xs)).foregroundStyle(theme.mutedForeground)
                 }
             }
             Spacer()

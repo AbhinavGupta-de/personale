@@ -185,9 +185,9 @@ struct ReviewPage: View {
     }
 
     private var header: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Spacing.space6) {
             Text("Time Entry Review")
-                .font(.system(size: 22, weight: .bold))
+                .font(AppFont.text(FontSize.xl2, .bold))
                 .foregroundStyle(theme.foreground)
 
             HStack(spacing: 2) {
@@ -205,56 +205,56 @@ struct ReviewPage: View {
                 HStack(spacing: 5) {
                     ProgressView().controlSize(.mini)
                     Text("Generating AI drafts…")
-                        .font(.system(size: 11)).foregroundStyle(theme.mutedForeground)
+                        .font(AppFont.text(FontSize.sm)).foregroundStyle(theme.mutedForeground)
                 }
-                .padding(.trailing, 10)
+                .padding(.trailing, Spacing.space4)
             } else {
                 Button {
                     vm.regenerateAll()
                 } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.clockwise.circle").font(.system(size: 10))
-                        Text("Regen all").font(.system(size: 11, weight: .medium))
+                    HStack(spacing: Spacing.space1) {
+                        Image(systemName: "arrow.clockwise.circle").font(AppFont.text(FontSize.xs))
+                        Text("Regen all").font(AppFont.text(FontSize.sm, .medium))
                     }
                     .foregroundStyle(theme.primary)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .padding(.horizontal, Spacing.space3).padding(.vertical, 3)
                     .background(theme.primary.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                 }
                 .buttonStyle(.plain)
                 .help("Re-generate AI drafts for every block on this day, even if one already exists. Use after the prompt has improved.")
-                .padding(.trailing, 10)
+                .padding(.trailing, Spacing.space4)
             }
 
             Text(vm.displayDate)
-                .font(.system(size: 13, weight: .medium))
+                .font(AppFont.text(FontSize.md, .medium))
                 .foregroundStyle(theme.foreground)
 
             HStack(spacing: 0) {
                 Button { vm.goToPreviousDay() } label: {
-                    Image(systemName: "chevron.left").font(.system(size: 11))
+                    Image(systemName: "chevron.left").font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
                 Button { vm.goToNextDay() } label: {
-                    Image(systemName: "chevron.right").font(.system(size: 11))
+                    Image(systemName: "chevron.right").font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 20).padding(.vertical, 14)
+        .padding(.horizontal, Spacing.space8).padding(.vertical, Spacing.space6)
     }
 
     @ViewBuilder
     private func filterButton(_ status: String, label: String) -> some View {
         Button { vm.statusFilter = status } label: {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(AppFont.text(FontSize.sm, .medium))
                 .foregroundStyle(vm.statusFilter == status ? theme.foreground : theme.mutedForeground)
-                .padding(.horizontal, 10).padding(.vertical, 4)
+                .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space1)
                 .background(vm.statusFilter == status ? theme.card : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
         }
@@ -265,12 +265,12 @@ struct ReviewPage: View {
 
     private var sidebar: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Spacing.space2) {
                 if vm.filtered.isEmpty {
                     Text(vm.isLoading ? "Loading…" : "No entries")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.mutedForeground)
-                        .padding(20)
+                        .padding(Spacing.space8)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
                 ForEach(vm.filtered) { block in
@@ -279,7 +279,7 @@ struct ReviewPage: View {
                     }
                 }
             }
-            .padding(12)
+            .padding(Spacing.space5)
         }
     }
 
@@ -291,7 +291,7 @@ struct ReviewPage: View {
             ReviewEditor(block: sel, vm: vm)
         } else {
             Text("Select an entry to review")
-                .font(.system(size: 13))
+                .font(AppFont.text(FontSize.md))
                 .foregroundStyle(theme.mutedForeground)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -325,28 +325,28 @@ private struct BlockRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: Spacing.space4) {
                 Circle()
                     .fill(CategoryColors.color(for: block.category))
                     .frame(width: 8, height: 8)
-                    .padding(.top, 4)
+                    .padding(.top, Spacing.space1)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(block.title ?? block.aiTitle ?? block.category)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(AppFont.text(FontSize.base, .medium))
                         .foregroundStyle(theme.foreground)
                         .lineLimit(1)
                     Text("\(block.startTime) – \(block.endTime) · \(fmt(block.durationSeconds))")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(AppFont.mono(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                 }
                 Spacer()
                 statusBadge
             }
-            .padding(10)
+            .padding(Spacing.space4)
             .background(selected ? theme.primary.opacity(0.12) : theme.secondary.opacity(0.4))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.md))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Radius.md)
                     .stroke(selected ? theme.primary : Color.clear, lineWidth: 1)
             )
         }
@@ -360,9 +360,9 @@ private struct BlockRow: View {
         default: ("Pending", theme.accent)
         }
         return Text(text)
-            .font(.system(size: 9, weight: .semibold))
+            .font(AppFont.text(FontSize.xs2, .semibold))
             .foregroundStyle(color)
-            .padding(.horizontal, 6).padding(.vertical, 2)
+            .padding(.horizontal, Spacing.space2).padding(.vertical, 2)
             .background(color.opacity(0.12))
             .clipShape(Capsule())
     }
@@ -404,11 +404,11 @@ private struct ReviewEditor: View {
             HStack(spacing: 5) {
                 Circle().fill(CategoryColors.color(for: category)).frame(width: 6, height: 6)
                 Text(category.uppercased())
-                    .font(.system(size: 10, weight: .semibold)).tracking(0.5)
+                    .font(AppFont.text(FontSize.xs, .semibold)).tracking(0.5)
                 Image(systemName: "chevron.down").font(.system(size: 8)).opacity(0.5)
             }
             .foregroundStyle(theme.foreground)
-            .padding(.horizontal, 8).padding(.vertical, 4)
+            .padding(.horizontal, Spacing.space3).padding(.vertical, Spacing.space1)
             .background(theme.secondary.opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 5))
         }
@@ -424,29 +424,29 @@ private struct ReviewEditor: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: Spacing.space6) {
                 HStack {
                     categoryBadge
                     Spacer()
                     Text("\(block.startTime) – \(block.endTime)")
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(AppFont.mono(FontSize.base))
                         .foregroundStyle(theme.foreground)
                     Text(fmt(block.durationSeconds))
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                     Button {
                         vm.generate(key: block.blockKey)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: Spacing.space1) {
                             if vm.generatingFor == block.blockKey {
                                 ProgressView().controlSize(.mini)
                             } else {
-                                Image(systemName: "sparkles").font(.system(size: 10))
+                                Image(systemName: "sparkles").font(AppFont.text(FontSize.xs))
                             }
-                            Text("AI").font(.system(size: 11, weight: .medium))
+                            Text("AI").font(AppFont.text(FontSize.sm, .medium))
                         }
                         .foregroundStyle(theme.primary)
-                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .padding(.horizontal, Spacing.space3).padding(.vertical, 3)
                         .background(theme.primary.opacity(0.12))
                         .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
@@ -456,9 +456,9 @@ private struct ReviewEditor: View {
 
                 TextField("Title", text: $title, axis: .vertical)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(AppFont.text(FontSize.lg, .semibold))
                     .foregroundStyle(theme.foreground)
-                    .padding(12)
+                    .padding(Spacing.space5)
                     .background(theme.secondary.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 7))
                     .lineLimit(1...3)
@@ -466,30 +466,30 @@ private struct ReviewEditor: View {
                 TextField("Description — what specifically did you do? (helps AI learn)",
                           text: $description, axis: .vertical)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
                     .foregroundStyle(theme.foreground)
-                    .padding(12)
+                    .padding(Spacing.space5)
                     .background(theme.secondary.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 7))
                     .lineLimit(3...8)
 
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.space3) {
                     metadataField(icon: "checkmark.square", placeholder: "Task", text: $task)
                     metadataField(icon: "folder", placeholder: "Project", text: $project)
                     metadataField(icon: "person", placeholder: "Client", text: $client)
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: Spacing.space4) {
                     Button {
                         save()
                         vm.setStatus("approved", key: block.blockKey)
                     } label: {
                         HStack(spacing: 5) {
-                            Text("Accept").font(.system(size: 12, weight: .semibold))
-                            Text("⌘↵").font(.system(size: 10)).opacity(0.7)
+                            Text("Accept").font(AppFont.text(FontSize.base, .semibold))
+                            Text("⌘↵").font(AppFont.text(FontSize.xs)).opacity(0.7)
                         }
                         .foregroundStyle(theme.primaryForeground)
-                        .padding(.horizontal, 16).padding(.vertical, 7)
+                        .padding(.horizontal, Spacing.space7).padding(.vertical, 7)
                         .background(theme.primary)
                         .clipShape(Capsule())
                     }
@@ -500,11 +500,11 @@ private struct ReviewEditor: View {
                         vm.setStatus("rejected", key: block.blockKey)
                     } label: {
                         HStack(spacing: 5) {
-                            Text("Reject").font(.system(size: 12))
-                            Text("⌘⌫").font(.system(size: 10)).opacity(0.7)
+                            Text("Reject").font(AppFont.text(FontSize.base))
+                            Text("⌘⌫").font(AppFont.text(FontSize.xs)).opacity(0.7)
                         }
                         .foregroundStyle(theme.foreground)
-                        .padding(.horizontal, 16).padding(.vertical, 7)
+                        .padding(.horizontal, Spacing.space7).padding(.vertical, 7)
                         .background(theme.secondary)
                         .clipShape(Capsule())
                     }
@@ -513,13 +513,13 @@ private struct ReviewEditor: View {
 
                     Spacer()
                 }
-                .padding(.top, 4)
+                .padding(.top, Spacing.space1)
 
                 if let err = vm.errorMessage {
-                    Text(err).font(.system(size: 11)).foregroundStyle(theme.warning)
+                    Text(err).font(AppFont.text(FontSize.sm)).foregroundStyle(theme.warning)
                 }
             }
-            .padding(20)
+            .padding(Spacing.space8)
         }
         .onAppear { populate() }
         .onChange(of: block.blockKey) { _, _ in populate() }
@@ -529,14 +529,14 @@ private struct ReviewEditor: View {
 
     @ViewBuilder
     private func metadataField(icon: String, placeholder: String, text: Binding<String>) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).font(.system(size: 10)).foregroundStyle(theme.mutedForeground)
+        HStack(spacing: Spacing.space2) {
+            Image(systemName: icon).font(AppFont.text(FontSize.xs)).foregroundStyle(theme.mutedForeground)
             TextField(placeholder, text: text)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(AppFont.text(FontSize.base))
                 .foregroundStyle(theme.foreground)
         }
-        .padding(.horizontal, 10).padding(.vertical, 7)
+        .padding(.horizontal, Spacing.space4).padding(.vertical, 7)
         .background(theme.secondary.opacity(0.4))
         .clipShape(RoundedRectangle(cornerRadius: 5))
         .frame(maxWidth: .infinity)
@@ -579,41 +579,41 @@ private struct OverviewPanel: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.space7) {
                 SectionTitle(text: "Overview")
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("Top Apps & Websites")
-                        .font(.system(size: 10, weight: .semibold)).tracking(0.5)
+                        .font(AppFont.text(FontSize.xs, .semibold)).tracking(0.5)
                         .foregroundStyle(theme.mutedForeground)
                     ForEach(block.apps.prefix(8), id: \.appName) { app in
-                        HStack(spacing: 6) {
+                        HStack(spacing: Spacing.space2) {
                             Text(app.appName)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .lineLimit(1)
                             Spacer()
                             Text(fmt(app.totalSeconds))
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(AppFont.mono(FontSize.xs))
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
 
                 if let domains = block.topDomains, !domains.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: Spacing.space2) {
                         Text("Top Domains")
-                            .font(.system(size: 10, weight: .semibold)).tracking(0.5)
+                            .font(AppFont.text(FontSize.xs, .semibold)).tracking(0.5)
                             .foregroundStyle(theme.mutedForeground)
                         ForEach(domains.prefix(6)) { dom in
-                            HStack(spacing: 6) {
+                            HStack(spacing: Spacing.space2) {
                                 Text(dom.domain)
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(AppFont.mono(FontSize.sm))
                                     .foregroundStyle(theme.foreground)
                                     .lineLimit(1)
                                 Spacer()
                                 Text(fmt(dom.seconds))
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(AppFont.mono(FontSize.xs))
                                     .foregroundStyle(theme.mutedForeground)
                             }
                         }
@@ -621,21 +621,21 @@ private struct OverviewPanel: View {
                 }
 
                 if !block.categories.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: Spacing.space2) {
                         Text("Categories in this block")
-                            .font(.system(size: 10, weight: .semibold)).tracking(0.5)
+                            .font(AppFont.text(FontSize.xs, .semibold)).tracking(0.5)
                             .foregroundStyle(theme.mutedForeground)
                         ForEach(block.categories, id: \.category) { c in
-                            HStack(spacing: 6) {
+                            HStack(spacing: Spacing.space2) {
                                 Circle()
                                     .fill(CategoryColors.color(for: c.category))
                                     .frame(width: 6, height: 6)
                                 Text(c.category)
-                                    .font(.system(size: 11))
+                                    .font(AppFont.text(FontSize.sm))
                                     .foregroundStyle(theme.foreground)
                                 Spacer()
                                 Text("\(c.percent)%")
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(AppFont.mono(FontSize.xs))
                                     .foregroundStyle(theme.mutedForeground)
                             }
                         }
@@ -644,7 +644,7 @@ private struct OverviewPanel: View {
 
                 Spacer(minLength: 0)
             }
-            .padding(16)
+            .padding(Spacing.space7)
         }
     }
 }

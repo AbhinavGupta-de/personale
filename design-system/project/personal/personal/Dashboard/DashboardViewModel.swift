@@ -1,0 +1,560 @@
+#if os(macOS)
+import Combine
+import Foundation
+import SwiftUI
+
+@MainActor
+class DashboardViewModel: ObservableObject {
+    @Published var selectedDate: Date = ActivityViewModel.effectiveToday(
+        dayStartHour: AppSettings.shared.dayStartHour)
+    @Published var isLoading = false
+
+    var dayStartHour: Int { AppSettings.shared.dayStartHour }
+    var effectiveToday: Date {
+        ActivityViewModel.effectiveToday(dayStartHour: dayStartHour)
+    }
+
+    // Live data (nil = not yet loaded, use mock fallback)
+    @Published var dayStats: DailyStatsResponse?
+    @Published var timelineEntries: [TimelineEntryResponse]?
+    @Published var activityEntries: [ActivityLogEntryResponse]?
+    @Published var categoryBreakdown: [CategoryBreakdownResponse]?
+    @Published var workblockEntries: [WorkblockEntryResponse]?
+    @Published var domainStats: DomainStatsResponse?
+    @Published var focusSessions: [FocusSessionResponse] = []
+    @Published var categories: [CategoryResponse] = []
+    @Published var streakDays: Int = 0
+    @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
+    private var draftsRequestedDates: Set<String> = []
+
+    // Break timer — ticks every second, computed client-side from existing data
+    @Published var secondsSinceLastBreak: Int = 0
+
+    private let api = APIClient.shared
+    private var refreshTimer: Timer?
+    private var breakTickTimer: Timer?
+    private var lastBreakEnd: Date?
+    private var cache: [String: DayCache] = [:]
+    private var activeFetchDate: String? // guards against stale responses
+
+    private struct DayCache {
+        var dayStats: DailyStatsResponse?
+        var timelineEntries: [TimelineEntryResponse]?
+        var activityEntries: [ActivityLogEntryResponse]?
+        var categoryBreakdown: [CategoryBreakdownResponse]?
+        var workblockEntries: [WorkblockEntryResponse]?
+        var domainStats: DomainStatsResponse?
+
+        var hasAnyData: Bool {
+            dayStats != nil || timelineEntries != nil || activityEntries != nil
+                || categoryBreakdown != nil || workblockEntries != nil
+        }
+    }
+
+    private static let dateFmt: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        return fmt
+    }()
+
+    private static let displayFmt: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "EEEE, MMMM d, yyyy"
+        return fmt
+    }()
+
+    var dateString: String { Self.dateFmt.string(from: selectedDate) }
+    var displayDate: String { Self.displayFmt.string(from: selectedDate) }
+
+    /// "Fresh Start Effect" framing (Dai/Milkman/Riis 2014): when the selected
+    /// day is a Monday or the 1st of the month, surface a reset copy — cheap
+    /// but shown to boost goal re-engagement.
+    var freshStartLabel: String? {
+        let cal = Calendar.current
+        let weekday = cal.component(.weekday, from: selectedDate)
+        let day = cal.component(.day, from: selectedDate)
+        if day == 1 {
+            let fmt = DateFormatter(); fmt.dateFormat = "MMMM"
+            return "\(fmt.string(from: selectedDate)) — fresh start"
+        }
+        if weekday == 2 { // Monday (Sunday = 1)
+            let weekOfYear = cal.component(.weekOfYear, from: selectedDate)
+            return "Week \(weekOfYear) — reset"
+        }
+        return nil
+    }
+
+    var isToday: Bool {
+        Calendar.current.isDate(selectedDate, inSameDayAs: effectiveToday)
+    }
+
+    // MARK: - Converted data for cards
+
+    var timeline: [MockData.TimelineBlock] {
+        guard let entries = timelineEntries, !entries.isEmpty else {
+            return []
+        }
+        return entries.compactMap { entry in
+            guard let startHour = parseTimeToHour(entry.startTime),
+                let endHour = parseTimeToHour(entry.endTime),
+                endHour > startHour
+            else { return nil }
+            let type = entry.category
+            return MockData.TimelineBlock(
+                start: startHour, end: endHour, type: type, label: entry.appName)
+        }
+    }
+
+    var workHours: MockData.WorkHours {
+        let settings = AppSettings.shared
+        let targetH = settings.targetHoursPerDay
+        let targetStr = "\(targetH) hr 0 min"
+        let trackingStr = String(format: "From %d:00", settings.dayStartHour)
+
+        guard let stats = dayStats else {
+            return MockData.WorkHours(
+                totalWorked: "0 min", percentOfDay: 0,
+                targetHours: targetStr, trackingOn: true, trackingHours: trackingStr)
+        }
+        let totalSecs = stats.totalTrackedSeconds
+        let hours = totalSecs / 3600
+        let mins = (totalSecs % 3600) / 60
+        let totalStr = hours > 0 ? "\(hours) hr \(mins) min" : "\(mins) min"
+        let targetSecs = targetH * 3600
+        let pct = targetSecs > 0 ? Double(totalSecs) / Double(targetSecs) * 100 : 0
+        return MockData.WorkHours(
+            totalWorked: totalStr,
+            percentOfDay: pct,
+            targetHours: targetStr,
+            trackingOn: true,
+            trackingHours: trackingStr
+        )
+    }
+
+    var activityLog: [MockData.ActivityEntry] {
+        guard let entries = activityEntries, !entries.isEmpty else {
+            return []
+        }
+        return entries.reversed().map { entry in
+            MockData.ActivityEntry(
+                time: entry.time,
+                app: entry.appName,
+                detail: entry.detail
+            )
+        }
+    }
+
+    var workblocks: [MockData.Workblock] {
+        guard let entries = workblockEntries, !entries.isEmpty else {
+            return []
+        }
+        return entries.map { entry in
+            MockData.Workblock(
+                time: entry.time,
+                task: entry.task,
+                duration: entry.duration,
+                score: nil
+            )
+        }
+    }
+
+    var timeBreakdown: [MockData.TimeBreakdownEntry] {
+        guard let categories = categoryBreakdown, !categories.isEmpty else {
+            return []
+        }
+        return categories.map { cat in
+            let secs = cat.totalSeconds
+            let hours = secs / 3600
+            let mins = (secs % 3600) / 60
+            let timeStr = hours > 0 ? "\(hours) hr \(mins) min" : "\(mins) min"
+            return MockData.TimeBreakdownEntry(
+                category: cat.category,
+                percent: cat.percent,
+                time: timeStr,
+                colorHex: CategoryColors.map[cat.category] ?? CategoryColors.fallback
+            )
+        }
+    }
+
+    // MARK: - Scores (client-side from category breakdown)
+
+    var scores: MockData.ScoreSet {
+        guard let categories = categoryBreakdown, !categories.isEmpty,
+              let stats = dayStats, stats.totalTrackedSeconds > 0
+        else {
+            return MockData.ScoreSet(
+                focus: .init(percent: 0, time: "0 min"),
+                communication: .init(percent: 0, time: "0 min"),
+                other: .init(percent: 0, time: "0 min"))
+        }
+
+        let total = stats.totalTrackedSeconds
+        var focusSecs = 0, commSecs = 0, otherSecs = 0
+
+        for cat in categories {
+            switch cat.category {
+            case "Code", "Design", "Writing", "Reading":
+                focusSecs += cat.totalSeconds
+            case "Communication":
+                commSecs += cat.totalSeconds
+            default:
+                otherSecs += cat.totalSeconds
+            }
+        }
+
+        func pct(_ v: Int) -> Int { total > 0 ? Int(round(Double(v) * 100.0 / Double(total))) : 0 }
+        func fmt(_ s: Int) -> String {
+            let h = s / 3600; let m = (s % 3600) / 60
+            return h > 0 ? "\(h) hr \(m) min" : "\(m) min"
+        }
+
+        return MockData.ScoreSet(
+            focus: .init(percent: pct(focusSecs), time: fmt(focusSecs)),
+            communication: .init(percent: pct(commSecs), time: fmt(commSecs)),
+            other: .init(percent: pct(otherSecs), time: fmt(otherSecs)))
+    }
+
+    // MARK: - Break Timer (client-side, no backend calls)
+
+    /// Finds the end time of the last gap (break) in the timeline.
+    /// A "break" is any gap >= 5 minutes between consecutive timeline blocks.
+    private func computeLastBreakEnd() {
+        guard isToday, let entries = timelineEntries, entries.count >= 2 else {
+            lastBreakEnd = nil
+            return
+        }
+
+        let today = Calendar.current.startOfDay(for: Date())
+        let minimumBreakSeconds: TimeInterval = 5 * 60  // 5-minute gap = break
+
+        // Timeline entries are sorted by time; walk backwards to find last gap
+        var lastGapEnd: Date?
+        for i in stride(from: entries.count - 1, through: 1, by: -1) {
+            guard let prevEnd = parseTimeToDate(entries[i - 1].endTime, relativeTo: today),
+                  let currStart = parseTimeToDate(entries[i].startTime, relativeTo: today)
+            else { continue }
+            let gap = currStart.timeIntervalSince(prevEnd)
+            if gap >= minimumBreakSeconds {
+                lastGapEnd = currStart  // work resumed here → break ended
+                break
+            }
+        }
+
+        // If no gap found, the "last break" is start of first block (no break taken)
+        if lastGapEnd == nil {
+            lastGapEnd = parseTimeToDate(entries.first!.startTime, relativeTo: today)
+        }
+
+        lastBreakEnd = lastGapEnd
+        updateSecondsSinceLastBreak()
+    }
+
+    private func updateSecondsSinceLastBreak() {
+        guard let ref = lastBreakEnd else {
+            secondsSinceLastBreak = 0
+            return
+        }
+        secondsSinceLastBreak = max(0, Int(Date().timeIntervalSince(ref)))
+    }
+
+    var breakTimerText: String {
+        let h = secondsSinceLastBreak / 3600
+        let m = (secondsSinceLastBreak % 3600) / 60
+        let s = secondsSinceLastBreak % 60
+        return String(format: "%d:%02d:%02d", h, m, s)
+    }
+
+    var breakToWorkRatio: String {
+        guard let stats = dayStats, stats.totalTrackedSeconds > 0 else {
+            return "—"
+        }
+        let totalDaySoFar = Date().timeIntervalSince(
+            Calendar.current.startOfDay(for: Date())
+        )
+        let workedSecs = Double(stats.totalTrackedSeconds)
+        let breakSecs = max(0, totalDaySoFar - workedSecs)
+        guard breakSecs > 0 else { return "0 / 1" }
+        let ratio = workedSecs / breakSecs
+        return ratio >= 1
+            ? "1 / \(String(format: "%.1f", ratio))"
+            : "\(String(format: "%.1f", breakSecs / workedSecs)) / 1"
+    }
+
+    private func startBreakTick() {
+        breakTickTimer?.invalidate()
+        guard isToday else { return }
+        breakTickTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) {
+            [weak self] _ in
+            Task { @MainActor in
+                self?.updateSecondsSinceLastBreak()
+            }
+        }
+    }
+
+    private func stopBreakTick() {
+        breakTickTimer?.invalidate()
+        breakTickTimer = nil
+    }
+
+    private func parseTimeToDate(_ time: String, relativeTo dayStart: Date) -> Date? {
+        let parts = time.split(separator: ":")
+        guard parts.count >= 2,
+              let h = Int(parts[0]),
+              let m = Int(parts[1])
+        else { return nil }
+        return Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: dayStart)
+    }
+
+    // MARK: - Navigation
+
+    func startRefreshing() {
+        fetchAllIncremental()
+        refreshTimer?.invalidate()
+        if isToday {
+            refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) {
+                [weak self] _ in
+                Task { @MainActor in
+                    self?.fetchAllIncremental()
+                }
+            }
+            startBreakTick()
+        }
+    }
+
+    func stopRefreshing() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+        stopBreakTick()
+    }
+
+    func goToPreviousDay() {
+        selectedDate =
+            Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+        navigateToCurrentDate()
+    }
+
+    func goToNextDay() {
+        let tomorrow =
+            Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+        if tomorrow <= effectiveToday {
+            selectedDate = tomorrow
+            navigateToCurrentDate()
+        }
+    }
+
+    func goToToday() {
+        selectedDate = effectiveToday
+        navigateToCurrentDate()
+    }
+
+    // MARK: - Helpers
+
+    func formatDuration(_ seconds: Int) -> String {
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        if h > 0 { return "\(h) hr \(m) min" }
+        return "\(m) min"
+    }
+
+    private func navigateToCurrentDate() {
+        let date = dateString
+
+        // Immediately apply cached data (instant navigation)
+        if let cached = cache[date] {
+            dayStats = cached.dayStats
+            timelineEntries = cached.timelineEntries
+            activityEntries = cached.activityEntries
+            categoryBreakdown = cached.categoryBreakdown
+            workblockEntries = cached.workblockEntries
+            domainStats = cached.domainStats
+            isLoading = !cached.hasAnyData
+        } else {
+            dayStats = nil
+            timelineEntries = nil
+            activityEntries = nil
+            categoryBreakdown = nil
+            workblockEntries = nil
+            domainStats = nil
+            focusSessions = []
+            isLoading = true
+        }
+
+        startRefreshing()
+    }
+
+    // MARK: - Incremental fetching
+
+    private func fetchAllIncremental() {
+        let date = dateString
+        activeFetchDate = date
+
+        if cache[date] == nil {
+            isLoading = true
+        }
+
+        // Fire each endpoint independently — UI updates as each arrives
+        Task {
+            guard let s = try? await api.fetchDayStats(date: date),
+                activeFetchDate == date
+            else { return }
+            self.dayStats = s
+            self.cache[date, default: DayCache()].dayStats = s
+            self.isLoading = false
+        }
+        Task {
+            guard let t = try? await api.fetchTimeline(date: date),
+                activeFetchDate == date
+            else { return }
+            self.timelineEntries = t
+            self.cache[date, default: DayCache()].timelineEntries = t
+            self.isLoading = false
+            self.computeLastBreakEnd()
+        }
+        Task {
+            guard let a = try? await api.fetchActivity(date: date),
+                activeFetchDate == date
+            else { return }
+            self.activityEntries = a
+            self.cache[date, default: DayCache()].activityEntries = a
+            self.isLoading = false
+        }
+        Task {
+            guard let c = try? await api.fetchCategories(date: date),
+                activeFetchDate == date
+            else { return }
+            self.categoryBreakdown = c
+            self.cache[date, default: DayCache()].categoryBreakdown = c
+            self.isLoading = false
+        }
+        Task {
+            guard let w = try? await api.fetchWorkblocks(date: date),
+                activeFetchDate == date
+            else { return }
+            self.workblockEntries = w
+            self.cache[date, default: DayCache()].workblockEntries = w
+            self.isLoading = false
+        }
+        Task {
+            guard let d = try? await api.fetchDomainStats(date: date),
+                activeFetchDate == date
+            else { return }
+            self.domainStats = d
+            self.cache[date, default: DayCache()].domainStats = d
+        }
+        Task {
+            guard let s = try? await api.fetchSessions(date: date),
+                activeFetchDate == date
+            else { return }
+            self.focusSessions = s
+        }
+        Task {
+            guard let reviews = try? await api.fetchReviews(date: date, status: "all"),
+                activeFetchDate == date
+            else { return }
+            self.reviewsByKey = Dictionary(uniqueKeysWithValues: reviews.map { ($0.blockKey, $0) })
+
+            let needsDraft = reviews.contains { $0.aiTitle == nil || ($0.aiTitle?.isEmpty ?? true) }
+            if needsDraft && !self.draftsRequestedDates.contains(date) {
+                self.draftsRequestedDates.insert(date)
+                if let refreshed = try? await self.api.generateMissingReviewInsights(date: date),
+                   self.activeFetchDate == date {
+                    self.reviewsByKey = Dictionary(
+                        uniqueKeysWithValues: refreshed.map { ($0.blockKey, $0) })
+                }
+            }
+        }
+        Task {
+            // Categories rarely change — load once per navigation and keep.
+            if let c = try? await api.fetchCategorySettings(), activeFetchDate == date {
+                self.categories = c
+            }
+        }
+        Task {
+            await self.recomputeStreak()
+        }
+
+        // Prefetch adjacent days in background
+        prefetchAdjacent()
+    }
+
+    private func prefetchAdjacent() {
+        let prev = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate)!
+        let next = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate)!
+
+        for date in [prev, next] {
+            guard date <= effectiveToday else { continue }
+            let dateStr = Self.dateFmt.string(from: date)
+            guard cache[dateStr] == nil else { continue }
+
+            // Prefetch all endpoints for adjacent days
+            Task {
+                if let s = try? await api.fetchDayStats(date: dateStr) {
+                    self.cache[dateStr, default: DayCache()].dayStats = s
+                }
+            }
+            Task {
+                if let t = try? await api.fetchTimeline(date: dateStr) {
+                    self.cache[dateStr, default: DayCache()].timelineEntries = t
+                }
+            }
+            Task {
+                if let c = try? await api.fetchCategories(date: dateStr) {
+                    self.cache[dateStr, default: DayCache()].categoryBreakdown = c
+                }
+            }
+            Task {
+                if let w = try? await api.fetchWorkblocks(date: dateStr) {
+                    self.cache[dateStr, default: DayCache()].workblockEntries = w
+                }
+            }
+            Task {
+                if let a = try? await api.fetchActivity(date: dateStr) {
+                    self.cache[dateStr, default: DayCache()].activityEntries = a
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Consecutive days (counting backwards from effectiveToday) where
+    /// total tracked ≥ targetHoursPerDay. Pulls range and walks backwards.
+    private func recomputeStreak() async {
+        let cal = Calendar.current
+        let end = effectiveToday
+        guard let start = cal.date(byAdding: .day, value: -30, to: end) else { return }
+        let fromStr = Self.dateFmt.string(from: start)
+        let toStr = Self.dateFmt.string(from: end)
+        guard let range = try? await api.fetchRange(from: fromStr, to: toStr) else { return }
+
+        let targetSecs = AppSettings.shared.targetHoursPerDay * 3600
+        // Map date-string → totalTrackedSeconds
+        let dayTotals = Dictionary(uniqueKeysWithValues:
+            range.days.map { ($0.date, $0.totalTrackedSeconds) })
+
+        var count = 0
+        var cursor = end
+        while true {
+            let key = Self.dateFmt.string(from: cursor)
+            let total = dayTotals[key] ?? 0
+            if total >= targetSecs {
+                count += 1
+                guard let prev = cal.date(byAdding: .day, value: -1, to: cursor) else { break }
+                cursor = prev
+            } else {
+                break
+            }
+        }
+        self.streakDays = count
+    }
+
+    private func parseTimeToHour(_ time: String) -> Double? {
+        let parts = time.split(separator: ":")
+        guard parts.count >= 2,
+            let h = Double(parts[0]),
+            let m = Double(parts[1])
+        else { return nil }
+        return h + m / 60.0
+    }
+}
+#endif

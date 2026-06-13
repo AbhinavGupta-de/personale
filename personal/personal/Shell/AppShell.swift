@@ -106,7 +106,7 @@ struct Sidebar: View {
                     sidebarButton(item: item)
                 }
             }
-            .padding(.top, 12)
+            .padding(.top, Spacing.space5)
 
             Spacer()
 
@@ -115,7 +115,7 @@ struct Sidebar: View {
                     sidebarButton(item: item)
                 }
             }
-            .padding(.bottom, 12)
+            .padding(.bottom, Spacing.space5)
         }
         .frame(width: AppMetrics.sidebarWidth)
         .background(theme.card)
@@ -144,7 +144,7 @@ struct Sidebar: View {
                         ? theme.primary.opacity(0.12)
                         : Color.clear
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.md))
         }
         .buttonStyle(.plain)
         .help(item.label)
@@ -168,7 +168,7 @@ struct TopHeader: View {
 
             // Center: brand
             Text("PERSONALE")
-                .font(.system(size: 13, weight: .semibold))
+                .font(AppFont.text(FontSize.md, .semibold))
                 .tracking(3)
                 .foregroundStyle(theme.foreground.opacity(0.8))
 
@@ -180,11 +180,11 @@ struct TopHeader: View {
                 .frame(width: 24, height: 24)
                 .overlay(
                     Text("A")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(AppFont.text(FontSize.xs2, .semibold))
                         .foregroundStyle(theme.primaryForeground)
                 )
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Spacing.space8)
         .frame(height: AppMetrics.topHeaderHeight)
         .overlay(alignment: .bottom) {
             Rectangle()
@@ -197,7 +197,7 @@ struct TopHeader: View {
     private func headerButton(icon: String) -> some View {
         Button {} label: {
             Image(systemName: icon)
-                .font(.system(size: 10, weight: .medium))
+                .font(AppFont.text(FontSize.xs, .medium))
                 .foregroundStyle(theme.mutedForeground)
                 .frame(width: 28, height: 28)
         }
@@ -217,11 +217,11 @@ struct BottomBar: View {
     var body: some View {
         HStack {
             // Left: power + continue + timer
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.space4) {
                 // Power
                 Button {} label: {
                     Image(systemName: "power")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.success)
                 }
                 .buttonStyle(.plain)
@@ -229,16 +229,16 @@ struct BottomBar: View {
                 // Continue
                 Button {} label: {
                     Image(systemName: "forward.fill")
-                        .font(.system(size: 9))
+                        .font(AppFont.text(FontSize.xs2))
                         .foregroundStyle(theme.success)
                 }
                 .buttonStyle(.plain)
 
                 // Timer ring + time
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.space3) {
                     timerRing
                     Text(formatTime(secondsRemaining))
-                        .font(.system(size: 13, weight: .bold).monospacedDigit())
+                        .font(AppFont.text(FontSize.md, .bold).monospacedDigit())
                         .foregroundStyle(theme.accent)
 
                     VStack(alignment: .leading, spacing: 0) {
@@ -252,7 +252,7 @@ struct BottomBar: View {
                             .foregroundStyle(theme.mutedForeground)
                     }
                 }
-                .padding(.leading, 4)
+                .padding(.leading, Spacing.space1)
 
                 // End/Start Focus
                 Button {
@@ -260,18 +260,18 @@ struct BottomBar: View {
                 } label: {
                     HStack(spacing: 3) {
                         Text(focusActive ? "End Focus" : "Start Focus")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(AppFont.text(FontSize.sm, .medium))
                         Image(systemName: "chevron.down")
                             .font(.system(size: 7))
                             .opacity(0.6)
                     }
                     .foregroundStyle(theme.foreground)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, Spacing.space5)
                     .padding(.vertical, 5)
                     .background(theme.secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: Radius.sm)
                             .stroke(theme.border.opacity(0.6), lineWidth: 1)
                     )
                 }
@@ -281,31 +281,31 @@ struct BottomBar: View {
             Spacer()
 
             // Right: ambient controls
-            HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 4)
+            HStack(spacing: Spacing.space4) {
+                RoundedRectangle(cornerRadius: Radius.xs)
                     .fill(theme.secondary.opacity(0.8))
                     .frame(width: 24, height: 24)
 
                 Text("Silence")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
 
                 Button {} label: {
                     Image(systemName: "speaker.wave.2")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                 }
                 .buttonStyle(.plain)
 
                 Button {} label: {
                     Image(systemName: "message")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spacing.space7)
         .frame(height: AppMetrics.bottomBarHeight)
         .background(theme.card)
         .overlay(alignment: .top) {
@@ -370,9 +370,9 @@ struct DateNavigator: View {
 
     var body: some View {
         HStack {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.space3) {
                 Text(dateText)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(AppFont.text(FontSize.lg, .semibold))
                     .foregroundStyle(theme.foreground)
 
                 if isLoading {
@@ -384,7 +384,7 @@ struct DateNavigator: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.space3) {
                 // View toggle
                 HStack(spacing: 0) {
                     ForEach(views, id: \.self) { view in
@@ -392,10 +392,10 @@ struct DateNavigator: View {
                             activeView = view
                         } label: {
                             Text(view)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(AppFont.text(FontSize.sm, .medium))
                                 .foregroundStyle(activeView == view ? theme.foreground : theme.mutedForeground)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
+                                .padding(.horizontal, Spacing.space4)
+                                .padding(.vertical, Spacing.space1)
                                 .background(
                                     activeView == view
                                         ? theme.card
@@ -417,12 +417,12 @@ struct DateNavigator: View {
                 if !isToday {
                     Button { onToday?() } label: {
                         Text("Today")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(AppFont.text(FontSize.sm, .medium))
                             .foregroundStyle(theme.primary)
-                            .padding(.horizontal, 10)
+                            .padding(.horizontal, Spacing.space4)
                             .padding(.vertical, 5)
                             .background(theme.primary.opacity(0.12))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                     }
                     .buttonStyle(.plain)
                 }
@@ -440,7 +440,7 @@ struct DateNavigator: View {
     private func headerIconButton(icon: String, action: (() -> Void)? = nil) -> some View {
         Button { action?() } label: {
             Image(systemName: icon)
-                .font(.system(size: 10))
+                .font(AppFont.text(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground)
                 .frame(width: 28, height: 28)
         }

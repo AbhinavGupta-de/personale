@@ -1,0 +1,40 @@
+/* ============================================================
+   Personale Design System — Fonts
+
+   Production (macOS): SF Pro Text renders via -apple-system /
+   local() — no file upload needed on Apple machines.
+
+   ⚠️  Web / cross-platform: Inter (Google Fonts) is the
+   nearest open-source substitute. Upload SF Pro Text .otf/.ttf
+   files to replace the local() stubs below with url() sources.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap');
+
+/* ── SF Pro Text — system font stub ─────────────────────────
+   On macOS, local('SF Pro Text') resolves to the installed copy.
+   Replace with url('fonts/SFProText-Regular.otf') etc. once you
+   upload the files to this project.                            */
+@font-face {
+  font-family: 'SF Pro Text';
+  src: local('SF Pro Text'), local('.SFNSText'), local('SF Pro Display');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  src: local('SF Pro Text'), local('.SFNSText'), local('SF Pro Display');
+  font-weight: 100 900;
+  font-style: italic;
+}
+
+/* ── Cascadia Code — system/local stub ──────────────────────
+   Cascadia Code ships with VS Code and Windows Terminal.
+   Replace with url('fonts/CascadiaCode.ttf') once uploaded.   */
+@font-face {
+  font-family: 'Cascadia Code';
+  src: local('Cascadia Code'), local('Cascadia Mono'), local('Menlo');
+  font-weight: 100 700;
+  font-style: normal;
+}

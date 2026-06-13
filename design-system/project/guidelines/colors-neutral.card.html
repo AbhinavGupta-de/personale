@@ -1,0 +1,48 @@
+<!-- @dsCard group="Colors" viewport="700x130" name="Surface Stack" subtitle="Layered dark surfaces — bg → muted → card → secondary → border" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); display: flex; align-items: center; padding: 20px; gap: 8px; height: 90px; box-sizing: border-box; }
+  .swatch { flex: 1; height: 56px; border-radius: 6px; display: flex; flex-direction: column; justify-content: flex-end; padding: 7px 9px; gap: 2px; border: 1px solid rgba(43,43,49,0.5); }
+  .label { font-size: 9px; font-weight: 600; color: var(--color-muted-foreground); text-transform: uppercase; letter-spacing: 0.5px; }
+  .hex { font-size: 10px; font-family: var(--font-mono); color: var(--color-foreground); }
+  .var { font-size: 8px; font-family: var(--font-mono); color: var(--color-muted-foreground); margin-top: 1px; }
+</style></head>
+<body>
+  <div class="swatch" style="background:#101014;">
+    <span class="label">Background</span>
+    <span class="hex">#101014</span>
+    <span class="var">--color-background</span>
+  </div>
+  <div class="swatch" style="background:#1f1f23;">
+    <span class="label">Muted</span>
+    <span class="hex">#1F1F23</span>
+    <span class="var">--color-muted</span>
+  </div>
+  <div class="swatch" style="background:#17171c;">
+    <span class="label">Card</span>
+    <span class="hex">#17171C</span>
+    <span class="var">--color-card</span>
+  </div>
+  <div class="swatch" style="background:#232329;">
+    <span class="label">Secondary</span>
+    <span class="hex">#232329</span>
+    <span class="var">--color-secondary</span>
+  </div>
+  <div class="swatch" style="background:#2b2b31;">
+    <span class="label">Border</span>
+    <span class="hex">#2B2B31</span>
+    <span class="var">--color-border</span>
+  </div>
+  <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:3px;padding:7px 9px;flex:0.7;">
+    <span class="label" style="color:#e0e0e0">Foreground</span>
+    <span class="hex">#E0E0E0</span>
+    <span class="var">--color-foreground</span>
+  </div>
+  <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:3px;padding:7px 9px;flex:0.7;">
+    <span class="label">Muted FG</span>
+    <span class="hex">#7A7A7A</span>
+    <span class="var">--color-muted-fg</span>
+  </div>
+</body></html>

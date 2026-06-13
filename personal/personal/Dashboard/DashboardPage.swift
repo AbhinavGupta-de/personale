@@ -21,28 +21,28 @@ struct DashboardPage: View {
                         onToday: { viewModel.goToToday() }
                     )
                     if let freshStart = viewModel.freshStartLabel {
-                        HStack(spacing: 4) {
+                        HStack(spacing: Spacing.space1) {
                             Image(systemName: "sparkles")
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.primary)
                             Text(freshStart)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(AppFont.text(FontSize.sm, .medium))
                                 .foregroundStyle(theme.foreground)
                         }
-                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .padding(.horizontal, Spacing.space3).padding(.vertical, Spacing.space1)
                         .background(theme.primary.opacity(0.12))
                         .clipShape(Capsule())
                     }
                     if viewModel.streakDays > 0 {
-                        HStack(spacing: 4) {
+                        HStack(spacing: Spacing.space1) {
                             Image(systemName: "flame.fill")
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.accent)
                             Text("\(viewModel.streakDays)d streak")
-                                .font(.system(size: 11, weight: .medium).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm, .medium).monospacedDigit())
                                 .foregroundStyle(theme.foreground)
                         }
-                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .padding(.horizontal, Spacing.space3).padding(.vertical, Spacing.space1)
                         .background(theme.accent.opacity(0.12))
                         .clipShape(Capsule())
                     }

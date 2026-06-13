@@ -7,13 +7,13 @@ struct MenuBarView: View {
     @State private var refreshTimer: Timer?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.space5) {
             Text("Personale")
                 .font(.headline)
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.space1) {
                 Text("Current App")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -26,7 +26,7 @@ struct MenuBarView: View {
                 }
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.space3) {
                 Circle()
                     .fill(appTracker.eventClient.isServerReachable ? .green : .orange)
                     .frame(width: 7, height: 7)

@@ -32,7 +32,7 @@ struct WeekActivityColumn: View {
         VStack(alignment: .center, spacing: 0) {
             VStack(spacing: 2) {
                 Text(Self.dayNameFmt.string(from: date))
-                    .font(.system(size: 10, weight: .medium))
+                    .font(AppFont.text(FontSize.xs, .medium))
                     .foregroundStyle(theme.mutedForeground)
                 Text(Self.dayNumFmt.string(from: date))
                     .font(.system(size: 16, weight: .bold))
@@ -52,7 +52,7 @@ struct WeekActivityColumn: View {
                         let hours = Double(session.durationSeconds) / 3600.0
                         let height = CGFloat(hours) * hourHeight
                         weekSessionBlock(session: session, height: max(height, 2))
-                            .padding(.horizontal, 4)
+                            .padding(.horizontal, Spacing.space1)
                             .offset(y: top)
                     }
                 }

@@ -1,0 +1,35 @@
+<!-- @dsCard group="Colors" viewport="700x130" name="Dark Surfaces" subtitle="Surface elevation via color alone — no shadows" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: #101014; font-family: var(--font-sans); padding: 16px 20px; box-sizing: border-box; display: flex; gap: 0; align-items: stretch; height: 98px; }
+  .layer { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px 12px; position: relative; }
+  .layer::after { content:''; position:absolute; right:0; top:10%; bottom:10%; width:1px; background:rgba(255,255,255,0.05); }
+  .layer:last-child::after { display:none; }
+  .level { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-muted-foreground); }
+  .name { font-size: 10px; color: var(--color-foreground); margin-top: 2px; }
+  .hex { font-size: 9px; font-family: var(--font-mono); color: var(--color-muted-foreground); margin-top: 1px; }
+</style></head>
+<body>
+  <div class="layer" style="background:#101014;border-radius:6px 0 0 6px;">
+    <span class="level">Base</span>
+    <span class="name">Background</span>
+    <span class="hex">#101014</span>
+  </div>
+  <div class="layer" style="background:#17171c;">
+    <span class="level">+1</span>
+    <span class="name">Card</span>
+    <span class="hex">#17171C</span>
+  </div>
+  <div class="layer" style="background:#1f1f23;">
+    <span class="level">+2</span>
+    <span class="name">Muted</span>
+    <span class="hex">#1F1F23</span>
+  </div>
+  <div class="layer" style="background:#232329;border-radius:0 6px 6px 0;">
+    <span class="level">+3</span>
+    <span class="name">Secondary</span>
+    <span class="hex">#232329</span>
+  </div>
+</body></html>

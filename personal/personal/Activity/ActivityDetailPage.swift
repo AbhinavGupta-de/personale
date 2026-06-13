@@ -68,7 +68,7 @@ struct ActivityDetailPage: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.space5) {
             Image(systemName: "clock")
                 .font(.system(size: 32))
                 .foregroundStyle(theme.mutedForeground.opacity(0.5))
@@ -99,7 +99,7 @@ struct HourRuler: View {
                 let hour = (dayStartHour + i) % 24
                 HStack(spacing: 0) {
                     Text(formatHourLabel(hour))
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(AppFont.mono(FontSize.xs2))
                         .foregroundStyle(theme.mutedForeground)
                         .frame(width: 52, alignment: .trailing)
                     Rectangle()
@@ -165,7 +165,7 @@ struct DayTimelineColumn: View {
                     let height = CGFloat(hours) * hourHeight
                     sessionBlock(session: session, height: max(height, 3))
                         .offset(y: top)
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, Spacing.space1)
                 }
             }
         }
@@ -184,17 +184,17 @@ struct DayTimelineColumn: View {
                 if height >= 28 {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(labelFor(session))
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(AppFont.text(FontSize.sm, .semibold))
                             .foregroundStyle(.white)
                             .lineLimit(2)
                         if height >= 40 {
                             Text("\(session.startTime) - \(session.endTime)")
-                                .font(.system(size: 9))
+                                .font(AppFont.text(FontSize.xs2))
                                 .foregroundStyle(.white.opacity(0.7))
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, Spacing.space4)
+                    .padding(.vertical, Spacing.space1)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -328,15 +328,15 @@ struct PlaceholderColumn: View {
     var body: some View {
         ZStack {
             Rectangle().fill(Color.clear).frame(height: 24 * hourHeight)
-            VStack(spacing: 6) {
+            VStack(spacing: Spacing.space2) {
                 Image(systemName: icon)
                     .font(.system(size: 18))
                     .foregroundStyle(theme.mutedForeground.opacity(0.4))
                 Text("No \(title.lowercased()) tracked")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground.opacity(0.6))
                 Text("Coming soon")
-                    .font(.system(size: 9))
+                    .font(AppFont.text(FontSize.xs2))
                     .foregroundStyle(theme.mutedForeground.opacity(0.4))
             }
         }
@@ -370,9 +370,9 @@ struct DayTimelineCard: View {
                 columnHeader(text: "Tasks", icon: "checkmark.square")
                 columnHeader(text: "Calendar", icon: "calendar")
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
+            .padding(.horizontal, Spacing.space3)
+            .padding(.top, Spacing.space5)
+            .padding(.bottom, Spacing.space1)
 
             Divider().opacity(0.3)
 
@@ -412,7 +412,7 @@ struct DayTimelineCard: View {
                     PlaceholderColumn(title: "Calendar", icon: "calendar", hourHeight: hourHeight)
                         .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, Spacing.space3)
             }
             .scrollIndicators(.hidden)
             .frame(height: cardHeight)
@@ -422,17 +422,17 @@ struct DayTimelineCard: View {
 
     @ViewBuilder
     private func columnHeader(text: String, icon: String) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.space2) {
             Image(systemName: icon)
-                .font(.system(size: 10))
+                .font(AppFont.text(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground)
             Text(text)
-                .font(.system(size: 11, weight: .semibold))
+                .font(AppFont.text(FontSize.sm, .semibold))
                 .foregroundStyle(theme.foreground)
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 8)
+        .padding(.leading, Spacing.space3)
     }
 }
 
@@ -475,8 +475,8 @@ struct WeekTimelineCard: View {
                         .frame(maxWidth: .infinity)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 12)
+                .padding(.horizontal, Spacing.space3)
+                .padding(.vertical, Spacing.space5)
             }
             .scrollIndicators(.hidden)
             .frame(height: cardHeight)
@@ -494,58 +494,58 @@ struct WeeklySummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Weekly Summary")
-                .font(.system(size: 15, weight: .bold))
+                .font(AppFont.text(FontSize.lg, .bold))
                 .foregroundStyle(theme.foreground)
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space7)
+                .padding(.bottom, Spacing.space5)
 
-            Divider().opacity(0.3).padding(.horizontal, 16)
+            Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.space1) {
                 Text("Weekly hours logged")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
                 Text(viewModel.weekTotalFocusDuration)
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(theme.foreground)
                 Text("\(viewModel.weekEntryCount) entries")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.vertical, Spacing.space4)
 
-            Divider().opacity(0.3).padding(.horizontal, 16)
+            Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.space3) {
                 Text("Categories")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(AppFont.text(FontSize.xs2, .semibold))
                     .tracking(0.5)
                     .foregroundStyle(theme.mutedForeground)
 
                 ForEach(Array(viewModel.weekCategoryBreakdown.enumerated()), id: \.offset) { _, cat in
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spacing.space3) {
                         Text("\(cat.percent)%")
-                            .font(.system(size: 11).monospacedDigit())
+                            .font(AppFont.text(FontSize.sm).monospacedDigit())
                             .foregroundStyle(theme.mutedForeground)
                             .frame(width: 28, alignment: .trailing)
-                        RoundedRectangle(cornerRadius: 2)
+                        RoundedRectangle(cornerRadius: Radius.progressBar)
                             .fill(CategoryColors.color(for: cat.category))
                             .frame(width: 10, height: 10)
                         Text(cat.category)
-                            .font(.system(size: 11))
+                            .font(AppFont.text(FontSize.sm))
                             .foregroundStyle(theme.foreground)
                         Spacer()
                         Text(viewModel.formatDuration(cat.totalSeconds))
-                            .font(.system(size: 11).monospacedDigit())
+                            .font(AppFont.text(FontSize.sm).monospacedDigit())
                             .foregroundStyle(theme.mutedForeground)
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.top, Spacing.space4)
+            .padding(.bottom, Spacing.space6)
         }
         .dashboardCard()
     }
@@ -560,21 +560,21 @@ struct SessionPopoverCard: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Spacing.space6) {
             HStack(alignment: .top) {
                 Text(session.name)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(theme.foreground)
                 Spacer()
                 Text(session.duration)
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .font(AppFont.text(FontSize.md, .semibold).monospacedDigit())
                     .foregroundStyle(theme.foreground)
             }
 
             if !session.categories.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("Categories")
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                     ForEach(Array(session.categories.prefix(5).enumerated()), id: \.offset) { _, cat in
                         rowLine(
@@ -588,9 +588,9 @@ struct SessionPopoverCard: View {
             }
 
             if !session.apps.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("Apps & Websites")
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                     ForEach(session.apps.prefix(6)) { app in
                         rowLine(
@@ -610,21 +610,21 @@ struct SessionPopoverCard: View {
 
     @ViewBuilder
     private func rowLine(percent: Int, color: Color, label: String, value: String) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.space4) {
             Text("\(percent)%")
-                .font(.system(size: 11).monospacedDigit())
+                .font(AppFont.text(FontSize.sm).monospacedDigit())
                 .foregroundStyle(theme.mutedForeground)
                 .frame(width: 30, alignment: .trailing)
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: Radius.progressBar)
                 .fill(color.opacity(0.7))
                 .frame(width: 40, height: 6)
             Text(label)
-                .font(.system(size: 11))
+                .font(AppFont.text(FontSize.sm))
                 .foregroundStyle(theme.foreground)
                 .lineLimit(1)
             Spacer()
             Text(value)
-                .font(.system(size: 11).monospacedDigit())
+                .font(AppFont.text(FontSize.sm).monospacedDigit())
                 .foregroundStyle(theme.mutedForeground)
         }
     }
@@ -647,15 +647,15 @@ struct SessionSummaryCard: View {
             // ── Header with close ──
             HStack {
                 Image(systemName: "timer")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
                 Text("Session Summary")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(AppFont.text(FontSize.md, .semibold))
                     .foregroundStyle(theme.foreground)
                 Spacer()
                 Button { onClose() } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                         .frame(width: 24, height: 24)
                         .background(theme.secondary.opacity(0.6))
@@ -663,11 +663,11 @@ struct SessionSummaryCard: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 12)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.top, Spacing.space6)
+            .padding(.bottom, Spacing.space5)
 
-            Divider().opacity(0.3).padding(.horizontal, 16)
+            Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
 
             // ── Title + total duration ──
             HStack(alignment: .firstTextBaseline) {
@@ -676,19 +676,19 @@ struct SessionSummaryCard: View {
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(theme.foreground)
                     Text("\(session.startTime) – \(session.endTime)")
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                 }
                 Spacer()
                 Text(session.duration)
-                    .font(.system(size: 15, weight: .bold).monospacedDigit())
+                    .font(AppFont.text(FontSize.lg, .bold).monospacedDigit())
                     .foregroundStyle(theme.foreground)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.vertical, Spacing.space5)
 
             // ── Quality Score donut + stats ──
-            HStack(alignment: .center, spacing: 16) {
+            HStack(alignment: .center, spacing: Spacing.space7) {
                 ZStack {
                     Circle()
                         .stroke(theme.secondary.opacity(0.4), lineWidth: 6)
@@ -702,119 +702,119 @@ struct SessionSummaryCard: View {
                 }
                 .frame(width: 62, height: 62)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     summaryRow(label: "Quality Score", value: "\(qualityScore).0")
                     summaryRow(label: "Focus Time", value: session.duration)
                     summaryRow(label: "Focus Time (%)", value: "100%")
                     summaryRow(label: "Interruptions", value: "\(max(0, session.categories.count - 1))")
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.bottom, Spacing.space5)
 
-            Divider().opacity(0.3).padding(.horizontal, 16)
+            Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
 
             // ── Categories ──
             if !session.categories.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("Categories")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(AppFont.text(FontSize.xs2, .semibold))
                         .tracking(0.5)
                         .foregroundStyle(theme.mutedForeground)
 
                     ForEach(Array(session.categories.enumerated()), id: \.offset) { _, cat in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text("\(cat.percent)%")
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 28, alignment: .trailing)
-                            RoundedRectangle(cornerRadius: 2)
+                            RoundedRectangle(cornerRadius: Radius.progressBar)
                                 .fill(CategoryColors.color(for: cat.category))
                                 .frame(width: 10, height: 10)
                             Text(cat.category)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                             Spacer()
                             Text(viewModel.formatDuration(cat.totalSeconds))
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.vertical, Spacing.space4)
 
-                Divider().opacity(0.3).padding(.horizontal, 16)
+                Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
             }
 
             // ── Top Apps ──
             if !session.apps.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("Top Apps")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(AppFont.text(FontSize.xs2, .semibold))
                         .tracking(0.5)
                         .foregroundStyle(theme.mutedForeground)
 
                     ForEach(session.apps.prefix(5)) { app in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text("\(app.percent)%")
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 28, alignment: .trailing)
                             Text(app.appName)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .lineLimit(1)
                             Spacer()
                             Text(viewModel.formatDuration(app.totalSeconds))
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.vertical, Spacing.space4)
 
-                Divider().opacity(0.3).padding(.horizontal, 16)
+                Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
             }
 
             // ── Top Domains (Interrupters proxy) ──
             if let domains = session.topDomains, !domains.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("Top Sites")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(AppFont.text(FontSize.xs2, .semibold))
                         .tracking(0.5)
                         .foregroundStyle(theme.mutedForeground)
 
                     ForEach(domains.prefix(5)) { d in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Image(systemName: "globe")
-                                .font(.system(size: 9))
+                                .font(AppFont.text(FontSize.xs2))
                                 .foregroundStyle(theme.mutedForeground.opacity(0.6))
                             Text(d.domain)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .lineLimit(1)
                             Spacer()
                             Text(viewModel.formatDuration(d.seconds))
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.vertical, Spacing.space4)
 
-                Divider().opacity(0.3).padding(.horizontal, 16)
+                Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
             }
 
             // ── Rating ──
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Spacing.space2) {
                 Text("Rating")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(AppFont.text(FontSize.xs2, .semibold))
                     .tracking(0.5)
                     .foregroundStyle(theme.mutedForeground)
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.space1) {
                     ForEach(1...5, id: \.self) { star in
                         Button {
                             viewModel.setRating(star == rating ? 0 : star, for: session)
@@ -827,9 +827,9 @@ struct SessionSummaryCard: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.top, Spacing.space4)
+            .padding(.bottom, Spacing.space6)
         }
         .dashboardCard()
     }
@@ -838,11 +838,11 @@ struct SessionSummaryCard: View {
     private func summaryRow(label: String, value: String) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 11))
+                .font(AppFont.text(FontSize.sm))
                 .foregroundStyle(theme.foreground)
             Spacer()
             Text(value)
-                .font(.system(size: 11, weight: .medium).monospacedDigit())
+                .font(AppFont.text(FontSize.sm, .medium).monospacedDigit())
                 .foregroundStyle(theme.foreground)
         }
     }
@@ -865,12 +865,12 @@ struct SessionDetailCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // ── Header ──
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.space1) {
                     Text(session.name)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(AppFont.text(FontSize.xl, .bold))
                         .foregroundStyle(theme.foreground)
                     Text("\(session.startTime) – \(session.endTime)")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                 }
                 Spacer()
@@ -878,12 +878,12 @@ struct SessionDetailCard: View {
                     .font(.system(size: 18, weight: .bold).monospacedDigit())
                     .foregroundStyle(theme.foreground)
             }
-            .padding(16)
+            .padding(Spacing.space7)
 
-            Divider().opacity(0.3).padding(.horizontal, 16)
+            Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
 
             // ── Category donut + stats ──
-            HStack(spacing: 20) {
+            HStack(spacing: Spacing.space8) {
                 // Mini donut chart
                 ZStack {
                     ForEach(Array(session.categories.enumerated()), id: \.offset) { i, cat in
@@ -907,35 +907,35 @@ struct SessionDetailCard: View {
                 .frame(width: 72, height: 72)
 
                 // Category legend
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     ForEach(Array(session.categories.enumerated()), id: \.offset) { _, cat in
-                        HStack(spacing: 6) {
-                            RoundedRectangle(cornerRadius: 2)
+                        HStack(spacing: Spacing.space2) {
+                            RoundedRectangle(cornerRadius: Radius.progressBar)
                                 .fill(categoryColor(cat.category))
                                 .frame(width: 8, height: 8)
                             Text(cat.category)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                             Spacer()
                             Text("\(cat.percent)%")
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                             Text(formatDuration(cat.totalSeconds))
-                                .font(.system(size: 10).monospacedDigit())
+                                .font(AppFont.text(FontSize.xs).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground.opacity(0.7))
                                 .frame(width: 60, alignment: .trailing)
                         }
                     }
                 }
             }
-            .padding(16)
+            .padding(Spacing.space7)
 
-            Divider().opacity(0.3).padding(.horizontal, 16)
+            Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
 
             // ── Top Apps ──
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Spacing.space2) {
                 Text("TOP APPS")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(AppFont.text(FontSize.xs2, .semibold))
                     .tracking(0.8)
                     .foregroundStyle(theme.mutedForeground)
 
@@ -944,44 +944,44 @@ struct SessionDetailCard: View {
                 }
                 if session.apps.count > 6 {
                     Text("+\(session.apps.count - 6) more")
-                        .font(.system(size: 9))
+                        .font(AppFont.text(FontSize.xs2))
                         .foregroundStyle(theme.mutedForeground.opacity(0.6))
                         .padding(.leading, 40)
                 }
             }
-            .padding(16)
+            .padding(Spacing.space7)
 
             // ── Top Domains (if any browser usage) ──
             if !allDomains.isEmpty {
-                Divider().opacity(0.3).padding(.horizontal, 16)
+                Divider().opacity(0.3).padding(.horizontal, Spacing.space7)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("TOP SITES")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(AppFont.text(FontSize.xs2, .semibold))
                         .tracking(0.8)
                         .foregroundStyle(theme.mutedForeground)
 
                     ForEach(allDomains) { domain in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Image(systemName: "globe")
-                                .font(.system(size: 9))
+                                .font(AppFont.text(FontSize.xs2))
                                 .foregroundStyle(theme.mutedForeground.opacity(0.5))
                                 .frame(width: 20)
 
                             Text(domain.domain)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .lineLimit(1)
 
                             Spacer()
 
                             Text(formatDuration(domain.seconds))
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
-                .padding(16)
+                .padding(Spacing.space7)
             }
 
             Spacer(minLength: 8)
@@ -992,9 +992,9 @@ struct SessionDetailCard: View {
     // ── Helpers ──
 
     private func sessionAppRow(app: SessionAppBreakdownResponse) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.space3) {
             Text("\(app.percent)%")
-                .font(.system(size: 11).monospacedDigit())
+                .font(AppFont.text(FontSize.sm).monospacedDigit())
                 .foregroundStyle(theme.mutedForeground)
                 .frame(width: 30, alignment: .trailing)
 
@@ -1006,14 +1006,14 @@ struct SessionDetailCard: View {
             .frame(width: 50, height: 5)
 
             Text(app.appName)
-                .font(.system(size: 11, weight: .medium))
+                .font(AppFont.text(FontSize.sm, .medium))
                 .foregroundStyle(theme.foreground)
                 .lineLimit(1)
 
             Spacer()
 
             Text(formatDuration(app.totalSeconds))
-                .font(.system(size: 11).monospacedDigit())
+                .font(AppFont.text(FontSize.sm).monospacedDigit())
                 .foregroundStyle(theme.mutedForeground)
         }
     }
@@ -1041,7 +1041,7 @@ struct DailySummaryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.space5) {
             header
             workHoursCard
             productivityMetricsCard
@@ -1055,14 +1055,14 @@ struct DailySummaryCard: View {
     private var contextSwitchCard: some View {
         let total = viewModel.totalContextSwitches
         let peak = viewModel.peakSwitchHour
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: Spacing.space3) {
             HStack {
                 Text("Context Switches")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(AppFont.text(FontSize.sm, .semibold))
                     .foregroundStyle(theme.foreground)
                 Spacer()
                 Text("\(total) today")
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(AppFont.mono(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
             }
             // Sparkline of switches per hour
@@ -1085,15 +1085,15 @@ struct DailySummaryCard: View {
 
             if let peak {
                 Text("Peak: \(String(format: "%02d:00", peak.hour)) (\(peak.count) switches)")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
             } else if total == 0 {
                 Text("Single-app focus all day. Nice.")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
             }
         }
-        .padding(14)
+        .padding(Spacing.space6)
         .dashboardCard()
     }
 
@@ -1102,48 +1102,48 @@ struct DailySummaryCard: View {
     private var header: some View {
         HStack {
             Image(systemName: "chevron.right.2")
-                .font(.system(size: 10))
+                .font(AppFont.text(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground)
             Text(headerText)
-                .font(.system(size: 13, weight: .semibold))
+                .font(AppFont.text(FontSize.md, .semibold))
                 .foregroundStyle(theme.foreground)
             Spacer()
             Image(systemName: "gearshape")
-                .font(.system(size: 11))
+                .font(AppFont.text(FontSize.sm))
                 .foregroundStyle(theme.mutedForeground)
         }
-        .padding(.horizontal, 4)
-        .padding(.top, 4)
+        .padding(.horizontal, Spacing.space1)
+        .padding(.top, Spacing.space1)
     }
 
     // MARK: - Work Hours
 
     private var workHoursCard: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .top, spacing: Spacing.space7) {
+            VStack(alignment: .leading, spacing: Spacing.space1) {
                 Text("Work Hours")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
                 Text(viewModel.totalFocusDuration)
-                    .font(.system(size: 22, weight: .bold))
+                    .font(AppFont.text(FontSize.xl2, .bold))
                     .foregroundStyle(theme.foreground)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: Spacing.space1) {
                 Text("Percent of Target")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.space1) {
                     Text(String(format: "%.0f%%", viewModel.percentOfTarget))
-                        .font(.system(size: 22, weight: .bold))
+                        .font(AppFont.text(FontSize.xl2, .bold))
                         .foregroundStyle(theme.foreground)
                     Text("of \(viewModel.formatDuration(targetSeconds))")
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                 }
             }
         }
-        .padding(16)
+        .padding(Spacing.space7)
         .dashboardCard()
     }
 
@@ -1152,9 +1152,9 @@ struct DailySummaryCard: View {
     private var productivityMetricsCard: some View {
         let focus = viewModel.totalFocusSeconds
         let grandTotal = max(focus, 1)
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: Spacing.space4) {
             Text("Productivity Metrics")
-                .font(.system(size: 11, weight: .semibold))
+                .font(AppFont.text(FontSize.sm, .semibold))
                 .foregroundStyle(theme.foreground)
 
             GeometryReader { geo in
@@ -1170,30 +1170,30 @@ struct DailySummaryCard: View {
             }
             .frame(height: 8)
 
-            HStack(spacing: 16) {
+            HStack(spacing: Spacing.space7) {
                 metricLegend(color: theme.chartCyan, label: "Focus", value: viewModel.formatDuration(focus))
                 metricLegend(color: theme.chartPurple, label: "Meetings", value: "0 min")
                 metricLegend(color: theme.chartGray, label: "Breaks", value: "0 min")
                 metricLegend(color: theme.mutedForeground.opacity(0.4), label: "Other", value: "0 min")
             }
         }
-        .padding(14)
+        .padding(Spacing.space6)
         .dashboardCard()
     }
 
     @ViewBuilder
     private func metricLegend(color: Color, label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 2)
+            HStack(spacing: Spacing.space1) {
+                RoundedRectangle(cornerRadius: Radius.progressBar)
                     .fill(color)
                     .frame(width: 8, height: 8)
                 Text(label)
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.foreground)
             }
             Text(value)
-                .font(.system(size: 10).monospacedDigit())
+                .font(AppFont.text(FontSize.xs).monospacedDigit())
                 .foregroundStyle(theme.mutedForeground)
         }
     }
@@ -1201,32 +1201,32 @@ struct DailySummaryCard: View {
     // MARK: - Top Categories
 
     private var topCategoriesCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.space3) {
             Text("Top Categories")
-                .font(.system(size: 11, weight: .semibold))
+                .font(AppFont.text(FontSize.sm, .semibold))
                 .foregroundStyle(theme.foreground)
                 .padding(.bottom, 2)
 
             ForEach(Array(topCategories.enumerated()), id: \.offset) { _, cat in
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.space3) {
                     Text("\(cat.percent)%")
-                        .font(.system(size: 11).monospacedDigit())
+                        .font(AppFont.text(FontSize.sm).monospacedDigit())
                         .foregroundStyle(theme.mutedForeground)
                         .frame(width: 36, alignment: .trailing)
-                    RoundedRectangle(cornerRadius: 2)
+                    RoundedRectangle(cornerRadius: Radius.progressBar)
                         .fill(CategoryColors.color(for: cat.category))
                         .frame(width: 40, height: 6)
                     Text(cat.category)
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.foreground)
                     Spacer()
                     Text(viewModel.formatDuration(cat.totalSeconds))
-                        .font(.system(size: 11).monospacedDigit())
+                        .font(AppFont.text(FontSize.sm).monospacedDigit())
                         .foregroundStyle(theme.mutedForeground)
                 }
             }
         }
-        .padding(14)
+        .padding(Spacing.space6)
         .dashboardCard()
     }
 }

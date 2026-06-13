@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x160" name="Category Colors" subtitle="Fixed activity-category color map — same in Swift + web" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 14px 20px; box-sizing: border-box; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .row { display: flex; align-items: center; gap: 9px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .name { font-size: 11px; color: var(--color-foreground); flex: 1; }
+  .hex { font-size: 10px; font-family: var(--font-mono); color: var(--color-muted-foreground); }
+  .bar { height: 3px; border-radius: 2px; margin-top: 3px; }
+</style></head>
+<body>
+  <div class="grid">
+    <div><div class="row"><span class="dot" style="background:#7c5cfc;"></span><span class="name">Code</span><span class="hex">#7C5CFC</span></div><div class="bar" style="background:#7c5cfc;width:80%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#f5a623;"></span><span class="name">Browsing</span><span class="hex">#F5A623</span></div><div class="bar" style="background:#f5a623;width:55%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#d64d8a;"></span><span class="name">Communication</span><span class="hex">#D64D8A</span></div><div class="bar" style="background:#d64d8a;width:45%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#00ccbf;"></span><span class="name">Design</span><span class="hex">#00CCBF</span></div><div class="bar" style="background:#00ccbf;width:35%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#35a882;"></span><span class="name">Writing</span><span class="hex">#35A882</span></div><div class="bar" style="background:#35a882;width:30%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#9b85f5;"></span><span class="name">Media</span><span class="hex">#9B85F5</span></div><div class="bar" style="background:#9b85f5;width:25%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#6b7280;"></span><span class="name">Utilities</span><span class="hex">#6B7280</span></div><div class="bar" style="background:#6b7280;width:20%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#3b82f6;"></span><span class="name">Reading</span><span class="hex">#3B82F6</span></div><div class="bar" style="background:#3b82f6;width:15%;"></div></div>
+    <div><div class="row"><span class="dot" style="background:#3d4451;"></span><span class="name">Other</span><span class="hex">#3D4451</span></div><div class="bar" style="background:#3d4451;width:10%;"></div></div>
+  </div>
+</body></html>

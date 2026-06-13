@@ -1,0 +1,23 @@
+<!-- @dsCard group="Spacing" viewport="700x130" name="Spacing Scale" subtitle="4px base grid — --space-1 through --space-10" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 16px 20px; display: flex; align-items: flex-end; gap: 8px; box-sizing: border-box; height: 98px; }
+  .step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+  .block { background: var(--color-chart-purple); border-radius: 2px; width: 100%; opacity: 0.8; }
+  .label { font-size: 8px; font-family: var(--font-mono); color: var(--color-muted-foreground); white-space: nowrap; }
+  .px { font-size: 9px; font-weight: 600; color: var(--color-foreground); font-family: var(--font-mono); }
+</style></head>
+<body>
+  <div class="step"><div class="block" style="height:4px;"></div><span class="px">4</span><span class="label">--space-1</span></div>
+  <div class="step"><div class="block" style="height:6px;"></div><span class="px">6</span><span class="label">--space-2</span></div>
+  <div class="step"><div class="block" style="height:8px;"></div><span class="px">8</span><span class="label">--space-3</span></div>
+  <div class="step"><div class="block" style="height:10px;"></div><span class="px">10</span><span class="label">--space-4</span></div>
+  <div class="step"><div class="block" style="height:12px;"></div><span class="px">12</span><span class="label">--space-5</span></div>
+  <div class="step"><div class="block" style="height:14px; opacity:1;"></div><span class="px">14</span><span class="label">--card-gap</span></div>
+  <div class="step"><div class="block" style="height:16px;"></div><span class="px">16</span><span class="label">--card-px</span></div>
+  <div class="step"><div class="block" style="height:20px;"></div><span class="px">20</span><span class="label">--content</span></div>
+  <div class="step"><div class="block" style="height:24px;"></div><span class="px">24</span><span class="label">--space-9</span></div>
+  <div class="step"><div class="block" style="height:32px;"></div><span class="px">32</span><span class="label">--space-10</span></div>
+</body></html>

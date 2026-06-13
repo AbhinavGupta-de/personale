@@ -1,0 +1,46 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Layout Metrics" subtitle="Fixed dimensions from AppMetrics — sidebar, header, bottom bar, card" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 16px 20px; box-sizing: border-box; display: flex; gap: 12px; align-items: flex-start; }
+  .metric { display: flex; flex-direction: column; gap: 5px; }
+  .bar-h { background: rgba(123,86,210,0.25); border: 1px solid rgba(123,86,210,0.4); border-radius: 3px; display: flex; align-items: center; justify-content: center; }
+  .val { font-size: 11px; font-weight: 700; font-family: var(--font-mono); color: var(--color-chart-purple); }
+  .name { font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--color-muted-foreground); }
+  .token { font-size: 9px; font-family: var(--font-mono); color: var(--color-muted-foreground); opacity: 0.7; }
+  .sep { width: 1px; background: rgba(43,43,49,0.6); align-self: stretch; margin: 0 4px; }
+</style></head>
+<body>
+  <div class="metric">
+    <div class="bar-h" style="width:52px; height:80px;"><span class="val" style="writing-mode:vertical-lr;">52px</span></div>
+    <span class="name">Sidebar</span>
+    <span class="token">--sidebar-width</span>
+  </div>
+  <div class="sep"></div>
+  <div class="metric" style="flex:1;">
+    <div class="bar-h" style="width:100%; height:42px;"><span class="val">42px</span></div>
+    <span class="name">Top Header</span>
+    <span class="token">--header-height</span>
+  </div>
+  <div class="sep"></div>
+  <div class="metric" style="flex:1;">
+    <div class="bar-h" style="width:100%; height:50px; border-color:rgba(0,204,184,0.4); background:rgba(0,204,184,0.1);"><span class="val" style="color:#00ccb8;">50px</span></div>
+    <span class="name">Bottom Bar</span>
+    <span class="token">--bottom-bar-height</span>
+  </div>
+  <div class="sep"></div>
+  <div class="metric">
+    <div style="display:flex;gap:6px;align-items:flex-start;">
+      <div>
+        <div class="bar-h" style="width:40px;height:40px;border-radius:8px;background:rgba(43,43,49,0.5);"><span class="val" style="font-size:9px;">8px</span></div>
+        <span class="name" style="font-size:8px;">Radius</span>
+      </div>
+      <div>
+        <div style="width:40px;height:40px;border-radius:3px;background:rgba(43,43,49,0.2);border:1px solid rgba(43,43,49,0.8);display:flex;align-items:center;justify-content:center;"><span class="val" style="font-size:9px;">1px</span></div>
+        <span class="name" style="font-size:8px;">Border</span>
+      </div>
+    </div>
+    <span class="token">--card-radius</span>
+  </div>
+</body></html>

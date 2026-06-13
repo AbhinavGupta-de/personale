@@ -19,21 +19,21 @@ struct ProductivityPage: View {
         ScrollView {
             VStack(spacing: AppMetrics.cardGap) {
                 // Header: title + section tabs
-                HStack(spacing: 12) {
+                HStack(spacing: Spacing.space5) {
                     Text("Productivity")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(AppFont.text(FontSize.xl2, .bold))
                         .foregroundStyle(theme.foreground)
 
                     HStack(spacing: 2) {
                         ForEach(ProductivityTab.allCases, id: \.self) { tab in
                             Button { activeTab = tab } label: {
                                 Text(tab.rawValue)
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(AppFont.text(FontSize.sm, .medium))
                                     .foregroundStyle(activeTab == tab ? theme.foreground : theme.mutedForeground)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
+                                    .padding(.horizontal, Spacing.space4)
+                                    .padding(.vertical, Spacing.space1)
                                     .background(activeTab == tab ? theme.secondary : Color.clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
                             }
                             .buttonStyle(.plain)
                         }
@@ -46,12 +46,12 @@ struct ProductivityPage: View {
                         ForEach(PeriodMode.allCases, id: \.self) { mode in
                             Button { viewModel.switchPeriodMode(mode) } label: {
                                 Text(mode.rawValue)
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(AppFont.text(FontSize.sm, .medium))
                                     .foregroundStyle(viewModel.periodMode == mode ? theme.foreground : theme.mutedForeground)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
+                                    .padding(.horizontal, Spacing.space4)
+                                    .padding(.vertical, Spacing.space1)
                                     .background(viewModel.periodMode == mode ? theme.secondary : Color.clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
                             }
                             .buttonStyle(.plain)
                         }
@@ -112,12 +112,12 @@ struct ProductivityPage: View {
 
     @ViewBuilder
     private func comingSoon(title: String) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Spacing.space2) {
             Image(systemName: "sparkles")
                 .font(.system(size: 24))
                 .foregroundStyle(theme.mutedForeground.opacity(0.6))
             Text("\(title) — coming soon")
-                .font(.system(size: 13, weight: .medium))
+                .font(AppFont.text(FontSize.md, .medium))
                 .foregroundStyle(theme.mutedForeground)
         }
         .frame(maxWidth: .infinity, minHeight: 360)
@@ -145,22 +145,22 @@ struct FocusScoreRow: View {
     private var averageCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Avg Focus Score")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
             Spacer(minLength: 0)
             ZStack {
                 CircularProgress(value: Double(averageScore), size: 120, strokeWidth: 10,
                                  color: theme.chartPurple)
                 VStack(spacing: 0) {
                     Text("\(averageScore)")
-                        .font(.system(size: 28, weight: .bold).monospacedDigit())
+                        .font(AppFont.text(FontSize.xl4, .bold).monospacedDigit())
                         .foregroundStyle(theme.foreground)
                     Text("score")
-                        .font(.system(size: 9))
+                        .font(AppFont.text(FontSize.xs2))
                         .foregroundStyle(theme.mutedForeground)
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, Spacing.space7)
             Spacer(minLength: 0)
         }
         .frame(width: 220, height: 240)
@@ -170,7 +170,7 @@ struct FocusScoreRow: View {
     private var perDayCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Focus Score / Day")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
             if perDayScores.isEmpty {
                 emptyState("No data")
@@ -180,8 +180,8 @@ struct FocusScoreRow: View {
                     let barWidth = max(3, (geo.size.width - 32) / CGFloat(perDayScores.count) - 3)
                     HStack(alignment: .bottom, spacing: 3) {
                         ForEach(Array(perDayScores.enumerated()), id: \.offset) { _, day in
-                            VStack(spacing: 4) {
-                                RoundedRectangle(cornerRadius: 2)
+                            VStack(spacing: Spacing.space1) {
+                                RoundedRectangle(cornerRadius: Radius.progressBar)
                                     .fill(theme.chartPurple)
                                     .frame(height: CGFloat(day.score) / maxScore * 160)
                                 Text(day.label)
@@ -192,7 +192,7 @@ struct FocusScoreRow: View {
                             .help("\(day.score)%")
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Spacing.space7)
                 }
                 .frame(height: 190)
             }
@@ -205,25 +205,25 @@ struct FocusScoreRow: View {
     private var interruptorsCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Top Interruptors")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
             if topInterruptors.isEmpty {
                 emptyState("No interruptions logged")
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     ForEach(Array(topInterruptors.prefix(6).enumerated()), id: \.offset) { _, item in
                         HStack {
                             Text(item.name)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .lineLimit(1)
                             Spacer()
                             Text("\(item.count)×")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(AppFont.mono(FontSize.sm))
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Spacing.space7)
             }
         }
         .frame(width: 260, height: 240)
@@ -233,7 +233,7 @@ struct FocusScoreRow: View {
     @ViewBuilder
     private func emptyState(_ msg: String) -> some View {
         Text(msg)
-            .font(.system(size: 11))
+            .font(AppFont.text(FontSize.sm))
             .foregroundStyle(theme.mutedForeground)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
@@ -266,38 +266,38 @@ struct BreaksListCard: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 SectionTitle(text: "Today's Breaks")
-                    .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                    .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
                 if svc.breaks.isEmpty {
                     Text("No breaks recorded yet")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.mutedForeground)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 30)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(svc.breaks) { b in
-                            HStack(spacing: 10) {
+                            HStack(spacing: Spacing.space4) {
                                 Circle()
                                     .fill(b.classification == .breakSession ? theme.success : theme.warning)
                                     .frame(width: 6, height: 6)
                                 Text(b.classification.rawValue)
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(AppFont.text(FontSize.sm, .semibold))
                                     .foregroundStyle(theme.foreground)
                                     .frame(width: 60, alignment: .leading)
                                 Text("\(formatTime(b.startedAt)) – \(formatTime(b.endedAt))")
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(AppFont.mono(FontSize.sm))
                                     .foregroundStyle(theme.mutedForeground)
                                 Spacer()
                                 Text(formatDuration(b.durationSeconds))
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(AppFont.mono(FontSize.sm))
                                     .foregroundStyle(theme.foreground)
                             }
-                            .padding(.horizontal, 16).padding(.vertical, 6)
+                            .padding(.horizontal, Spacing.space7).padding(.vertical, Spacing.space2)
                             Divider().opacity(0.2)
                         }
                     }
-                    .padding(.bottom, 6)
+                    .padding(.bottom, Spacing.space2)
                 }
             }
             .dashboardCard()
@@ -305,17 +305,17 @@ struct BreaksListCard: View {
     }
 
     private func statCard(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.space1) {
             Text(title.uppercased())
-                .font(.system(size: 10, weight: .semibold))
+                .font(AppFont.text(FontSize.xs, .semibold))
                 .tracking(0.8)
                 .foregroundStyle(theme.mutedForeground)
             Text(value)
-                .font(.system(size: 22, weight: .bold).monospacedDigit())
+                .font(AppFont.text(FontSize.xl2, .bold).monospacedDigit())
                 .foregroundStyle(theme.foreground)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(Spacing.space7)
         .dashboardCard()
     }
 
@@ -344,13 +344,13 @@ struct BreakdownChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Breakdown Chart")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
             if data.isEmpty {
                 Text("No data for this period")
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
                     .foregroundStyle(theme.mutedForeground)
                     .frame(maxWidth: .infinity, minHeight: 200)
             } else {
@@ -358,7 +358,7 @@ struct BreakdownChartCard: View {
                     let barWidth = max(4, (geo.size.width - 32) / CGFloat(data.count) - 3)
                     let chartHeight: CGFloat = 240
 
-                    VStack(spacing: 4) {
+                    VStack(spacing: Spacing.space1) {
                         HStack(alignment: .bottom, spacing: 3) {
                             ForEach(Array(data.enumerated()), id: \.offset) { _, day in
                                 let total = day.productive + day.communication + day.other
@@ -379,7 +379,7 @@ struct BreakdownChartCard: View {
                                     }
                                     // Productive (purple) — bottom
                                     if day.productive > 0 {
-                                        RoundedRectangle(cornerRadius: total == day.productive ? 2 : 1)
+                                        RoundedRectangle(cornerRadius: total == day.productive ? Radius.progressBar : 1)
                                             .fill(theme.chartPurple)
                                             .frame(height: CGFloat(day.productive) * scale)
                                     }
@@ -389,7 +389,7 @@ struct BreakdownChartCard: View {
                             }
                         }
                         .frame(height: chartHeight)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, Spacing.space7)
 
                         // X-axis labels (show every few days)
                         HStack(spacing: 3) {
@@ -405,31 +405,31 @@ struct BreakdownChartCard: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, Spacing.space7)
                     }
                 }
                 .frame(height: 280)
             }
 
             // Legend
-            HStack(spacing: 16) {
+            HStack(spacing: Spacing.space7) {
                 legendItem(color: theme.chartPurple, label: "Productive")
                 legendItem(color: theme.chartCyan, label: "Communication")
                 legendItem(color: theme.chartGray, label: "Other")
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.bottom, Spacing.space6)
         }
         .dashboardCard()
     }
 
     private func legendItem(color: Color, label: String) -> some View {
-        HStack(spacing: 4) {
-            RoundedRectangle(cornerRadius: 2)
+        HStack(spacing: Spacing.space1) {
+            RoundedRectangle(cornerRadius: Radius.progressBar)
                 .fill(color)
                 .frame(width: 8, height: 8)
             Text(label)
-                .font(.system(size: 9))
+                .font(AppFont.text(FontSize.xs2))
                 .foregroundStyle(theme.mutedForeground)
         }
     }
@@ -445,30 +445,30 @@ struct WorkCategoriesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Work Categories")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
             ScrollView {
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     ForEach(Array(categories.enumerated()), id: \.offset) { _, cat in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text("\(cat.percent)%")
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 28, alignment: .trailing)
 
                             Text(cat.category)
-                                .font(.system(size: 11))
+                                .font(AppFont.text(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .frame(width: 100, alignment: .leading)
                                 .lineLimit(1)
 
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 2)
+                                    RoundedRectangle(cornerRadius: Radius.progressBar)
                                         .fill(theme.secondary.opacity(0.5))
-                                    RoundedRectangle(cornerRadius: 2)
+                                    RoundedRectangle(cornerRadius: Radius.progressBar)
                                         .fill(CategoryColors.color(for: cat.category))
                                         .opacity(0.45 + Double(cat.percent) / 50.0)
                                         .frame(width: min(CGFloat(cat.percent) * 3.5 / 100 * geo.size.width, geo.size.width))
@@ -477,7 +477,7 @@ struct WorkCategoriesCard: View {
                             .frame(height: 4)
 
                             Text(formatDuration(cat.totalSeconds))
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 76, alignment: .trailing)
                         }
@@ -485,8 +485,8 @@ struct WorkCategoriesCard: View {
                 }
             }
             .frame(height: 320)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.bottom, Spacing.space6)
         }
         .dashboardCard()
     }
@@ -511,13 +511,13 @@ struct BreakdownDonutsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Breakdown")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
-            VStack(spacing: 16) {
+            VStack(spacing: Spacing.space7) {
                 ForEach(Array(data.enumerated()), id: \.offset) { _, item in
-                    HStack(spacing: 12) {
+                    HStack(spacing: Spacing.space5) {
                         ZStack {
                             CircularProgress(
                                 value: Double(item.percent),
@@ -532,14 +532,14 @@ struct BreakdownDonutsCard: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.label)
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(AppFont.text(FontSize.md, .semibold))
                                 .foregroundStyle(theme.foreground)
-                            HStack(spacing: 4) {
+                            HStack(spacing: Spacing.space1) {
                                 Text("\(item.percent)%")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(AppFont.text(FontSize.sm, .bold))
                                     .foregroundStyle(theme.foreground)
                                 Text(formatDuration(item.seconds))
-                                    .font(.system(size: 11))
+                                    .font(AppFont.text(FontSize.sm))
                                     .foregroundStyle(theme.mutedForeground)
                             }
                         }
@@ -548,8 +548,8 @@ struct BreakdownDonutsCard: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.bottom, Spacing.space6)
         }
         .dashboardCard()
     }
@@ -565,31 +565,31 @@ struct WorkHoursStatsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Work Hours")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
-            HStack(alignment: .top, spacing: 20) {
+            HStack(alignment: .top, spacing: Spacing.space8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Avg. Work Hours per week")
-                        .font(.system(size: 9))
+                        .font(AppFont.text(FontSize.xs2))
                         .foregroundStyle(theme.mutedForeground)
                     Text(avgPerWeek)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(AppFont.text(FontSize.xl, .bold))
                         .foregroundStyle(theme.foreground)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Avg. time worked per day")
-                        .font(.system(size: 9))
+                        .font(AppFont.text(FontSize.xs2))
                         .foregroundStyle(theme.mutedForeground)
                     Text(avgPerDay)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(AppFont.text(FontSize.xl, .bold))
                         .foregroundStyle(theme.foreground)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.bottom, Spacing.space6)
         }
         .dashboardCard()
     }

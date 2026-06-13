@@ -17,13 +17,13 @@ struct HorizontalTimelineCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Timeline")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: Radius.xs)
                         .fill(theme.secondary.opacity(0.4))
                         .frame(height: 36)
 
@@ -32,7 +32,7 @@ struct HorizontalTimelineCard: View {
                             .truncatingRemainder(dividingBy: 24)
                         let left = shiftedStart / 24 * geo.size.width
                         let width = (block.end - block.start) / 24 * geo.size.width
-                        RoundedRectangle(cornerRadius: 2)
+                        RoundedRectangle(cornerRadius: Radius.progressBar)
                             .fill(theme.activityColor(for: block.type).opacity(0.85))
                             .frame(width: max(width, 2), height: 36)
                             .offset(x: left)
@@ -41,19 +41,19 @@ struct HorizontalTimelineCard: View {
                 }
             }
             .frame(height: 36)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spacing.space7)
 
             HStack(spacing: 0) {
                 ForEach(Array(hourLabels.enumerated()), id: \.offset) { i, hour in
                     Text(hourLabelText(hour))
-                        .font(.system(size: 9).monospacedDigit())
+                        .font(AppFont.text(FontSize.xs2).monospacedDigit())
                         .foregroundStyle(theme.mutedForeground)
                     if i < hourLabels.count - 1 { Spacer() }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.top, Spacing.space2)
+            .padding(.bottom, Spacing.space6)
         }
         .dashboardCard()
     }
@@ -80,9 +80,9 @@ struct PieChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Pie Chart")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
             Spacer(minLength: 0)
 
@@ -99,12 +99,12 @@ struct PieChartCard: View {
                         .rotationEffect(.degrees(-90))
                 }
                 Text(totalText)
-                    .font(.system(size: 13, weight: .bold).monospacedDigit())
+                    .font(AppFont.text(FontSize.md, .bold).monospacedDigit())
                     .foregroundStyle(theme.foreground)
             }
             .frame(width: 140, height: 140)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, Spacing.space7)
 
             Spacer(minLength: 0)
         }
@@ -124,39 +124,39 @@ struct CategoriesListCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Categories")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
-            VStack(spacing: 6) {
+            VStack(spacing: Spacing.space2) {
                 ForEach(Array(categories.enumerated()), id: \.offset) { _, cat in
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spacing.space3) {
                         Text("\(cat.percent)%")
-                            .font(.system(size: 11).monospacedDigit())
+                            .font(AppFont.text(FontSize.sm).monospacedDigit())
                             .foregroundStyle(theme.mutedForeground)
                             .frame(width: 32, alignment: .trailing)
-                        RoundedRectangle(cornerRadius: 2)
+                        RoundedRectangle(cornerRadius: Radius.progressBar)
                             .fill(CategoryColors.color(for: cat.category).opacity(0.8))
                             .frame(width: 44, height: 6)
                         Text(cat.category)
-                            .font(.system(size: 11))
+                            .font(AppFont.text(FontSize.sm))
                             .foregroundStyle(theme.foreground)
                         Spacer()
                         Text(formatDuration(cat.totalSeconds))
-                            .font(.system(size: 11).monospacedDigit())
+                            .font(AppFont.text(FontSize.sm).monospacedDigit())
                             .foregroundStyle(theme.mutedForeground)
                     }
                 }
                 if categories.isEmpty {
                     Text("No categories yet")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 40)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.bottom, Spacing.space6)
         }
         .frame(minHeight: 260, alignment: .top)
         .dashboardCard()
@@ -190,42 +190,42 @@ struct WebsitesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Websites")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
             let list = rows
             if list.isEmpty {
                 Text("No browser activity yet")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 40)
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     ForEach(Array(list.prefix(10).enumerated()), id: \.offset) { _, row in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text("\(pct(row.seconds))%")
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 32, alignment: .trailing)
                             Circle()
                                 .fill(CategoryColors.color(for: row.category))
                                 .frame(width: 6, height: 6)
                             Text(row.domain)
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(AppFont.mono(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                             Spacer()
                             Text(formatDuration(row.seconds))
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(AppFont.text(FontSize.sm).monospacedDigit())
                                 .foregroundStyle(theme.mutedForeground)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.bottom, Spacing.space6)
             }
         }
         .frame(minHeight: 260, alignment: .top)
@@ -246,19 +246,19 @@ struct TodaySessionsStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Today's Sessions")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
             if sessions.isEmpty {
                 Text("No focus sessions yet")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 30)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(alignment: .top, spacing: Spacing.space4) {
                         ForEach(sessions) { session in
                             let key = ReviewKey.make(
                                 date: dateString,
@@ -276,11 +276,11 @@ struct TodaySessionsStrip: View {
                             )
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Spacing.space7)
                 }
             }
         }
-        .padding(.bottom, 14)
+        .padding(.bottom, Spacing.space6)
         .dashboardCard()
     }
 }
@@ -293,46 +293,46 @@ private struct SessionMiniCard: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.space2) {
+            HStack(spacing: Spacing.space2) {
                 Circle()
                     .fill(CategoryColors.color(for: session.name))
                     .frame(width: 8, height: 8)
                 Text(label.isEmpty ? session.name : label)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(AppFont.text(FontSize.sm, .semibold))
                     .foregroundStyle(theme.foreground)
                     .lineLimit(2)
             }
             Text("\(session.startTime) – \(session.endTime)")
-                .font(.system(size: 10, design: .monospaced))
+                .font(AppFont.mono(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground)
             Text(formatDuration(session.durationSeconds))
-                .font(.system(size: 13, weight: .bold).monospacedDigit())
+                .font(AppFont.text(FontSize.md, .bold).monospacedDigit())
                 .foregroundStyle(theme.foreground)
 
             Divider().opacity(0.25)
 
             VStack(alignment: .leading, spacing: 3) {
                 ForEach(session.apps.prefix(3)) { app in
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spacing.space1) {
                         Text(app.appName)
-                            .font(.system(size: 10))
+                            .font(AppFont.text(FontSize.xs))
                             .foregroundStyle(theme.mutedForeground)
                             .lineLimit(1)
                         Spacer()
                         Text("\(app.percent)%")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(AppFont.mono(FontSize.xs))
                             .foregroundStyle(theme.mutedForeground.opacity(0.8))
                     }
                 }
             }
         }
-        .padding(10)
+        .padding(Spacing.space4)
         .frame(width: 200, alignment: .topLeading)
         .background(theme.secondary.opacity(0.4))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .stroke(theme.border.opacity(0.3), lineWidth: 1)
         )
     }
@@ -354,40 +354,40 @@ struct AppsWebsitesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Apps & Websites")
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
 
-            VStack(spacing: 6) {
+            VStack(spacing: Spacing.space2) {
                 ForEach(entries.prefix(8), id: \.appName) { e in
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spacing.space3) {
                         Text("\(pct(e.totalSeconds))%")
-                            .font(.system(size: 11).monospacedDigit())
+                            .font(AppFont.text(FontSize.sm).monospacedDigit())
                             .foregroundStyle(theme.mutedForeground)
                             .frame(width: 32, alignment: .trailing)
-                        RoundedRectangle(cornerRadius: 2)
+                        RoundedRectangle(cornerRadius: Radius.progressBar)
                             .fill(theme.chartPurple.opacity(0.6))
                             .frame(width: 44, height: 6)
                         Text(e.appName)
-                            .font(.system(size: 11))
+                            .font(AppFont.text(FontSize.sm))
                             .foregroundStyle(theme.foreground)
                             .lineLimit(1)
                         Spacer()
                         Text(formatDuration(e.totalSeconds))
-                            .font(.system(size: 11).monospacedDigit())
+                            .font(AppFont.text(FontSize.sm).monospacedDigit())
                             .foregroundStyle(theme.mutedForeground)
                     }
                 }
                 if entries.isEmpty {
                     Text("No apps tracked yet")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 40)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.bottom, Spacing.space6)
         }
         .frame(minHeight: 260, alignment: .top)
         .dashboardCard()
