@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS app_sessions (
     CONSTRAINT check_dates CHECK (ended_at IS NULL OR ended_at >= started_at)
 );
 ALTER TABLE app_sessions ADD COLUMN IF NOT EXISTS enriched_context TEXT;
+ALTER TABLE app_sessions ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'active';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_single_active ON app_sessions ((true)) WHERE (ended_at IS NULL);
 CREATE INDEX IF NOT EXISTS idx_sessions_active ON app_sessions (started_at) WHERE (ended_at IS NULL);

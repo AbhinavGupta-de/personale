@@ -47,6 +47,16 @@ public class EventController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/events/idle")
+    public ResponseEntity<Void> idleBlock(@RequestBody IdleBlockRequest request) {
+        Instant startedAt = Instant.parse(request.startedAt());
+        Instant endedAt = Instant.parse(request.endedAt());
+        eventService.recordIdleBlock(startedAt, endedAt);
+        return ResponseEntity.ok().build();
+    }
+
+    private record IdleBlockRequest(String startedAt, String endedAt) {}
+
     @ExceptionHandler(DateTimeParseException.class)
     public ResponseEntity<String> handleBadTimestamp(DateTimeParseException ex) {
         return ResponseEntity.badRequest().body("Invalid timestamp: " + ex.getParsedString());

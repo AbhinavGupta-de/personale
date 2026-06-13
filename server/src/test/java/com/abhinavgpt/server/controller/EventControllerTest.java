@@ -125,4 +125,18 @@ class EventControllerTest {
             "com.apple.Safari",
             Instant.parse("2026-03-07T10:00:00Z"));
     }
+
+    @Test
+    void idleBlock_returns200() throws Exception {
+        mockMvc.perform(post("/api/events/idle")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"startedAt":"2026-03-07T10:00:00Z","endedAt":"2026-03-07T10:05:00Z"}
+                    """))
+            .andExpect(status().isOk());
+
+        verify(eventService).recordIdleBlock(
+            Instant.parse("2026-03-07T10:00:00Z"),
+            Instant.parse("2026-03-07T10:05:00Z"));
+    }
 }

@@ -14,6 +14,7 @@ public class AppSession {
     private String bundleId;
     private String windowTitle;
     private String enrichedContext;
+    private String kind = "active";
     private Instant startedAt;
     private Instant endedAt;
 
@@ -24,6 +25,13 @@ public class AppSession {
         this.bundleId = bundleId;
         this.windowTitle = windowTitle;
         this.startedAt = startedAt;
+    }
+
+    public static AppSession idleBlock(Instant startedAt, Instant endedAt) {
+        AppSession session = new AppSession("Away", null, null, startedAt);
+        session.setKind("idle");
+        session.setEndedAt(endedAt);
+        return session;
     }
 
     public Long getId() { return id; }
@@ -40,6 +48,9 @@ public class AppSession {
 
     public String getEnrichedContext() { return enrichedContext; }
     public void setEnrichedContext(String enrichedContext) { this.enrichedContext = enrichedContext; }
+
+    public String getKind() { return kind; }
+    public void setKind(String kind) { this.kind = kind; }
 
     public Instant getStartedAt() { return startedAt; }
     public void setStartedAt(Instant startedAt) { this.startedAt = startedAt; }

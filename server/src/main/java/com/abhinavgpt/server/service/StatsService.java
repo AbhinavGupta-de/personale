@@ -69,6 +69,7 @@ public class StatsService {
         Map<String, String> nameByBundle = new LinkedHashMap<>();
 
         for (AppSession session : ctx.sessions()) {
+            if (isIdle(session)) continue;
             String key = session.getBundleId() != null ? session.getBundleId() : session.getAppName();
             Instant effStart = SessionMergeService.effectiveStart(session, ctx.startOfDay());
             Instant effEnd = SessionMergeService.effectiveEnd(session, ctx.endOfDay(), now);
@@ -284,6 +285,7 @@ public class StatsService {
         Map<String, Long> timeByCategory = new LinkedHashMap<>();
 
         for (AppSession session : ctx.sessions()) {
+            if (isIdle(session)) continue;
             Instant effStart = SessionMergeService.effectiveStart(session, ctx.startOfDay());
             Instant effEnd = SessionMergeService.effectiveEnd(session, ctx.endOfDay(), now);
             long seconds = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
@@ -367,6 +369,7 @@ public class StatsService {
         Map<String, String> catByKey = new LinkedHashMap<>();
 
         for (AppSession s : ctx.sessions()) {
+            if (isIdle(s)) continue;
             Instant effStart = SessionMergeService.effectiveStart(s, ctx.startOfDay());
             Instant effEnd = SessionMergeService.effectiveEnd(s, ctx.endOfDay(), now);
             long secs = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
@@ -436,6 +439,7 @@ public class StatsService {
         Map<String, Map<String, String>> catSourceTypes = new LinkedHashMap<>();
 
         for (AppSession session : ctx.sessions()) {
+            if (isIdle(session)) continue;
             Instant effStart = SessionMergeService.effectiveStart(session, ctx.startOfDay());
             Instant effEnd = SessionMergeService.effectiveEnd(session, ctx.endOfDay(), now);
             long seconds = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
@@ -503,6 +507,7 @@ public class StatsService {
 
             Map<String, Long> timeByCategory = new LinkedHashMap<>();
             for (AppSession session : ctx.sessions()) {
+                if (isIdle(session)) continue;
                 Instant effStart = SessionMergeService.effectiveStart(session, ctx.startOfDay());
                 Instant effEnd = SessionMergeService.effectiveEnd(session, ctx.endOfDay(), now);
                 long seconds = Math.max(0, Duration.between(effStart, effEnd).getSeconds());
@@ -565,5 +570,9 @@ public class StatsService {
         long hours = totalSeconds / 3600;
         long minutes = (totalSeconds % 3600) / 60;
         return hours > 0 ? hours + " hr " + minutes + " min" : minutes + " min";
+    }
+
+    private static boolean isIdle(AppSession session) {
+        return "idle".equals(session.getKind());
     }
 }

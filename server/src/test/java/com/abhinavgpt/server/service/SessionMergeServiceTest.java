@@ -5,6 +5,7 @@ import com.abhinavgpt.server.entity.AppSession;
 import com.abhinavgpt.server.entity.BrowserEvent;
 import com.abhinavgpt.server.entity.CategoryMapping;
 import com.abhinavgpt.server.entity.CategoryThreshold;
+import com.abhinavgpt.server.repository.AppSessionRepository;
 import com.abhinavgpt.server.repository.CategoryMappingRepository;
 import com.abhinavgpt.server.repository.CategoryThresholdRepository;
 import com.abhinavgpt.server.repository.DomainCategoryMappingRepository;
@@ -18,7 +19,9 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SessionMergeServiceTest {
@@ -26,6 +29,7 @@ class SessionMergeServiceTest {
     @Mock private CategoryMappingRepository bundleRepo;
     @Mock private DomainCategoryMappingRepository domainRepo;
     @Mock private CategoryThresholdRepository thresholdRepo;
+    @Mock private AppSessionRepository sessionRepo;
 
     private SessionMergeService mergeService;
 
@@ -43,9 +47,10 @@ class SessionMergeServiceTest {
             new CategoryThreshold("Code", 600),
             new CategoryThreshold("Reading", 900),
             new CategoryThreshold("Communication", 180)));
+        lenient().when(sessionRepo.findIdleSessionsOverlapping(any(), any())).thenReturn(List.of());
         CategoryResolver resolver = new CategoryResolver(bundleRepo, domainRepo, thresholdRepo);
         DomainTimeService domainTimeService = new DomainTimeService(resolver);
-        mergeService = new SessionMergeService(resolver, domainTimeService);
+        mergeService = new SessionMergeService(resolver, domainTimeService, sessionRepo);
     }
 
     private AppSession session(String appName, String bundleId, String startIso, String endIso) {
@@ -67,6 +72,42 @@ class SessionMergeServiceTest {
 
         assertThat(blocks).hasSize(1);
         assertThat(blocks.getFirst().category()).isEqualTo("Code");
+    }
+
+    @Test
+    void sameCategoryGapWithoutIdleStillMerges() {
+        List<AppSession> sessions = List.of(
+            session("Xcode", "com.apple.dt.Xcode", "2026-04-10T10:00:00Z", "2026-04-10T10:30:00Z"),
+            session("Ghostty", "com.mitchellh.ghostty", "2026-04-10T10:35:00Z", "2026-04-10T11:00:00Z"));
+
+        List<MergedBlock> blocks = mergeService.buildMergedBlocks(
+            sessions, DAY_START, DAY_END,
+            Instant.parse("2026-04-10T12:00:00Z"), List.of());
+
+        assertThat(blocks).hasSize(1);
+        assertThat(blocks.getFirst().category()).isEqualTo("Code");
+    }
+
+    @Test
+    void idleRowInGapBlocksSameCategoryMerge() {
+        AppSession idle = AppSession.idleBlock(
+            Instant.parse("2026-04-10T10:30:00Z"),
+            Instant.parse("2026-04-10T10:35:00Z"));
+        when(sessionRepo.findIdleSessionsOverlapping(DAY_START, DAY_END)).thenReturn(List.of(idle));
+
+        List<AppSession> sessions = List.of(
+            session("Xcode", "com.apple.dt.Xcode", "2026-04-10T10:00:00Z", "2026-04-10T10:30:00Z"),
+            idle,
+            session("Ghostty", "com.mitchellh.ghostty", "2026-04-10T10:35:00Z", "2026-04-10T11:00:00Z"));
+
+        List<MergedBlock> blocks = mergeService.buildMergedBlocks(
+            sessions, DAY_START, DAY_END,
+            Instant.parse("2026-04-10T12:00:00Z"), List.of());
+
+        assertThat(blocks).hasSize(2);
+        assertThat(blocks)
+            .extracting(MergedBlock::category)
+            .containsExactly("Code", "Code");
     }
 
     @Test
