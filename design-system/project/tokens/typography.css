@@ -1,0 +1,47 @@
+/* ============================================================
+   Personale Design System — Typography Tokens
+   Source: personal/personal/Shell/AppShell.swift + Theme.swift
+   ============================================================ */
+
+:root {
+  /* ── Font Families ──────────────────────────────────────── */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+               "SF Pro Display", "Inter", system-ui, sans-serif;
+
+  --font-mono: "SF Mono", "Menlo", "Monaco", ui-monospace,
+               "Cascadia Code", "Fira Code", monospace;
+
+  /* ── Size Scale ─────────────────────────────────────────── */
+  /* UI is deliberately dense — base text is 11–12px          */
+  --text-2xs:   9px;    /* micro labels, timestamps */
+  --text-xs:   10px;    /* section titles, captions */
+  --text-sm:   11px;    /* body / list rows */
+  --text-base: 12px;    /* primary body text */
+  --text-md:   13px;    /* header labels, brand */
+  --text-lg:   15px;    /* date navigator */
+  --text-xl:   20px;    /* stat values (compact) */
+  --text-2xl:  22px;    /* headline stats */
+  --text-3xl:  26px;    /* streak numbers */
+  --text-4xl:  28px;    /* large stat values */
+  --text-timer: 48px;   /* Pomodoro timer */
+
+  /* ── Font Weights ───────────────────────────────────────── */
+  --font-weight-regular:   400;
+  --font-weight-medium:    500;
+  --font-weight-semibold:  600;
+  --font-weight-bold:      700;
+
+  /* ── Letter Spacing ─────────────────────────────────────── */
+  --tracking-section: 0.08em;   /* SECTION TITLES (≈0.8px at 10px) */
+  --tracking-brand:   0.23em;   /* PERSONALE wordmark (≈3px at 13px) */
+  --tracking-normal:  0;
+
+  /* ── Line Height ────────────────────────────────────────── */
+  --leading-tight:   1.2;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  /* ── Tabular Numbers ────────────────────────────────────── */
+  /* Always apply font-variant-numeric: tabular-nums to       */
+  /* duration, percentage, and timestamp text                  */
+}

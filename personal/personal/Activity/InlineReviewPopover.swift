@@ -44,50 +44,50 @@ struct InlineReviewPopover: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.space4) {
             header
 
             Divider().opacity(0.3)
 
             TextField("Title", text: $title, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13, weight: .semibold))
+                .font(AppFont.text(FontSize.md, .semibold))
                 .foregroundStyle(theme.foreground)
-                .padding(10)
+                .padding(Spacing.space4)
                 .background(theme.secondary.opacity(0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                 .lineLimit(1...3)
 
             TextField("Description — what specifically did you do?",
                       text: $description, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.system(size: 11))
+                .font(AppFont.text(FontSize.sm))
                 .foregroundStyle(theme.foreground)
-                .padding(10)
+                .padding(Spacing.space4)
                 .background(theme.secondary.opacity(0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                 .lineLimit(3...8)
 
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.space2) {
                 field(icon: "checkmark.square", placeholder: "Task", text: $task)
                 field(icon: "folder", placeholder: "Project", text: $project)
                 field(icon: "person", placeholder: "Client", text: $client)
             }
 
             if let err = errorMessage {
-                Text(err).font(.system(size: 10)).foregroundStyle(theme.warning)
+                Text(err).font(AppFont.text(FontSize.xs)).foregroundStyle(theme.warning)
             }
 
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.space2) {
                 Button {
                     Task { await save(autoApprove: true) }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spacing.space1) {
                         if saving { ProgressView().controlSize(.mini) }
-                        Text("Save & Accept").font(.system(size: 11, weight: .semibold))
+                        Text("Save & Accept").font(AppFont.text(FontSize.sm, .semibold))
                     }
                     .foregroundStyle(theme.primaryForeground)
-                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .padding(.horizontal, Spacing.space5).padding(.vertical, 5)
                     .background(theme.primary)
                     .clipShape(Capsule())
                 }
@@ -98,9 +98,9 @@ struct InlineReviewPopover: View {
                     Task { await setStatus("rejected") }
                 } label: {
                     Text("Reject")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.foreground)
-                        .padding(.horizontal, 12).padding(.vertical, 5)
+                        .padding(.horizontal, Spacing.space5).padding(.vertical, 5)
                         .background(theme.secondary)
                         .clipShape(Capsule())
                 }
@@ -116,7 +116,7 @@ struct InlineReviewPopover: View {
                 }
             }
         }
-        .padding(14)
+        .padding(Spacing.space6)
         .frame(width: 420)
         .onAppear { populate() }
     }
@@ -124,7 +124,7 @@ struct InlineReviewPopover: View {
     // MARK: — Header (category picker + AI button)
 
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.space3) {
             Menu {
                 ForEach(availableCategories, id: \.self) { cat in
                     Button {
@@ -141,11 +141,11 @@ struct InlineReviewPopover: View {
                 HStack(spacing: 5) {
                     Circle().fill(CategoryColors.color(for: category)).frame(width: 7, height: 7)
                     Text(category.uppercased())
-                        .font(.system(size: 10, weight: .semibold)).tracking(0.4)
+                        .font(AppFont.text(FontSize.xs, .semibold)).tracking(0.4)
                     Image(systemName: "chevron.down").font(.system(size: 8)).opacity(0.5)
                 }
                 .foregroundStyle(theme.foreground)
-                .padding(.horizontal, 8).padding(.vertical, 4)
+                .padding(.horizontal, Spacing.space3).padding(.vertical, Spacing.space1)
                 .background(theme.secondary.opacity(0.6))
                 .clipShape(RoundedRectangle(cornerRadius: 5))
             }
@@ -155,20 +155,20 @@ struct InlineReviewPopover: View {
             Spacer()
 
             Text(timeRangeText)
-                .font(.system(size: 11, design: .monospaced))
+                .font(AppFont.mono(FontSize.sm))
                 .foregroundStyle(theme.mutedForeground)
 
             Button {
                 Task { await generate() }
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.space1) {
                     if generating {
                         ProgressView().controlSize(.mini)
                     } else {
-                        Image(systemName: "sparkles").font(.system(size: 10))
+                        Image(systemName: "sparkles").font(AppFont.text(FontSize.xs))
                     }
                     Text(aiTitle == nil ? "AI" : "Regen")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(AppFont.text(FontSize.xs, .medium))
                 }
                 .foregroundStyle(theme.primary)
                 .padding(.horizontal, 7).padding(.vertical, 3)
@@ -182,24 +182,24 @@ struct InlineReviewPopover: View {
 
     @ViewBuilder
     private func field(icon: String, placeholder: String, text: Binding<String>) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 9)).foregroundStyle(theme.mutedForeground)
+        HStack(spacing: Spacing.space1) {
+            Image(systemName: icon).font(AppFont.text(FontSize.xs2)).foregroundStyle(theme.mutedForeground)
             TextField(placeholder, text: text)
                 .textFieldStyle(.plain)
-                .font(.system(size: 11))
+                .font(AppFont.text(FontSize.sm))
                 .foregroundStyle(theme.foreground)
         }
-        .padding(.horizontal, 6).padding(.vertical, 4)
+        .padding(.horizontal, Spacing.space2).padding(.vertical, Spacing.space1)
         .background(theme.secondary.opacity(0.4))
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
         .frame(maxWidth: .infinity)
     }
 
     private func statusBadge(text: String, color: Color) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .semibold))
+            .font(AppFont.text(FontSize.xs2, .semibold))
             .foregroundStyle(color)
-            .padding(.horizontal, 6).padding(.vertical, 2)
+            .padding(.horizontal, Spacing.space2).padding(.vertical, 2)
             .background(color.opacity(0.12))
             .clipShape(Capsule())
     }

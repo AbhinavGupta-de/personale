@@ -8,9 +8,9 @@ struct SettingsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: Spacing.space9) {
                 Text("Settings")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(AppFont.text(FontSize.xl2, .bold))
                     .foregroundStyle(theme.foreground)
 
                 generalSection
@@ -23,7 +23,7 @@ struct SettingsPage: View {
                 dataSection
                 aboutSection
             }
-            .padding(24)
+            .padding(Spacing.space9)
         }
         .background(theme.background)
     }
@@ -32,21 +32,21 @@ struct SettingsPage: View {
 
     private var generalSection: some View {
         settingsCard(title: "General") {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.space7) {
                 // Server URL
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
                     Text("Server URL")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(AppFont.text(FontSize.base, .medium))
                         .foregroundStyle(theme.mutedForeground)
                     TextField("http://localhost:8696", text: $settings.serverURL)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(AppFont.mono(FontSize.md))
                         .foregroundStyle(theme.foreground)
-                        .padding(8)
+                        .padding(Spacing.space3)
                         .background(theme.secondary)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
+                            RoundedRectangle(cornerRadius: Radius.sm)
                                 .stroke(theme.border.opacity(0.6), lineWidth: 1)
                         )
                 }
@@ -54,12 +54,12 @@ struct SettingsPage: View {
                 Divider().opacity(0.4)
 
                 // Server status
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.space3) {
                     Circle()
                         .fill(appTracker.eventClient.isServerReachable ? theme.success : theme.warning)
                         .frame(width: 8, height: 8)
                     Text(appTracker.eventClient.isServerReachable ? "Server Online" : "Server Offline")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.foreground)
                     Spacer()
                 }
@@ -70,10 +70,10 @@ struct SettingsPage: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Launch at Login")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(AppFont.text(FontSize.md, .medium))
                             .foregroundStyle(theme.foreground)
                         Text("Start Personale automatically when you log in")
-                            .font(.system(size: 11))
+                            .font(AppFont.text(FontSize.sm))
                             .foregroundStyle(theme.mutedForeground)
                     }
                     Spacer()
@@ -91,10 +91,10 @@ struct SettingsPage: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Daily Recap Notification")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(AppFont.text(FontSize.md, .medium))
                             .foregroundStyle(theme.foreground)
                         Text("Summary of yesterday's tracked time, fired 1 hour after your day starts")
-                            .font(.system(size: 11))
+                            .font(AppFont.text(FontSize.sm))
                             .foregroundStyle(theme.mutedForeground)
                     }
                     Spacer()
@@ -112,10 +112,10 @@ struct SettingsPage: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("20-20-20 Eye Strain Nudge")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(AppFont.text(FontSize.md, .medium))
                             .foregroundStyle(theme.foreground)
                         Text("Every 20 min of active work, look 20 ft away for 20 sec. Suppressed during focus sessions.")
-                            .font(.system(size: 11))
+                            .font(AppFont.text(FontSize.sm))
                             .foregroundStyle(theme.mutedForeground)
                     }
                     Spacer()
@@ -134,10 +134,10 @@ struct SettingsPage: View {
 
     private var workDaySection: some View {
         settingsCard(title: "Work Day") {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.space7) {
                 HStack {
                     Text("Day Start")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.foreground)
                         .frame(width: 120, alignment: .leading)
                     Picker("", selection: $settings.dayStartHour) {
@@ -152,11 +152,11 @@ struct SettingsPage: View {
 
                 HStack {
                     Text("Target Hours")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.foreground)
                         .frame(width: 120, alignment: .leading)
                     Stepper("\(settings.targetHoursPerDay) hr", value: $settings.targetHoursPerDay, in: 1...24)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(AppFont.mono(FontSize.base))
                     Spacer()
                 }
             }
@@ -183,19 +183,19 @@ struct SettingsPage: View {
 
     private var trackingSection: some View {
         settingsCard(title: "Tracking") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.space5) {
                 Text("Idle Thresholds")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(AppFont.text(FontSize.base, .medium))
                     .foregroundStyle(theme.mutedForeground)
                 Text("Seconds of inactivity before a session is closed, per category")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground.opacity(0.7))
 
                 let categories = settings.idleThresholds.keys.sorted()
                 ForEach(categories, id: \.self) { category in
                     HStack {
                         Text(category)
-                            .font(.system(size: 12))
+                            .font(AppFont.text(FontSize.base))
                             .foregroundStyle(theme.foreground)
                             .frame(width: 120, alignment: .leading)
                         TextField("seconds", value: Binding(
@@ -203,19 +203,19 @@ struct SettingsPage: View {
                             set: { settings.idleThresholds[category] = TimeInterval($0) }
                         ), format: .number)
                             .textFieldStyle(.plain)
-                            .font(.system(size: 12, design: .monospaced))
+                            .font(AppFont.mono(FontSize.base))
                             .foregroundStyle(theme.foreground)
                             .frame(width: 60)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, Spacing.space3)
+                            .padding(.vertical, Spacing.space1)
                             .background(theme.secondary)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 4)
+                                RoundedRectangle(cornerRadius: Radius.xs)
                                     .stroke(theme.border.opacity(0.6), lineWidth: 1)
                             )
                         Text("s")
-                            .font(.system(size: 11))
+                            .font(AppFont.text(FontSize.sm))
                             .foregroundStyle(theme.mutedForeground)
                         Spacer()
                     }
@@ -224,7 +224,7 @@ struct SettingsPage: View {
                 Button("Reset to Defaults") {
                     settings.idleThresholds = AppSettings.defaultThresholds
                 }
-                .font(.system(size: 11))
+                .font(AppFont.text(FontSize.sm))
                 .foregroundStyle(theme.primary)
                 .buttonStyle(.plain)
             }
@@ -249,38 +249,38 @@ struct SettingsPage: View {
 
     private var dataSection: some View {
         settingsCard(title: "Data") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spacing.space5) {
                 HStack {
                     Text("Pending Events")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.foreground)
                     Spacer()
                     Text("\(appTracker.eventClient.pendingCount)")
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(AppFont.mono(FontSize.base))
                         .foregroundStyle(theme.mutedForeground)
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.space3) {
                     Button("Force Sync") {
                         appTracker.eventClient.triggerFlush()
                     }
-                    .font(.system(size: 12, weight: .medium))
+                    .font(AppFont.text(FontSize.base, .medium))
                     .foregroundStyle(theme.primaryForeground)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, Spacing.space6)
+                    .padding(.vertical, Spacing.space2)
                     .background(theme.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                     .buttonStyle(.plain)
 
                     Button("Export Last 30 Days (CSV)") {
                         Task { await CSVExport.exportLast30Days() }
                     }
-                    .font(.system(size: 12, weight: .medium))
+                    .font(AppFont.text(FontSize.base, .medium))
                     .foregroundStyle(theme.foreground)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, Spacing.space6)
+                    .padding(.vertical, Spacing.space2)
                     .background(theme.secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                     .buttonStyle(.plain)
                 }
             }
@@ -291,23 +291,23 @@ struct SettingsPage: View {
 
     private var aboutSection: some View {
         settingsCard(title: "About") {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.space3) {
                 HStack {
                     Text("Version")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.foreground)
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(AppFont.mono(FontSize.base))
                         .foregroundStyle(theme.mutedForeground)
                 }
                 HStack {
                     Text("Build")
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.foreground)
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(AppFont.mono(FontSize.base))
                         .foregroundStyle(theme.mutedForeground)
                 }
             }
@@ -318,16 +318,16 @@ struct SettingsPage: View {
 
     @ViewBuilder
     private func settingsCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Spacing.space7) {
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
+                .font(AppFont.text(FontSize.sm, .semibold))
                 .tracking(1)
                 .foregroundStyle(theme.mutedForeground)
 
             VStack(alignment: .leading, spacing: 0) {
                 content()
             }
-            .padding(16)
+            .padding(Spacing.space7)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(theme.card)
             .clipShape(RoundedRectangle(cornerRadius: 10))

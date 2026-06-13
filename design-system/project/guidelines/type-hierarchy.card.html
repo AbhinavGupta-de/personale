@@ -1,0 +1,36 @@
+<!-- @dsCard group="Type" viewport="700x180" name="Type Hierarchy" subtitle="Brand · Page header · Section title · Body · Caption" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 16px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+  .divider { height: 1px; background: rgba(43,43,49,0.4); }
+  .role { font-size: 9px; font-family: var(--font-mono); color: var(--color-muted-foreground); width: 110px; flex-shrink: 0; }
+  .row { display: flex; align-items: center; gap: 14px; }
+</style></head>
+<body>
+  <div class="row">
+    <span class="role">Brand wordmark</span>
+    <span style="font-size:13px;font-weight:600;letter-spacing:3px;color:var(--color-foreground);">PERSONALE</span>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <span class="role">Page header</span>
+    <span style="font-size:22px;font-weight:700;color:var(--color-foreground);">Insights</span>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <span class="role">Section title</span>
+    <span style="font-size:10px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--color-muted-foreground);">TIMELINE</span>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <span class="role">Body / list</span>
+    <span style="font-size:11px;color:var(--color-foreground);">VS Code · 2h 34m · Code</span>
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <span class="role">Caption / meta</span>
+    <span style="font-size:10px;color:var(--color-muted-foreground);">08:00 – 09:30 · 90 min</span>
+  </div>
+</body></html>

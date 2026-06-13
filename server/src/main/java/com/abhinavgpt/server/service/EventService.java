@@ -85,6 +85,17 @@ public class EventService {
         });
     }
 
+    @Transactional
+    public AppSession recordIdleBlock(Instant start, Instant end) {
+        Instant capped = cappedEnd(start, end);
+        long seconds = Duration.between(start, capped).getSeconds();
+        if (seconds < 60) {
+            log.debug("Skipping idle block shorter than 60s: {} → {}", start, capped);
+            return null;
+        }
+        return repository.save(AppSession.idleBlock(start, capped));
+    }
+
     private static final long DEDUPE_WINDOW_SECONDS = 2;
 
     @Transactional

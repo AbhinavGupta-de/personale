@@ -11,6 +11,8 @@
 #   uninstall  remove the launchd agents
 #   setup      one-time bootstrap: deps check + secret-scan hooks
 #   daylog     write yesterday's activity summary into the Obsidian daily note
+#   export     export app or browser data as JSON/CSV
+#   backup     pg_dump the database to ~/personale-backups (run by the nightly agent)
 #   doctor     diagnose common breakage
 #   help       this message
 
@@ -28,6 +30,7 @@ APP_PROJECT_DIR="$REPO_ROOT/personal"
 APP_BUILD_PRODUCT="$APP_PROJECT_DIR/build/Build/Products/Debug/personal.app"
 BACKEND_PORT="${PERSONALE_PORT:-8696}"
 BACKEND_HEALTH="http://localhost:${BACKEND_PORT}/actuator/health"
+BACKEND_API="http://localhost:${BACKEND_PORT}/api"
 BACKEND_LOG="/tmp/personale-backend.log"
 LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
 BACKEND_PLIST_LABEL="com.abhinavgpt.personale-backend"
@@ -37,6 +40,9 @@ BACKEND_PLIST="$LAUNCH_AGENTS/${BACKEND_PLIST_LABEL}.plist"
 APP_PLIST="$LAUNCH_AGENTS/${APP_PLIST_LABEL}.plist"
 DAYLOG_PLIST="$LAUNCH_AGENTS/${DAYLOG_PLIST_LABEL}.plist"
 DAYLOG_LOG="/tmp/personale-daylog.log"
+BACKUP_PLIST_LABEL="com.abhinavgpt.personale-backup"
+BACKUP_PLIST="$LAUNCH_AGENTS/${BACKUP_PLIST_LABEL}.plist"
+BACKUP_LOG="/tmp/personale-backup.log"
 
 c_red()   { printf '\033[31m%s\033[0m' "$1"; }
 c_grn()   { printf '\033[32m%s\033[0m' "$1"; }
@@ -220,8 +226,144 @@ write_daylog_plist() {
 EOF
 }
 
+write_backup_plist() {
+  cat >"$BACKUP_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${BACKUP_PLIST_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVER_DIR}/backup.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>3</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>${BACKUP_LOG}</string>
+  <key>StandardErrorPath</key><string>${BACKUP_LOG}</string>
+  <key>WorkingDirectory</key><string>${SERVER_DIR}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
+EOF
+}
+
 cmd_daylog() {
   python3 "$REPO_ROOT/scripts/daylog_summary.py" "$@"
+}
+
+cmd_backup() {
+  bash "$SERVER_DIR/backup.sh"
+}
+
+date_days_ago() {
+  local days="$1"
+  if date -v-"${days}"d +%F >/dev/null 2>&1; then
+    date -v-"${days}"d +%F
+  else
+    date -d "${days} days ago" +%F
+  fi
+}
+
+cmd_export_usage() {
+  cat <<EOF
+Usage: personale export [--format json|csv] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--browser] [--out PATH]
+EOF
+}
+
+cmd_export() {
+  local format="json"
+  local from
+  local to
+  local browser=0
+  local out=""
+  local ext
+  local endpoint
+  local bytes
+
+  from="$(date_days_ago 30)" || return 1
+  to="$(date +%F)"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --format)
+        shift
+        [[ $# -gt 0 ]] || { fail "--format requires json or csv"; return 1; }
+        format="$1"
+        ;;
+      --format=*)
+        format="${1#--format=}"
+        ;;
+      --from)
+        shift
+        [[ $# -gt 0 ]] || { fail "--from requires YYYY-MM-DD"; return 1; }
+        from="$1"
+        ;;
+      --from=*)
+        from="${1#--from=}"
+        ;;
+      --to)
+        shift
+        [[ $# -gt 0 ]] || { fail "--to requires YYYY-MM-DD"; return 1; }
+        to="$1"
+        ;;
+      --to=*)
+        to="${1#--to=}"
+        ;;
+      --browser)
+        browser=1
+        ;;
+      --out)
+        shift
+        [[ $# -gt 0 ]] || { fail "--out requires a path"; return 1; }
+        out="$1"
+        ;;
+      --out=*)
+        out="${1#--out=}"
+        ;;
+      -h|--help)
+        cmd_export_usage
+        return 0
+        ;;
+      *)
+        fail "Unknown export option: $1"
+        cmd_export_usage
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  case "$format" in
+    json|csv) ext="$format" ;;
+    *) fail "--format must be json or csv"; return 1 ;;
+  esac
+
+  [[ -n "$out" ]] || out="./personale-export-${to}.${ext}"
+  if [[ "$browser" -eq 1 ]]; then
+    endpoint="${BACKEND_API}/export/browser"
+  else
+    endpoint="${BACKEND_API}/export"
+  fi
+
+  curl -fsS -G "$endpoint" \
+    --data-urlencode "from=${from}" \
+    --data-urlencode "to=${to}" \
+    --data-urlencode "format=${format}" \
+    -o "$out" || return 1
+
+  bytes="$(wc -c < "$out" | tr -d ' ')"
+  ok "Exported: $out"
+  info "Bytes: $bytes"
 }
 
 cmd_install() {
@@ -231,13 +373,16 @@ cmd_install() {
   write_backend_plist
   write_app_plist
   write_daylog_plist
+  write_backup_plist
   # bootout if already loaded (idempotent)
   launchctl bootout gui/$(id -u)/${BACKEND_PLIST_LABEL} 2>/dev/null
   launchctl bootout gui/$(id -u)/${APP_PLIST_LABEL} 2>/dev/null
   launchctl bootout gui/$(id -u)/${DAYLOG_PLIST_LABEL} 2>/dev/null
+  launchctl bootout gui/$(id -u)/${BACKUP_PLIST_LABEL} 2>/dev/null
   launchctl bootstrap gui/$(id -u) "$BACKEND_PLIST" && ok "Backend agent loaded"
   launchctl bootstrap gui/$(id -u) "$APP_PLIST" && ok "App agent loaded"
   launchctl bootstrap gui/$(id -u) "$DAYLOG_PLIST" && ok "Daylog agent loaded (daily 04:15)"
+  launchctl bootstrap gui/$(id -u) "$BACKUP_PLIST" && ok "Backup agent loaded (daily 03:00, keeps 14)"
   echo ""
   ok "Installed. On every login from now on:"
   echo "    1. macOS launches both agents."
@@ -249,6 +394,8 @@ cmd_install() {
   echo "       backend until it's ready (shows 'Connecting…' meanwhile)."
   echo "    6. Every day at 04:15 the daylog agent writes yesterday's activity"
   echo "       summary into the Obsidian daily note (log: $DAYLOG_LOG)."
+  echo "    7. Every day at 03:00 the backup agent pg_dumps the DB to"
+  echo "       ~/personale-backups (keeps 14; log: $BACKUP_LOG)."
   echo ""
   echo "  Logs: tail -F $BACKEND_LOG"
 }
@@ -257,7 +404,8 @@ cmd_uninstall() {
   launchctl bootout gui/$(id -u)/${BACKEND_PLIST_LABEL} 2>/dev/null && ok "Backend agent unloaded"
   launchctl bootout gui/$(id -u)/${APP_PLIST_LABEL} 2>/dev/null && ok "App agent unloaded"
   launchctl bootout gui/$(id -u)/${DAYLOG_PLIST_LABEL} 2>/dev/null && ok "Daylog agent unloaded"
-  rm -f "$BACKEND_PLIST" "$APP_PLIST" "$DAYLOG_PLIST"
+  launchctl bootout gui/$(id -u)/${BACKUP_PLIST_LABEL} 2>/dev/null && ok "Backup agent unloaded"
+  rm -f "$BACKEND_PLIST" "$APP_PLIST" "$DAYLOG_PLIST" "$BACKUP_PLIST"
   ok "Plists removed"
 }
 
@@ -357,6 +505,8 @@ case "${1:-help}" in
   uninstall) cmd_uninstall ;;
   setup)     cmd_setup ;;
   daylog)    shift; cmd_daylog "$@" ;;
+  export)    shift; cmd_export "$@" ;;
+  backup)    cmd_backup ;;
   doctor)    cmd_doctor ;;
   help|-h|--help) cmd_help ;;
   *) fail "Unknown command: $1"; cmd_help; exit 1 ;;

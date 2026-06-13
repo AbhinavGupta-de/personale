@@ -1,0 +1,44 @@
+<!-- @dsCard group="Colors" viewport="700x130" name="Semantic Colors" subtitle="Success · Warning · Destructive with tinted backgrounds" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); display: flex; align-items: center; padding: 20px; gap: 12px; height: 90px; box-sizing: border-box; }
+  .pair { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .chip { height: 32px; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 500; gap: 7px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .tint { height: 16px; border-radius: 4px; opacity: 0.15; margin-top: 2px; }
+  .meta { font-size: 9px; font-family: var(--font-mono); color: var(--color-muted-foreground); margin-top: 3px; }
+</style></head>
+<body>
+  <div class="pair">
+    <div class="chip" style="background:rgba(43,171,124,0.12); color:#2bab7c;">
+      <span class="dot" style="background:#2bab7c;"></span> Success
+    </div>
+    <div class="meta">#2BAB7C · --color-success</div>
+  </div>
+  <div class="pair">
+    <div class="chip" style="background:rgba(245,159,10,0.12); color:#f59f0a;">
+      <span class="dot" style="background:#f59f0a;"></span> Warning
+    </div>
+    <div class="meta">#F59F0A · --color-warning</div>
+  </div>
+  <div class="pair">
+    <div class="chip" style="background:rgba(220,40,40,0.12); color:#dc2828;">
+      <span class="dot" style="background:#dc2828;"></span> Destructive
+    </div>
+    <div class="meta">#DC2828 · --color-destructive</div>
+  </div>
+  <div class="pair">
+    <div class="chip" style="background:rgba(0,204,184,0.12); color:#00ccb8;">
+      <span class="dot" style="background:#00ccb8;"></span> Accent
+    </div>
+    <div class="meta">#00CCB8 · --color-accent</div>
+  </div>
+  <div class="pair">
+    <div class="chip" style="background:rgba(123,86,210,0.12); color:#7b56d2;">
+      <span class="dot" style="background:#7b56d2;"></span> Primary
+    </div>
+    <div class="meta">#7B56D2 · --color-primary</div>
+  </div>
+</body></html>

@@ -1,0 +1,43 @@
+<!-- @dsCard group="Spacing" viewport="700x140" name="Interaction States" subtitle="Hover · active · disabled · focus for interactive elements" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 16px 20px; box-sizing: border-box; display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .group-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--color-muted-foreground); margin-bottom: 2px; }
+  .btn { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; border: none; font-family: var(--font-sans); }
+  .sidebar-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--color-muted-foreground); }
+  .sep { width: 1px; background: rgba(43,43,49,0.5); align-self: stretch; }
+</style></head>
+<body>
+  <div class="group">
+    <div class="group-label">Primary Button</div>
+    <button class="btn" style="background:#7b56d2;color:#fafafa;">Default</button>
+    <button class="btn" style="background:#7b56d2;color:#fafafa;opacity:0.85;">Hover</button>
+    <button class="btn" style="background:#7b56d2;color:#fafafa;opacity:0.7;">Press</button>
+    <button class="btn" style="background:#7b56d2;color:#fafafa;opacity:0.5;cursor:not-allowed;">Disabled</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <div class="group-label">Secondary Button</div>
+    <button class="btn" style="background:#232329;color:#e0e0e0;border:1px solid rgba(43,43,49,0.6);">Default</button>
+    <button class="btn" style="background:#2b2b35;color:#e0e0e0;border:1px solid rgba(43,43,49,0.8);">Hover</button>
+    <button class="btn" style="background:#232329;color:#e0e0e0;opacity:0.7;border:1px solid rgba(43,43,49,0.6);">Press</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <div class="group-label">Sidebar Icon</div>
+    <div class="sidebar-icon">⌂</div>
+    <div class="sidebar-icon" style="color:#7b56d2;background:rgba(123,86,210,0.12);">⌂</div>
+    <div style="font-size:9px;color:var(--color-muted-foreground);">Inactive / Active</div>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <div class="group-label">Tab</div>
+    <div style="display:flex;gap:2px;padding:3px;background:rgba(35,35,41,0.8);border-radius:7px;">
+      <div style="font-size:11px;font-weight:500;color:#e0e0e0;background:#17171c;padding:4px 10px;border-radius:5px;">Day</div>
+      <div style="font-size:11px;font-weight:500;color:#7a7a7a;padding:4px 10px;border-radius:5px;">Week</div>
+    </div>
+  </div>
+</body></html>

@@ -162,7 +162,7 @@ private struct BreakOverlayView: View {
     var body: some View {
         ZStack {
             Color.black.opacity(0.95).ignoresSafeArea()
-            VStack(spacing: 24) {
+            VStack(spacing: Spacing.space9) {
                 Text("Break Time")
                     .font(.system(size: 34, weight: .bold))
                     .foregroundStyle(Color.white)
@@ -185,11 +185,11 @@ private struct BreakOverlayView: View {
                     .foregroundStyle(Color.white.opacity(0.7))
 
                 Button("End Break") { onEnd() }
-                    .font(.system(size: 13, weight: .medium))
+                    .font(AppFont.text(FontSize.md, .medium))
                     .foregroundStyle(.black)
-                    .padding(.horizontal, 22).padding(.vertical, 10)
+                    .padding(.horizontal, 22).padding(.vertical, Spacing.space4)
                     .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.md))
                     .buttonStyle(.plain)
                     .keyboardShortcut(.escape)
             }

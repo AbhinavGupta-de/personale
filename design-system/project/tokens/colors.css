@@ -1,0 +1,54 @@
+/* ============================================================
+   Personale Design System — Color Tokens
+   Source: personal/personal/Shared/Theme.swift → DarkTheme
+   Personale is dark-only; no light-mode variants exist.
+   ============================================================ */
+
+:root {
+  /* ── Base Surfaces ─────────────────────────────────────── */
+  --color-background:        #101014;   /* page/window bg */
+  --color-foreground:        #e0e0e0;   /* primary text (white 88%) */
+  --color-card:              #17171c;   /* card surface */
+  --color-card-foreground:   #e0e0e0;
+
+  /* ── Secondary Surfaces ────────────────────────────────── */
+  --color-secondary:         #232329;   /* input bg, tab bg */
+  --color-muted:             #1f1f23;   /* subtle section bg */
+  --color-muted-foreground:  #7a7a7a;   /* secondary text (white 48%) */
+
+  /* ── Brand ─────────────────────────────────────────────── */
+  --color-primary:           #7b56d2;   /* main purple */
+  --color-primary-foreground:#fafafa;   /* text on purple */
+  --color-accent:            #00ccb8;   /* cyan — timers, streaks */
+
+  /* ── Semantic ───────────────────────────────────────────── */
+  --color-success:           #2bab7c;   /* completed, on-track */
+  --color-warning:           #f59f0a;   /* caution, away */
+  --color-destructive:       #dc2828;   /* delete, error */
+
+  /* ── Border ─────────────────────────────────────────────── */
+  --color-border:            #2b2b31;   /* card borders, dividers */
+
+  /* ── Chart Palette ──────────────────────────────────────── */
+  --color-chart-purple:       #7c5cfc;
+  --color-chart-purple-light: #9b85f5;
+  --color-chart-cyan:         #00ccbf;
+  --color-chart-teal:         #35a882;
+  --color-chart-pink:         #d64d8a;
+  --color-chart-amber:        #f5a623;
+  --color-chart-blue:         #3b82f6;
+  --color-chart-gray:         #3d4451;
+  --color-chart-gray-light:   #6b7280;
+
+  /* ── Activity Category Colors ───────────────────────────── */
+  /* Source: CategoryColors.map in Theme.swift                 */
+  --color-cat-code:          #7c5cfc;
+  --color-cat-browsing:      #f5a623;
+  --color-cat-communication: #d64d8a;
+  --color-cat-design:        #00ccbf;
+  --color-cat-writing:       #35a882;
+  --color-cat-media:         #9b85f5;
+  --color-cat-utilities:     #6b7280;
+  --color-cat-reading:       #3b82f6;
+  --color-cat-other:         #3d4451;
+}

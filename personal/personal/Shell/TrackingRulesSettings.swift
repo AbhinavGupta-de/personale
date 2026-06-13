@@ -81,11 +81,11 @@ struct TrackingRulesCard: View {
     @StateObject private var vm = TrackingRulesViewModel()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.space5) {
             headerRow
 
             if let err = vm.errorMessage {
-                Text(err).font(.system(size: 11)).foregroundStyle(theme.warning)
+                Text(err).font(AppFont.text(FontSize.sm)).foregroundStyle(theme.warning)
             }
 
             columnHeader
@@ -93,10 +93,10 @@ struct TrackingRulesCard: View {
 
             if vm.filtered.isEmpty {
                 Text("No rules match")
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
                     .foregroundStyle(theme.mutedForeground)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, Spacing.space8)
             } else {
                 VStack(spacing: 0) {
                     ForEach(vm.filtered) { rule in
@@ -120,11 +120,11 @@ struct TrackingRulesCard: View {
     }
 
     private var headerRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.space4) {
             TextField("Search rules", text: $vm.search)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .padding(.horizontal, 8).padding(.vertical, 4)
+                .font(AppFont.text(FontSize.base))
+                .padding(.horizontal, Spacing.space3).padding(.vertical, Spacing.space1)
                 .background(theme.secondary)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .overlay(RoundedRectangle(cornerRadius: 5).stroke(theme.border.opacity(0.6), lineWidth: 1))
@@ -150,9 +150,9 @@ struct TrackingRulesCard: View {
             Spacer()
 
             Button("New Rule") { vm.showingNewRule = true }
-                .font(.system(size: 11, weight: .medium))
+                .font(AppFont.text(FontSize.sm, .medium))
                 .foregroundStyle(theme.primaryForeground)
-                .padding(.horizontal, 10).padding(.vertical, 4)
+                .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space1)
                 .background(theme.primary)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .buttonStyle(.plain)
@@ -168,10 +168,10 @@ struct TrackingRulesCard: View {
             Text("Flags").frame(width: 80, alignment: .leading)
             Spacer().frame(width: 60)
         }
-        .font(.system(size: 10, weight: .semibold))
+        .font(AppFont.text(FontSize.xs, .semibold))
         .tracking(0.5)
         .foregroundStyle(theme.mutedForeground)
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.space1)
     }
 }
 
@@ -185,35 +185,35 @@ private struct RuleRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.space1) {
                 Image(systemName: rule.source == "macos" ? "desktopcomputer" : "safari")
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
                 Text(rule.source)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(AppFont.mono(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
             }
             .frame(width: 70, alignment: .leading)
 
             Text(rule.appName)
-                .font(.system(size: 12, design: .monospaced))
+                .font(AppFont.mono(FontSize.base))
                 .foregroundStyle(theme.foreground)
                 .lineLimit(1)
                 .frame(width: 200, alignment: .leading)
 
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.space1) {
                 Circle().fill(CategoryColors.color(for: rule.category)).frame(width: 6, height: 6)
-                Text(rule.category).font(.system(size: 11)).foregroundStyle(theme.foreground)
+                Text(rule.category).font(AppFont.text(FontSize.sm)).foregroundStyle(theme.foreground)
             }
             .frame(width: 110, alignment: .leading)
 
             Text(rule.keywords ?? "—")
-                .font(.system(size: 10, design: .monospaced))
+                .font(AppFont.mono(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.space1) {
                 if rule.alwaysBlock {
                     flagBadge("Block", color: theme.warning)
                 }
@@ -228,32 +228,32 @@ private struct RuleRow: View {
 
             Spacer()
 
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.space1) {
                 Button(action: onEdit) {
                     Image(systemName: "pencil")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
-                        .padding(4)
+                        .padding(Spacing.space1)
                 }
                 .buttonStyle(.plain)
                 Button(action: onDelete) {
                     Image(systemName: "trash")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
-                        .padding(4)
+                        .padding(Spacing.space1)
                 }
                 .buttonStyle(.plain)
             }
             .frame(width: 60)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, Spacing.space2)
     }
 
     private func flagBadge(_ text: String, color: Color) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .semibold))
+            .font(AppFont.text(FontSize.xs2, .semibold))
             .foregroundStyle(color)
-            .padding(.horizontal, 4).padding(.vertical, 1)
+            .padding(.horizontal, Spacing.space1).padding(.vertical, 1)
             .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 3))
     }
@@ -286,9 +286,9 @@ private struct RuleEditSheet: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Spacing.space6) {
             Text(rule == nil ? "New Tracking Rule" : "Edit Tracking Rule")
-                .font(.system(size: 15, weight: .semibold))
+                .font(AppFont.text(FontSize.lg, .semibold))
                 .foregroundStyle(theme.foreground)
 
             Divider().opacity(0.3)
@@ -296,10 +296,10 @@ private struct RuleEditSheet: View {
             labeled("App / Domain") {
                 TextField(source == "macos" ? "com.apple.Safari" : "github.com", text: $appName)
                     .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(AppFont.mono(FontSize.base))
             }
 
-            HStack(spacing: 14) {
+            HStack(spacing: Spacing.space6) {
                 labeled("Source") {
                     Picker("", selection: $source) {
                         Text("macOS").tag("macos")
@@ -319,13 +319,13 @@ private struct RuleEditSheet: View {
             labeled("Keywords (optional, comma-separated)") {
                 TextField("onboarding, pricing", text: $keywords)
                     .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
             }
 
             Divider().opacity(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Blocking").font(.system(size: 11, weight: .semibold)).foregroundStyle(theme.mutedForeground)
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                Text("Blocking").font(AppFont.text(FontSize.sm, .semibold)).foregroundStyle(theme.mutedForeground)
                 toggle("Always Block", $alwaysBlock)
                 toggle("Block during Breaks", $blockBreaks)
                 toggle("Block during Meetings", $blockMeetings)
@@ -334,8 +334,8 @@ private struct RuleEditSheet: View {
 
             Divider().opacity(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Tracking").font(.system(size: 11, weight: .semibold)).foregroundStyle(theme.mutedForeground)
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                Text("Tracking").font(AppFont.text(FontSize.sm, .semibold)).foregroundStyle(theme.mutedForeground)
                 toggle("Track Titles", $trackTitles)
                 toggle("Track Full URLs", $trackFullUrls)
             }
@@ -356,16 +356,16 @@ private struct RuleEditSheet: View {
                         blockMeetings: blockMeetings, blockFocus: blockFocus,
                         trackTitles: trackTitles, trackFullUrls: trackFullUrls))
                 }
-                .font(.system(size: 12, weight: .medium))
+                .font(AppFont.text(FontSize.base, .medium))
                 .foregroundStyle(theme.primaryForeground)
-                .padding(.horizontal, 14).padding(.vertical, 6)
+                .padding(.horizontal, Spacing.space6).padding(.vertical, Spacing.space2)
                 .background(theme.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                 .buttonStyle(.plain)
                 .disabled(appName.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
-        .padding(20)
+        .padding(Spacing.space8)
         .frame(width: 480, height: 560)
         .background(theme.card)
         .onAppear { populate() }
@@ -387,8 +387,8 @@ private struct RuleEditSheet: View {
 
     @ViewBuilder
     private func labeled<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.system(size: 11)).foregroundStyle(theme.mutedForeground)
+        VStack(alignment: .leading, spacing: Spacing.space1) {
+            Text(title).font(AppFont.text(FontSize.sm)).foregroundStyle(theme.mutedForeground)
             content()
         }
     }
@@ -396,7 +396,7 @@ private struct RuleEditSheet: View {
     @ViewBuilder
     private func toggle(_ title: String, _ binding: Binding<Bool>) -> some View {
         HStack {
-            Text(title).font(.system(size: 12)).foregroundStyle(theme.foreground)
+            Text(title).font(AppFont.text(FontSize.base)).foregroundStyle(theme.foreground)
             Spacer()
             Toggle("", isOn: binding)
                 .toggleStyle(.switch)

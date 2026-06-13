@@ -4,6 +4,8 @@ import com.abhinavgpt.server.domain.AppUsage;
 import com.abhinavgpt.server.domain.MergedBlock;
 import com.abhinavgpt.server.entity.AppSession;
 import com.abhinavgpt.server.entity.BrowserEvent;
+import com.abhinavgpt.server.repository.AppSessionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -32,11 +34,20 @@ public class SessionMergeService {
 
     private final CategoryResolver categoryResolver;
     private final DomainTimeService domainTimeService;
+    private final AppSessionRepository sessionRepository;
+
+    @Autowired
+    public SessionMergeService(CategoryResolver categoryResolver,
+                               DomainTimeService domainTimeService,
+                               AppSessionRepository sessionRepository) {
+        this.categoryResolver = categoryResolver;
+        this.domainTimeService = domainTimeService;
+        this.sessionRepository = sessionRepository;
+    }
 
     public SessionMergeService(CategoryResolver categoryResolver,
                                DomainTimeService domainTimeService) {
-        this.categoryResolver = categoryResolver;
-        this.domainTimeService = domainTimeService;
+        this(categoryResolver, domainTimeService, null);
     }
 
     public List<MergedBlock> buildMergedBlocks(List<AppSession> sessions,
@@ -44,7 +55,9 @@ public class SessionMergeService {
                                                Instant endOfDay,
                                                Instant now,
                                                List<BrowserEvent> browserEvents) {
+        List<IdleInterval> idleIntervals = loadIdleIntervals(sessions, startOfDay, endOfDay, now);
         List<MergedBlock> raw = sessions.stream()
+            .filter(s -> !isIdle(s))
             .filter(s -> sessionDurationSeconds(s, startOfDay, endOfDay, now) > 0)
             .sorted(Comparator.comparing(AppSession::getStartedAt))
             .map(s -> toInitialBlock(s, startOfDay, endOfDay, now, browserEvents))
@@ -52,9 +65,9 @@ public class SessionMergeService {
 
         if (raw.size() <= 1) return raw;
 
-        List<MergedBlock> merged = mergeAdjacentSameCategory(raw);
+        List<MergedBlock> merged = mergeAdjacentSameCategory(raw, idleIntervals);
         merged = absorbSmallBlocks(merged);
-        return mergeAdjacentSameCategory(merged);
+        return mergeAdjacentSameCategory(merged, idleIntervals);
     }
 
     // ── Block construction ──
@@ -92,7 +105,8 @@ public class SessionMergeService {
 
     // ── Merging ──
 
-    private List<MergedBlock> mergeAdjacentSameCategory(List<MergedBlock> blocks) {
+    private List<MergedBlock> mergeAdjacentSameCategory(List<MergedBlock> blocks,
+                                                        List<IdleInterval> idleIntervals) {
         if (blocks.isEmpty()) return blocks;
         List<MergedBlock> result = new ArrayList<>();
         MergedBlock current = blocks.getFirst();
@@ -100,7 +114,9 @@ public class SessionMergeService {
             MergedBlock next = blocks.get(i);
             long gap = Duration.between(current.end(), next.start()).getSeconds();
             long threshold = categoryResolver.idleThresholdSeconds(current.category());
-            if (next.category().equals(current.category()) && gap < threshold) {
+            if (next.category().equals(current.category())
+                && gap < threshold
+                && !hasIdleInGap(current.end(), next.start(), idleIntervals)) {
                 List<AppUsage> combined = new ArrayList<>(current.constituents());
                 combined.addAll(next.constituents());
                 current = new MergedBlock(
@@ -113,6 +129,15 @@ public class SessionMergeService {
         }
         result.add(current);
         return result;
+    }
+
+    private boolean hasIdleInGap(Instant gapStart, Instant gapEnd, List<IdleInterval> idleIntervals) {
+        for (IdleInterval idle : idleIntervals) {
+            if (!idle.start().isAfter(gapEnd) && !idle.end().isBefore(gapStart)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<MergedBlock> absorbSmallBlocks(List<MergedBlock> blocks) {
@@ -193,4 +218,28 @@ public class SessionMergeService {
         Instant end = session.getEndedAt() != null ? session.getEndedAt() : now;
         return end.isAfter(endOfDay) ? endOfDay : end;
     }
+
+    private List<IdleInterval> loadIdleIntervals(List<AppSession> sessions,
+                                                 Instant startOfDay,
+                                                 Instant endOfDay,
+                                                 Instant now) {
+        List<AppSession> idleRows = new ArrayList<>();
+        sessions.stream().filter(SessionMergeService::isIdle).forEach(idleRows::add);
+        if (sessionRepository != null) {
+            List<AppSession> repositoryRows = sessionRepository.findIdleSessionsOverlapping(startOfDay, endOfDay);
+            if (repositoryRows != null) {
+                idleRows.addAll(repositoryRows);
+            }
+        }
+        return idleRows.stream()
+            .map(s -> new IdleInterval(effectiveStart(s, startOfDay), effectiveEnd(s, endOfDay, now)))
+            .filter(i -> Duration.between(i.start(), i.end()).getSeconds() > 0)
+            .toList();
+    }
+
+    private static boolean isIdle(AppSession session) {
+        return "idle".equals(session.getKind());
+    }
+
+    private record IdleInterval(Instant start, Instant end) {}
 }

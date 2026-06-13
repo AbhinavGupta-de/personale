@@ -12,4 +12,11 @@ public interface BrowserEventRepository extends CrudRepository<BrowserEvent, Lon
 
     @Query("SELECT * FROM browser_events WHERE timestamp >= :start AND timestamp < :end ORDER BY timestamp LIMIT 10000")
     List<BrowserEvent> findByTimestampBetween(@Param("start") Instant start, @Param("end") Instant end);
+
+    @Query("""
+        SELECT * FROM browser_events
+        WHERE timestamp >= :start AND timestamp < :end
+        ORDER BY timestamp
+        """)
+    List<BrowserEvent> findByStartedAtBetween(@Param("start") Instant start, @Param("end") Instant end);
 }

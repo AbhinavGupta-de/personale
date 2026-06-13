@@ -11,7 +11,7 @@ struct InsightsPage: View {
                 header
                 if let err = vm.errorMessage {
                     Text(err)
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.warning)
                 }
                 if vm.overview == nil && vm.isLoading {
@@ -51,21 +51,21 @@ struct InsightsPage: View {
 
     @ViewBuilder
     private var header: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.space5) {
             Text("Insights")
-                .font(.system(size: 22, weight: .bold))
+                .font(AppFont.text(FontSize.xl2, .bold))
                 .foregroundStyle(theme.foreground)
 
             HStack(spacing: 2) {
                 ForEach(InsightsRange.allCases) { r in
                     Button { vm.selectRange(r) } label: {
                         Text(r.rawValue)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(AppFont.text(FontSize.sm, .medium))
                             .foregroundStyle(vm.range == r ? theme.foreground : theme.mutedForeground)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, Spacing.space4)
+                            .padding(.vertical, Spacing.space1)
                             .background(vm.range == r ? theme.secondary : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
                     }
                     .buttonStyle(.plain)
                 }
@@ -77,7 +77,7 @@ struct InsightsPage: View {
                 ProgressView().controlSize(.small).scaleEffect(0.7)
             }
             Text(vm.displayRangeLabel)
-                .font(.system(size: 11, design: .monospaced))
+                .font(AppFont.mono(FontSize.sm))
                 .foregroundStyle(theme.mutedForeground)
         }
     }
@@ -112,23 +112,23 @@ private struct HeadlineStat: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.space2) {
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .semibold))
+                .font(AppFont.text(FontSize.xs2, .semibold))
                 .tracking(0.8)
                 .foregroundStyle(theme.mutedForeground)
             Text(value)
-                .font(.system(size: 22, weight: .bold).monospacedDigit())
+                .font(AppFont.text(FontSize.xl2, .bold).monospacedDigit())
                 .foregroundStyle(theme.foreground)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Text(caption)
-                .font(.system(size: 10))
+                .font(AppFont.text(FontSize.xs))
                 .foregroundStyle(theme.mutedForeground)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(Spacing.space6)
         .dashboardCard()
     }
 }
@@ -157,13 +157,13 @@ private struct HeatmapCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Productive Hours · Weekday × Hour")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
             if maxValue == 0 {
                 Text("No productive sessions yet for this range.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space7)
             } else {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 2) {
@@ -178,7 +178,7 @@ private struct HeatmapCard: View {
                     ForEach(0..<7, id: \.self) { row in
                         HStack(spacing: 2) {
                             Text(InsightsViewModel.weekdayLabel(row + 1))
-                                .font(.system(size: 9, weight: .medium))
+                                .font(AppFont.text(FontSize.xs2, .medium))
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 30, alignment: .leading)
                             ForEach(grid[row]) { cell in
@@ -186,7 +186,7 @@ private struct HeatmapCard: View {
                             }
                         }
                     }
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spacing.space1) {
                         Text("less")
                             .font(.system(size: 8))
                             .foregroundStyle(theme.mutedForeground)
@@ -199,10 +199,10 @@ private struct HeatmapCard: View {
                             .font(.system(size: 8))
                             .foregroundStyle(theme.mutedForeground)
                     }
-                    .padding(.top, 6)
+                    .padding(.top, Spacing.space2)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.bottom, Spacing.space6)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -213,7 +213,7 @@ private struct HeatmapCard: View {
     private func cellRect(_ cell: InsightsOverviewResponse.HeatmapCell) -> some View {
         let intensity = maxValue > 0 ? Double(cell.productiveSeconds) / Double(maxValue) : 0
         let opacity = cell.productiveSeconds == 0 ? 0.06 : 0.18 + intensity * 0.82
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: Radius.progressBar)
             .fill(theme.chartPurple.opacity(opacity))
             .frame(maxWidth: .infinity)
             .frame(height: 16)
@@ -232,26 +232,26 @@ private struct DayOfWeekCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Average by Weekday")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
             if maxAvg == 0 {
                 Text("Not enough data yet.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space7)
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     ForEach(stats) { s in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text(InsightsViewModel.weekdayLabel(s.weekday))
-                                .font(.system(size: 11, weight: .medium))
+                                .font(AppFont.text(FontSize.sm, .medium))
                                 .foregroundStyle(theme.foreground)
                                 .frame(width: 32, alignment: .leading)
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 2)
+                                    RoundedRectangle(cornerRadius: Radius.progressBar)
                                         .fill(theme.secondary.opacity(0.5))
-                                    RoundedRectangle(cornerRadius: 2)
+                                    RoundedRectangle(cornerRadius: Radius.progressBar)
                                         .fill(theme.chartPurple)
                                         .frame(width: maxAvg > 0
                                                ? CGFloat(s.avgProductiveSeconds) / CGFloat(maxAvg) * geo.size.width
@@ -260,13 +260,13 @@ private struct DayOfWeekCard: View {
                             }
                             .frame(height: 8)
                             Text(formatHours(s.avgProductiveSeconds))
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(AppFont.mono(FontSize.xs))
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 60, alignment: .trailing)
                         }
                     }
                 }
-                .padding(.horizontal, 16).padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space6)
             }
         }
         .frame(width: 320)
@@ -296,16 +296,16 @@ private struct TrendCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Daily Trend")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
             if trend.isEmpty {
                 Text("No data.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space7)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: Spacing.space3) {
+                    HStack(spacing: Spacing.space5) {
                         legend("Productive hrs", color: theme.chartPurple)
                         legend("Context switches", color: theme.chartCyan)
                     }
@@ -331,11 +331,11 @@ private struct TrendCard: View {
                                 .help("\(p.date): \(formatHours(p.productiveSeconds)) productive · \(p.contextSwitches) switches")
                             }
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, Spacing.space7)
                     }
                     .frame(height: 140)
                 }
-                .padding(.bottom, 14)
+                .padding(.bottom, Spacing.space6)
             }
         }
         .frame(maxWidth: .infinity)
@@ -344,11 +344,11 @@ private struct TrendCard: View {
 
     @ViewBuilder
     private func legend(_ label: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8)
-            Text(label).font(.system(size: 9)).foregroundStyle(theme.mutedForeground)
+        HStack(spacing: Spacing.space1) {
+            RoundedRectangle(cornerRadius: Radius.progressBar).fill(color).frame(width: 8, height: 8)
+            Text(label).font(AppFont.text(FontSize.xs2)).foregroundStyle(theme.mutedForeground)
         }
-        .padding(.leading, 16)
+        .padding(.leading, Spacing.space7)
     }
 
     private func formatHours(_ secs: Int) -> String {
@@ -368,16 +368,16 @@ private struct StreakCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Productive Streak")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
-            VStack(alignment: .leading, spacing: 14) {
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
+            VStack(alignment: .leading, spacing: Spacing.space6) {
                 bigNumber(value: stats.currentStreak, label: "current")
                 bigNumber(value: stats.longestStreak, label: "longest")
                 Text("Day counts toward streak when you log \(stats.thresholdSeconds / 3600)+ productive hrs.")
-                    .font(.system(size: 9))
+                    .font(AppFont.text(FontSize.xs2))
                     .foregroundStyle(theme.mutedForeground)
                     .lineLimit(2)
             }
-            .padding(.horizontal, 16).padding(.bottom, 14)
+            .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space6)
         }
         .frame(width: 220)
         .dashboardCard()
@@ -385,12 +385,12 @@ private struct StreakCard: View {
 
     @ViewBuilder
     private func bigNumber(value: Int, label: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
             Text("\(value)")
-                .font(.system(size: 26, weight: .bold).monospacedDigit())
+                .font(AppFont.text(FontSize.xl3, .bold).monospacedDigit())
                 .foregroundStyle(theme.foreground)
             Text("day\(value == 1 ? "" : "s") \(label)")
-                .font(.system(size: 11))
+                .font(AppFont.text(FontSize.sm))
                 .foregroundStyle(theme.mutedForeground)
         }
     }
@@ -406,36 +406,36 @@ private struct DistractionsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Top Distractions · Last 7 days")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
             if items.isEmpty {
                 Text("Clean slate. No distractions logged.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space7)
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     ForEach(items) { d in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text(d.appName)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(AppFont.text(FontSize.sm, .medium))
                                 .foregroundStyle(theme.foreground)
                                 .lineLimit(1)
                             Text("· \(d.category)")
-                                .font(.system(size: 10))
+                                .font(AppFont.text(FontSize.xs))
                                 .foregroundStyle(theme.mutedForeground)
                                 .lineLimit(1)
                             Spacer()
                             Text("\(d.sessionCount)×")
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(AppFont.mono(FontSize.xs))
                                 .foregroundStyle(theme.mutedForeground)
                             Text(formatHours(d.totalSeconds))
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(AppFont.mono(FontSize.sm))
                                 .foregroundStyle(theme.foreground)
                                 .frame(width: 60, alignment: .trailing)
                         }
                     }
                 }
-                .padding(.horizontal, 16).padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space6)
             }
         }
         .frame(maxWidth: .infinity)
@@ -453,36 +453,36 @@ private struct LongestFocusCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Longest Focus Blocks")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
             if items.isEmpty {
                 Text("No deep-work blocks yet.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space7)
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     ForEach(items) { f in
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text(f.date)
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(AppFont.mono(FontSize.xs))
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 80, alignment: .leading)
                             Text("\(f.startTime)–\(f.endTime)")
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(AppFont.mono(FontSize.xs))
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 80, alignment: .leading)
                             Text(f.category)
-                                .font(.system(size: 10))
+                                .font(AppFont.text(FontSize.xs))
                                 .foregroundStyle(CategoryColors.color(for: f.category))
                                 .lineLimit(1)
                             Spacer()
                             Text(formatHours(f.durationSeconds))
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .font(AppFont.mono(FontSize.sm, .semibold))
                                 .foregroundStyle(theme.foreground)
                         }
                     }
                 }
-                .padding(.horizontal, 16).padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space6)
             }
         }
         .frame(maxWidth: .infinity)
@@ -505,32 +505,32 @@ private struct CategoryMixCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Category Mix · vs Prior Period")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
             if current.isEmpty {
                 Text("No data.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space7)
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     ForEach(Array(current.prefix(8).enumerated()), id: \.offset) { _, cat in
                         let prior = priorPct(cat.category)
                         let delta = prior.map { cat.percent - $0 }
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spacing.space3) {
                             Text("\(cat.percent)%")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(AppFont.mono(FontSize.sm))
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 36, alignment: .trailing)
                             Text(cat.category)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(AppFont.text(FontSize.sm, .medium))
                                 .foregroundStyle(theme.foreground)
                                 .frame(width: 110, alignment: .leading)
                                 .lineLimit(1)
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 2)
+                                    RoundedRectangle(cornerRadius: Radius.progressBar)
                                         .fill(theme.secondary.opacity(0.5))
-                                    RoundedRectangle(cornerRadius: 2)
+                                    RoundedRectangle(cornerRadius: Radius.progressBar)
                                         .fill(CategoryColors.color(for: cat.category))
                                         .frame(width: CGFloat(cat.percent) / 100 * geo.size.width)
                                 }
@@ -538,23 +538,23 @@ private struct CategoryMixCard: View {
                             .frame(height: 6)
                             if let d = delta {
                                 Text(d > 0 ? "+\(d)%" : "\(d)%")
-                                    .font(.system(size: 9, design: .monospaced))
+                                    .font(AppFont.mono(FontSize.xs2))
                                     .foregroundStyle(d > 0 ? theme.success : (d < 0 ? theme.warning : theme.mutedForeground))
                                     .frame(width: 40, alignment: .trailing)
                             } else {
                                 Text("new")
-                                    .font(.system(size: 9))
+                                    .font(AppFont.text(FontSize.xs2))
                                     .foregroundStyle(theme.mutedForeground)
                                     .frame(width: 40, alignment: .trailing)
                             }
                             Text(formatHours(cat.totalSeconds))
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(AppFont.mono(FontSize.xs))
                                 .foregroundStyle(theme.mutedForeground)
                                 .frame(width: 70, alignment: .trailing)
                         }
                     }
                 }
-                .padding(.horizontal, 16).padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space6)
             }
         }
         .frame(maxWidth: .infinity)
@@ -580,27 +580,27 @@ private struct NarrativeCard: View {
                         if isGenerating {
                             ProgressView().controlSize(.small).scaleEffect(0.6)
                         } else {
-                            Image(systemName: "sparkles").font(.system(size: 10))
+                            Image(systemName: "sparkles").font(AppFont.text(FontSize.xs))
                         }
                         Text(narrative == nil ? "Generate" : "Regenerate")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(AppFont.text(FontSize.sm, .medium))
                     }
                     .foregroundStyle(theme.primaryForeground)
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, Spacing.space4)
                     .padding(.vertical, 5)
                     .background(theme.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                 }
                 .buttonStyle(.plain)
                 .disabled(isGenerating)
             }
-            .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+            .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
             if let n = narrative {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Spacing.space5) {
                     if !n.summary.isEmpty {
                         Text(n.summary)
-                            .font(.system(size: 12))
+                            .font(AppFont.text(FontSize.base))
                             .foregroundStyle(theme.foreground)
                             .lineSpacing(2)
                     }
@@ -614,15 +614,15 @@ private struct NarrativeCard: View {
                         section(title: "Watchouts", items: n.watchouts, color: theme.warning)
                     }
                     Text("Generated \(n.generatedAt) · \(n.model)")
-                        .font(.system(size: 9))
+                        .font(AppFont.text(FontSize.xs2))
                         .foregroundStyle(theme.mutedForeground)
                 }
-                .padding(.horizontal, 16).padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space6)
             } else {
                 Text("Hit Generate for an AI-written recap of this period — patterns, wins, and watchouts grounded in your data.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, Spacing.space7).padding(.bottom, Spacing.space7)
             }
         }
         .dashboardCard()
@@ -630,16 +630,16 @@ private struct NarrativeCard: View {
 
     @ViewBuilder
     private func section(title: String, items: [String], color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.space1) {
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .semibold))
+                .font(AppFont.text(FontSize.xs2, .semibold))
                 .tracking(0.8)
                 .foregroundStyle(color)
             ForEach(Array(items.enumerated()), id: \.offset) { _, line in
-                HStack(alignment: .top, spacing: 6) {
-                    Circle().fill(color).frame(width: 4, height: 4).padding(.top, 6)
+                HStack(alignment: .top, spacing: Spacing.space2) {
+                    Circle().fill(color).frame(width: 4, height: 4).padding(.top, Spacing.space2)
                     Text(line)
-                        .font(.system(size: 12))
+                        .font(AppFont.text(FontSize.base))
                         .foregroundStyle(theme.foreground)
                         .fixedSize(horizontal: false, vertical: true)
                 }

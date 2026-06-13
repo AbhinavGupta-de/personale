@@ -194,4 +194,44 @@ class EventServiceTest {
 
         verify(repository, never()).save(any());
     }
+
+    @Test
+    void recordIdleBlock_insertsIdleSession() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        eventService.recordIdleBlock(
+            Instant.parse("2026-03-07T10:00:00Z"),
+            Instant.parse("2026-03-07T10:05:00Z"));
+
+        ArgumentCaptor<AppSession> captor = ArgumentCaptor.forClass(AppSession.class);
+        verify(repository).save(captor.capture());
+        AppSession session = captor.getValue();
+        assertThat(session.getKind()).isEqualTo("idle");
+        assertThat(session.getAppName()).isEqualTo("Away");
+        assertThat(session.getBundleId()).isNull();
+        assertThat(session.getStartedAt()).isEqualTo(Instant.parse("2026-03-07T10:00:00Z"));
+        assertThat(session.getEndedAt()).isEqualTo(Instant.parse("2026-03-07T10:05:00Z"));
+    }
+
+    @Test
+    void recordIdleBlock_dropsSub60SecondIdle() {
+        eventService.recordIdleBlock(
+            Instant.parse("2026-03-07T10:00:00Z"),
+            Instant.parse("2026-03-07T10:00:59Z"));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void recordIdleBlock_usesExistingCapForOverFourHours() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        eventService.recordIdleBlock(
+            Instant.parse("2026-03-07T10:00:00Z"),
+            Instant.parse("2026-03-07T15:00:00Z"));
+
+        ArgumentCaptor<AppSession> captor = ArgumentCaptor.forClass(AppSession.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getEndedAt()).isEqualTo(Instant.parse("2026-03-07T10:05:00Z"));
+    }
 }

@@ -42,6 +42,31 @@ class EventClient: ObservableObject {
         flushQueue.triggerFlush()
     }
 
+    func sendIdleBlock(start: String, end: String) {
+        let payload = IdleBlockPayload(startedAt: start, endedAt: end)
+        guard let body = try? JSONEncoder().encode(payload) else { return }
+
+        var request = URLRequest(url: baseURL.appendingPathComponent("api/events/idle"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+            if let error = error {
+                print("[EventClient] Idle block POST failed: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self?.isServerReachable = false
+                }
+                return
+            }
+            if let http = response as? HTTPURLResponse {
+                DispatchQueue.main.async {
+                    self?.isServerReachable = http.statusCode == 200
+                }
+            }
+        }.resume()
+    }
+
     func triggerFlush() {
         flushQueue.triggerFlush()
     }
@@ -49,5 +74,10 @@ class EventClient: ObservableObject {
     var pendingCount: Int {
         store.unsyncedCount()
     }
+}
+
+private struct IdleBlockPayload: Encodable {
+    let startedAt: String
+    let endedAt: String
 }
 #endif

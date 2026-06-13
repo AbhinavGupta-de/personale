@@ -1,0 +1,22 @@
+<!-- @dsCard group="Type" viewport="700x260" name="Type Scale" subtitle="9px → 48px — all sizes used in the app" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 14px 20px; box-sizing: border-box; }
+  .row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; border-bottom: 1px solid rgba(43,43,49,0.3); padding-bottom: 6px; }
+  .row:last-child { border-bottom: none; margin-bottom: 0; }
+  .meta { font-size: 9px; font-family: var(--font-mono); color: var(--color-muted-foreground); width: 90px; flex-shrink: 0; }
+  .sample { color: var(--color-foreground); line-height: 1.2; }
+</style></head>
+<body>
+  <div class="row"><span class="meta">--text-2xs · 9px</span><span class="sample" style="font-size:9px;">Micro labels · timestamps · section sub-captions</span></div>
+  <div class="row"><span class="meta">--text-xs · 10px</span><span class="sample" style="font-size:10px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:#7a7a7a;">SECTION TITLE</span></div>
+  <div class="row"><span class="meta">--text-sm · 11px</span><span class="sample" style="font-size:11px;">Body text — list rows, card content, tooltips</span></div>
+  <div class="row"><span class="meta">--text-base · 12px</span><span class="sample" style="font-size:12px;">Primary body — goal text field, narrative copy</span></div>
+  <div class="row"><span class="meta">--text-md · 13px</span><span class="sample" style="font-size:13px;font-weight:600;letter-spacing:3px;">PERSONALE</span></div>
+  <div class="row"><span class="meta">--text-lg · 15px</span><span class="sample" style="font-size:15px;font-weight:600;">Thursday, June 12</span></div>
+  <div class="row"><span class="meta">--text-2xl · 22px</span><span class="sample" style="font-size:22px;font-weight:700;font-family:var(--font-mono);">6h 32m</span></div>
+  <div class="row"><span class="meta">--text-3xl · 26px</span><span class="sample" style="font-size:26px;font-weight:700;font-family:var(--font-mono);">7 days</span></div>
+  <div class="row"><span class="meta">--text-timer · 48px</span><span class="sample" style="font-size:48px;font-weight:700;font-family:var(--font-mono);line-height:1;color:#00ccb8;">25:00</span></div>
+</body></html>

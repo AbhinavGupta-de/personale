@@ -14,6 +14,7 @@ class AppTracker: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     let eventClient: EventClient
     private var idleTimer: Timer?
+    private var idleStartedAt: Date?
 
     // Bundle→category map fetched from backend
     private var categoryMap: [String: String] = [:]
@@ -153,6 +154,7 @@ class AppTracker: ObservableObject {
         if idle >= currentIdleThreshold && !isIdle {
             isIdle = true
             let lastInputTime = Date().addingTimeInterval(-idle)
+            idleStartedAt = lastInputTime
             let timestamp = dateFormatter.string(from: lastInputTime)
             print("[\(dateFormatter.string(from: Date()))] User idle for \(Int(idle))s (threshold: \(Int(currentIdleThreshold))s/\(currentCategory)) — closing session")
             eventClient.sendSessionClose(
@@ -162,7 +164,9 @@ class AppTracker: ObservableObject {
             )
         } else if idle < currentIdleThreshold && isIdle {
             isIdle = false
-            let timestamp = dateFormatter.string(from: Date())
+            let returnedAt = Date()
+            sendIdleBlockIfNeeded(endedAt: returnedAt)
+            let timestamp = dateFormatter.string(from: returnedAt)
             print("[\(timestamp)] User returned from idle — re-registering frontmost app")
             if let app = NSWorkspace.shared.frontmostApplication {
                 handleAppSwitch(app)
@@ -255,7 +259,11 @@ class AppTracker: ObservableObject {
 
     private func handleSleep() {
         isIdle = true
-        let timestamp = dateFormatter.string(from: Date())
+        let sleepAt = Date()
+        if idleStartedAt == nil {
+            idleStartedAt = sleepAt
+        }
+        let timestamp = dateFormatter.string(from: sleepAt)
         print("[\(timestamp)] Mac going to sleep — closing active session")
         eventClient.sendSessionClose(
             timestamp: timestamp,
@@ -266,13 +274,24 @@ class AppTracker: ObservableObject {
 
     private func handleWake() {
         isIdle = false
-        let timestamp = dateFormatter.string(from: Date())
+        let wokeAt = Date()
+        sendIdleBlockIfNeeded(endedAt: wokeAt)
+        let timestamp = dateFormatter.string(from: wokeAt)
         print("[\(timestamp)] Mac woke up — re-registering frontmost app")
         eventClient.triggerFlush()
         fetchCategoryMap()
         if let app = NSWorkspace.shared.frontmostApplication {
             handleAppSwitch(app)
         }
+    }
+
+    private func sendIdleBlockIfNeeded(endedAt: Date) {
+        guard let startedAt = idleStartedAt else { return }
+        idleStartedAt = nil
+        eventClient.sendIdleBlock(
+            start: dateFormatter.string(from: startedAt),
+            end: dateFormatter.string(from: endedAt)
+        )
     }
 
     deinit {

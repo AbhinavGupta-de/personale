@@ -1,0 +1,37 @@
+<!-- @dsCard group="Spacing" viewport="700x200" name="Card Anatomy" subtitle="Surface · border · radius · padding — DashboardCardModifier spec" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 20px; box-sizing: border-box; display: flex; gap: 20px; align-items: flex-start; }
+  .card-demo { background: var(--color-card); border-radius: 8px; border: 1px solid rgba(43,43,49,0.5); flex: 1; }
+  .card-header { padding: 14px 16px 0; }
+  .section-title { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--color-muted-foreground); }
+  .card-body { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .text { font-size: 11px; color: var(--color-foreground); flex: 1; }
+  .num { font-size: 11px; font-family: var(--font-mono); color: var(--color-muted-foreground); }
+  .annotations { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .ann { display: flex; align-items: center; gap: 8px; }
+  .ann-line { width: 24px; height: 1px; background: var(--color-muted-foreground); opacity: 0.4; }
+  .ann-text { font-size: 9px; font-family: var(--font-mono); color: var(--color-muted-foreground); }
+</style></head>
+<body>
+  <div class="card-demo">
+    <div class="card-header"><span class="section-title">Categories</span></div>
+    <div class="card-body">
+      <div class="row"><span class="dot" style="background:#7c5cfc;"></span><span class="text">Code</span><span class="num">3h 12m</span></div>
+      <div class="row"><span class="dot" style="background:#d64d8a;"></span><span class="text">Communication</span><span class="num">52m</span></div>
+      <div class="row"><span class="dot" style="background:#00ccbf;"></span><span class="text">Design</span><span class="num">28m</span></div>
+    </div>
+  </div>
+  <div class="annotations">
+    <div class="ann"><div class="ann-line"></div><span class="ann-text">bg: #17171C --color-card</span></div>
+    <div class="ann"><div class="ann-line"></div><span class="ann-text">border: 1px rgba(43,43,49,0.5)</span></div>
+    <div class="ann"><div class="ann-line"></div><span class="ann-text">border-radius: 8px</span></div>
+    <div class="ann"><div class="ann-line"></div><span class="ann-text">padding-x: 16px</span></div>
+    <div class="ann"><div class="ann-line"></div><span class="ann-text">padding-top: 14px</span></div>
+    <div class="ann"><div class="ann-line"></div><span class="ann-text">box-shadow: none</span></div>
+  </div>
+</body></html>

@@ -181,8 +181,8 @@ struct SectionTitle: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 10, weight: .semibold))
-            .tracking(0.8)
+            .font(AppFont.sectionTitle)
+            .tracking(Tracking.section)
             .foregroundStyle(theme.mutedForeground)
     }
 }

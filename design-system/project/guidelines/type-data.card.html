@@ -1,0 +1,37 @@
+<!-- @dsCard group="Type" viewport="700x160" name="Data Typography" subtitle="Monospaced tabular-nums — durations, percentages, timestamps" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); padding: 16px 20px; box-sizing: border-box; }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .col-title { font-size: 9px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--color-muted-foreground); margin-bottom: 10px; }
+  .data-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .data-val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--color-foreground); }
+  .data-label { font-size: 10px; color: var(--color-muted-foreground); }
+</style></head>
+<body>
+  <div class="cols">
+    <div>
+      <div class="col-title">Durations</div>
+      <div class="data-row"><span class="data-val" style="font-size:22px;font-weight:700;">7h 51m</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:13px;font-weight:500;">1h 24m</span> <span class="data-label">Code</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:11px;">42 min</span> <span class="data-label">break</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:11px;color:#00ccb8;">19:45</span> <span class="data-label">timer</span></div>
+    </div>
+    <div>
+      <div class="col-title">Percentages</div>
+      <div class="data-row"><span class="data-val" style="font-size:22px;font-weight:700;">63%</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:13px;font-weight:600;">78%</span> <span class="data-label">focus score</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:11px;">12%</span> <span class="data-label">Browsing</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:11px;">+4%</span> <span class="data-label" style="color:#2bab7c;">vs prior</span></div>
+    </div>
+    <div>
+      <div class="col-title">Timestamps</div>
+      <div class="data-row"><span class="data-val" style="font-size:13px;font-weight:500;">08:00 – 09:30</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:11px;">18:04:33</span> <span class="data-label">activity</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:11px;">Jan 29</span> <span class="data-label">streak</span></div>
+      <div class="data-row"><span class="data-val" style="font-size:11px;">Mon Tue Wed</span></div>
+    </div>
+  </div>
+</body></html>

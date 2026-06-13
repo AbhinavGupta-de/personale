@@ -1,0 +1,38 @@
+<!-- @dsCard group="Colors" viewport="700x130" name="Brand Colors" subtitle="Primary purple + accent cyan" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--color-background); font-family: var(--font-sans); display: flex; align-items: center; padding: 20px; gap: 12px; height: 90px; box-sizing: border-box; }
+  .swatch { flex: 1; height: 56px; border-radius: 8px; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px 10px; gap: 2px; position: relative; overflow: hidden; }
+  .swatch-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
+  .swatch-hex { font-size: 10px; font-family: var(--font-mono); opacity: 0.7; }
+  .swatch-var { font-size: 9px; font-family: var(--font-mono); opacity: 0.5; margin-top: 1px; }
+</style></head>
+<body>
+  <div class="swatch" style="background:#7b56d2;">
+    <span class="swatch-label" style="color:#fafafa">Primary</span>
+    <span class="swatch-hex" style="color:#fafafa">#7B56D2</span>
+    <span class="swatch-var" style="color:#fafafa">--color-primary</span>
+  </div>
+  <div class="swatch" style="background:#9b85f5;">
+    <span class="swatch-label" style="color:#101014">Primary Light</span>
+    <span class="swatch-hex" style="color:#101014">#9B85F5</span>
+    <span class="swatch-var" style="color:#101014">--color-chart-purple-light</span>
+  </div>
+  <div class="swatch" style="background:#00ccb8;">
+    <span class="swatch-label" style="color:#101014">Accent</span>
+    <span class="swatch-hex" style="color:#101014">#00CCB8</span>
+    <span class="swatch-var" style="color:#101014">--color-accent</span>
+  </div>
+  <div class="swatch" style="background:#7c5cfc;">
+    <span class="swatch-label" style="color:#fafafa">Chart Purple</span>
+    <span class="swatch-hex" style="color:#fafafa">#7C5CFC</span>
+    <span class="swatch-var" style="color:#fafafa">--color-chart-purple</span>
+  </div>
+  <div class="swatch" style="background:rgba(123,86,210,0.12); border: 1px solid rgba(123,86,210,0.3);">
+    <span class="swatch-label" style="color:#7b56d2">Active Tint</span>
+    <span class="swatch-hex" style="color:#7b56d2">rgba(123,86,210,0.12)</span>
+    <span class="swatch-var" style="color:#7b56d2">sidebar active bg</span>
+  </div>
+</body></html>

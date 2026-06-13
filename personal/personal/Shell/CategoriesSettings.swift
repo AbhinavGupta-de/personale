@@ -125,12 +125,12 @@ struct CategoriesSettingsCard: View {
     @StateObject private var vm = CategoriesSettingsViewModel()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.space5) {
             headerRow
 
             if let err = vm.errorMessage {
                 Text(err)
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.warning)
             }
 
@@ -139,9 +139,9 @@ struct CategoriesSettingsCard: View {
 
             if vm.filtered.isEmpty {
                 Text(vm.isLoading ? "Loading…" : "No categories")
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, Spacing.space8)
                     .frame(maxWidth: .infinity, alignment: .center)
             } else {
                 VStack(spacing: 0) {
@@ -156,13 +156,13 @@ struct CategoriesSettingsCard: View {
     }
 
     private var headerRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.space4) {
             TextField("Search categories", text: $vm.search)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(AppFont.text(FontSize.base))
                 .foregroundStyle(theme.foreground)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, Spacing.space3)
+                .padding(.vertical, Spacing.space1)
                 .background(theme.secondary)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .overlay(
@@ -175,10 +175,10 @@ struct CategoriesSettingsCard: View {
 
             TextField("New category name", text: $vm.newCategoryName)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(AppFont.text(FontSize.base))
                 .foregroundStyle(theme.foreground)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, Spacing.space3)
+                .padding(.vertical, Spacing.space1)
                 .background(theme.secondary)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .overlay(
@@ -189,10 +189,10 @@ struct CategoriesSettingsCard: View {
                 .onSubmit { vm.create() }
 
             Button("Create") { vm.create() }
-                .font(.system(size: 11, weight: .medium))
+                .font(AppFont.text(FontSize.sm, .medium))
                 .foregroundStyle(theme.primaryForeground)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .padding(.horizontal, Spacing.space4)
+                .padding(.vertical, Spacing.space1)
                 .background(theme.primary)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .buttonStyle(.plain)
@@ -211,10 +211,10 @@ struct CategoriesSettingsCard: View {
             Text("Goal").frame(width: 60, alignment: .center)
             Spacer()
         }
-        .font(.system(size: 10, weight: .semibold))
+        .font(AppFont.text(FontSize.xs, .semibold))
         .tracking(0.5)
         .foregroundStyle(theme.mutedForeground)
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.space1)
     }
 }
 
@@ -230,12 +230,12 @@ private struct CategoryRow: View {
     var body: some View {
         HStack(spacing: 0) {
             // Name + category colour dot
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.space2) {
                 Circle()
                     .fill(CategoryColors.color(for: category.name))
                     .frame(width: 8, height: 8)
                 Text(category.name)
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
                     .foregroundStyle(theme.foreground)
                     .lineLimit(1)
             }
@@ -245,13 +245,13 @@ private struct CategoryRow: View {
             TextField("", text: $idleText)
                 .textFieldStyle(.plain)
                 .multilineTextAlignment(.trailing)
-                .font(.system(size: 11, design: .monospaced))
+                .font(AppFont.mono(FontSize.sm))
                 .foregroundStyle(theme.foreground)
                 .frame(width: 64)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, Spacing.space2)
                 .padding(.vertical, 3)
                 .background(theme.secondary)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
                 .onAppear { idleText = String(category.idleThresholdSeconds) }
                 .onSubmit {
                     if let n = Int(idleText), n > 0 { vm.updateThreshold(category, seconds: n) }
@@ -277,14 +277,14 @@ private struct CategoryRow: View {
                 vm.delete(category)
             } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(6)
+                    .padding(Spacing.space2)
             }
             .buttonStyle(.plain)
             .help("Delete")
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, Spacing.space2)
     }
 
     @State private var showGoalPopover = false
@@ -300,10 +300,10 @@ private struct CategoryRow: View {
         } label: {
             HStack(spacing: 3) {
                 Image(systemName: category.dailyGoalSeconds > 0 ? "flag.fill" : "flag")
-                    .font(.system(size: 9))
+                    .font(AppFont.text(FontSize.xs2))
                 if category.dailyGoalSeconds > 0 {
                     Text("\(category.dailyGoalSeconds / 60)m")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(AppFont.mono(FontSize.xs2))
                 }
             }
             .foregroundStyle(category.dailyGoalSeconds > 0 ? theme.primary : theme.mutedForeground)
@@ -312,24 +312,24 @@ private struct CategoryRow: View {
         .buttonStyle(.plain)
         .popover(isPresented: $showGoalPopover, arrowEdge: .trailing) {
             goalEditor
-                .padding(14)
+                .padding(Spacing.space6)
                 .frame(width: 220)
         }
     }
 
     private var goalEditor: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.space4) {
             Text("Daily Goal — \(category.name)")
-                .font(.system(size: 12, weight: .semibold))
+                .font(AppFont.text(FontSize.base, .semibold))
                 .foregroundStyle(theme.foreground)
 
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.space2) {
                 TextField("0", text: $goalMinutes)
                     .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(AppFont.mono(FontSize.base))
                     .frame(width: 70)
                 Text("minutes / day")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
             }
 
@@ -353,9 +353,9 @@ private struct CategoryRow: View {
                     vm.updateGoal(category, seconds: max(0, mins) * 60, isMax: goalIsMax)
                     showGoalPopover = false
                 }
-                .font(.system(size: 11, weight: .medium))
+                .font(AppFont.text(FontSize.sm, .medium))
                 .foregroundStyle(theme.primaryForeground)
-                .padding(.horizontal, 10).padding(.vertical, 3)
+                .padding(.horizontal, Spacing.space4).padding(.vertical, 3)
                 .background(theme.primary)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .buttonStyle(.plain)

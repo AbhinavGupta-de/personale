@@ -155,28 +155,28 @@ private struct BlockerOverlayView: View {
                 .foregroundStyle(Color.white.opacity(0.85))
 
             Text("Back to focus")
-                .font(.system(size: 22, weight: .semibold))
+                .font(AppFont.text(FontSize.xl2, .semibold))
                 .foregroundStyle(Color.white)
 
-            VStack(spacing: 4) {
+            VStack(spacing: Spacing.space1) {
                 Text("\(appName) • \(category)")
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(AppFont.mono(FontSize.md))
                     .foregroundStyle(Color.white.opacity(0.75))
                 Text("You've crossed your distraction threshold in this focus session.")
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
                     .foregroundStyle(Color.white.opacity(0.65))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Spacing.space8)
             }
 
             Button {
                 if remainingLock == 0 { onDismiss() }
             } label: {
                 Text(remainingLock > 0 ? "Dismiss in \(remainingLock)s" : "Dismiss")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(AppFont.text(FontSize.md, .medium))
                     .foregroundStyle(remainingLock > 0 ? Color.white.opacity(0.4) : Color.black)
                     .padding(.horizontal, 18)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, Spacing.space3)
                     .background(remainingLock > 0 ? Color.white.opacity(0.2) : Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 7))
             }
@@ -184,7 +184,7 @@ private struct BlockerOverlayView: View {
             .disabled(remainingLock > 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
+        .padding(Spacing.space9)
         .background(Color.black.opacity(0.9))
         .onAppear { startLockTimer() }
     }

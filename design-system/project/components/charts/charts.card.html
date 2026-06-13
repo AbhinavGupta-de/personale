@@ -1,0 +1,81 @@
+<!-- @dsCard group="Components" viewport="700x260" name="Chart Components" subtitle="ProgressBar · TimelineBar — data visualization primitives" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: #101014; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; padding: 16px; }
+  .label { font-size: 9px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: #7a7a7a; margin-bottom: 8px; }
+  .divider { height: 1px; background: rgba(43,43,49,0.5); margin: 14px 0; }
+  .card { background: #17171c; border-radius: 8px; border: 1px solid rgba(43,43,49,0.5); padding: 14px 16px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { ProgressBar, TimelineBar } = window.PersonaleDesignSystem_0c6c40;
+
+const CATS = [
+  { label:'Code',          pct:63, color:'#7c5cfc' },
+  { label:'Communication', pct:12, color:'#d64d8a' },
+  { label:'Design',        pct:8,  color:'#00ccbf' },
+  { label:'Writing',       pct:7,  color:'#35a882' },
+  { label:'Browsing',      pct:7,  color:'#f5a623' },
+  { label:'Other',         pct:3,  color:'#3d4451' },
+];
+
+const BLOCKS = [
+  { start:8,   end:9.5,  type:'Code',          label:'VS Code' },
+  { start:9.5, end:10,   type:'Communication',  label:'Slack' },
+  { start:10,  end:12,   type:'Code',           label:'Cursor' },
+  { start:12,  end:12.5, type:'Browsing',       label:'Chrome' },
+  { start:13,  end:15,   type:'Code',           label:'VS Code' },
+  { start:15,  end:15.5, type:'Design',         label:'Figma' },
+  { start:15.5,end:16,   type:'Communication',  label:'Slack' },
+  { start:16,  end:17,   type:'Writing',        label:'Notion' },
+];
+
+const HOURS = [8,10,12,14,16,18];
+
+function Demo() {
+  return (
+    <div>
+      <div class="label">Timeline Bar — daily activity strip</div>
+      <div class="card" style={{marginBottom:14}}>
+        <TimelineBar blocks={BLOCKS} dayStart={8} />
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:6}}>
+          {HOURS.map(h => (
+            <span key={h} style={{fontSize:9,fontFamily:'monospace',color:'#7a7a7a'}}>
+              {h < 12 ? `${h}AM` : h === 12 ? '12PM' : `${h-12}PM`}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div class="label">Progress Bars — category breakdown</div>
+      <div class="card">
+        {CATS.map(c => (
+          <div key={c.label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:7}}>
+            <span style={{fontSize:11,fontFamily:'monospace',color:'#7a7a7a',width:28,textAlign:'right'}}>{c.pct}%</span>
+            <div style={{width:44,height:6,borderRadius:2,background:c.color,opacity:0.7}}></div>
+            <span style={{fontSize:11,color:'#e0e0e0',flex:1}}>{c.label}</span>
+            <ProgressBar value={c.pct} color={c.color} style={{flex:2}} />
+            <span style={{fontSize:11,fontFamily:'monospace',color:'#7a7a7a',width:50,textAlign:'right'}}>
+              {c.pct > 50 ? '4h 6m' : c.pct > 10 ? '47m' : c.pct > 7 ? '31m' : '27m'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>
+</body>
+</html>

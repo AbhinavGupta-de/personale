@@ -170,7 +170,7 @@ struct PomodoroPage: View {
     // MARK: Timer column
 
     private var timerColumn: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.space9) {
             Spacer(minLength: 40)
 
             ZStack {
@@ -180,19 +180,19 @@ struct PomodoroPage: View {
                     .trim(from: 0, to: vm.progress)
                     .stroke(theme.chartCyan, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                VStack(spacing: 6) {
+                VStack(spacing: Spacing.space2) {
                     Text(vm.elapsedText)
-                        .font(.system(size: 48, weight: .bold, design: .monospaced))
+                        .font(AppFont.mono(FontSize.timer, .bold))
                         .foregroundStyle(theme.foreground)
                     Text(vm.isRunning ? "Focus running" : "Ready to start")
-                        .font(.system(size: 11))
+                        .font(AppFont.text(FontSize.sm))
                         .foregroundStyle(theme.mutedForeground)
                 }
             }
             .frame(width: 260, height: 260)
 
             // Controls
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.space4) {
                 if !vm.isRunning {
                     pomodoroButton("Start", icon: "play.fill", primary: true) { vm.start() }
                 } else {
@@ -203,17 +203,17 @@ struct PomodoroPage: View {
             }
 
             // Target picker
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.space3) {
                 Text("Target:")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
                 ForEach([15, 25, 45, 60], id: \.self) { m in
                     Button("\(m)m") { vm.resetTarget(minutes: m) }
-                        .font(.system(size: 11, weight: .medium))
+                        .font(AppFont.text(FontSize.sm, .medium))
                         .foregroundStyle(vm.targetSeconds == m * 60 ? theme.foreground : theme.mutedForeground)
-                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .padding(.horizontal, Spacing.space3).padding(.vertical, 3)
                         .background(vm.targetSeconds == m * 60 ? theme.secondary : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
                         .buttonStyle(.plain)
                 }
             }
@@ -233,17 +233,17 @@ struct PomodoroPage: View {
                 ForEach(RightTab.allCases, id: \.self) { tab in
                     Button { rightTab = tab } label: {
                         Text(tab.rawValue)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(AppFont.text(FontSize.sm, .medium))
                             .foregroundStyle(rightTab == tab ? theme.foreground : theme.mutedForeground)
-                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .padding(.horizontal, Spacing.space4).padding(.vertical, 5)
                             .background(rightTab == tab ? theme.secondary : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
                     }
                     .buttonStyle(.plain)
                 }
                 Spacer()
             }
-            .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+            .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
             Divider().opacity(0.3)
 
@@ -264,26 +264,26 @@ struct PomodoroPage: View {
     }
 
     private var currentSessionTab: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.space5) {
             SectionTitle(text: "Goal")
             TextField("I will [task] so that [outcome]…", text: $vm.goal, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(AppFont.text(FontSize.base))
                 .foregroundStyle(theme.foreground)
-                .padding(10)
+                .padding(Spacing.space4)
                 .background(theme.secondary)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                 .lineLimit(3...6)
 
             // Implementation-intention nudge (Gollwitzer 1999).
             // Soft-validates: short goals don't get the full intention effect.
             if !vm.isRunning && vm.goal.trimmingCharacters(in: .whitespaces).count < 15 {
-                HStack(spacing: 6) {
+                HStack(spacing: Spacing.space2) {
                     Image(systemName: "lightbulb")
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.accent)
                     Text("Tip: write an intention, not just a topic. \"Draft the migration spec\" beats \"work on DB\".")
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -298,14 +298,14 @@ struct PomodoroPage: View {
                 infoRow(label: "Elapsed", value: vm.elapsedText)
             }
         }
-        .padding(16)
+        .padding(Spacing.space7)
     }
 
     private var timelineTab: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.space3) {
             if vm.sessions.isEmpty {
                 Text("No sessions yet today")
-                    .font(.system(size: 12))
+                    .font(AppFont.text(FontSize.base))
                     .foregroundStyle(theme.mutedForeground)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 30)
@@ -315,40 +315,40 @@ struct PomodoroPage: View {
                     Divider().opacity(0.2)
                 }
                 if let err = vm.insightError {
-                    Text(err).font(.system(size: 10)).foregroundStyle(theme.warning)
+                    Text(err).font(AppFont.text(FontSize.xs)).foregroundStyle(theme.warning)
                 }
             }
         }
-        .padding(16)
+        .padding(Spacing.space7)
     }
 
     @ViewBuilder
     private func timelineRow(_ session: PomodoroSessionResponse) -> some View {
         let insight = vm.insights[session.id]
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.space1) {
+            HStack(spacing: Spacing.space4) {
                 Circle()
                     .fill(session.status == "completed" ? theme.success : theme.warning)
                     .frame(width: 6, height: 6)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(insight?.title ?? session.goal)
-                        .font(.system(size: 12, weight: insight != nil ? .semibold : .regular))
+                        .font(AppFont.text(FontSize.base, insight != nil ? .semibold : .regular))
                         .foregroundStyle(theme.foreground)
                         .lineLimit(2)
                     Text(formatIso(session.startedAt))
-                        .font(.system(size: 10))
+                        .font(AppFont.text(FontSize.xs))
                         .foregroundStyle(theme.mutedForeground)
                 }
                 Spacer()
                 Text(formatDuration(session.durationSeconds))
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(AppFont.mono(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
             }
             if let desc = insight?.description {
                 Text(desc)
-                    .font(.system(size: 10))
+                    .font(AppFont.text(FontSize.xs))
                     .foregroundStyle(theme.mutedForeground)
-                    .padding(.leading, 16)
+                    .padding(.leading, Spacing.space7)
             }
             HStack {
                 Spacer()
@@ -359,9 +359,9 @@ struct PomodoroPage: View {
                         vm.generateInsight(for: session)
                     } label: {
                         HStack(spacing: 3) {
-                            Image(systemName: "sparkles").font(.system(size: 9))
+                            Image(systemName: "sparkles").font(AppFont.text(FontSize.xs2))
                             Text(insight == nil ? "Generate AI insight" : "Regenerate")
-                                .font(.system(size: 10))
+                                .font(AppFont.text(FontSize.xs))
                         }
                         .foregroundStyle(theme.primary)
                     }
@@ -369,26 +369,26 @@ struct PomodoroPage: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.space1)
     }
 
     private func infoRow(label: String, value: String) -> some View {
         HStack {
-            Text(label).font(.system(size: 11)).foregroundStyle(theme.mutedForeground)
+            Text(label).font(AppFont.text(FontSize.sm)).foregroundStyle(theme.mutedForeground)
             Spacer()
-            Text(value).font(.system(size: 12, design: .monospaced)).foregroundStyle(theme.foreground)
+            Text(value).font(AppFont.mono(FontSize.base)).foregroundStyle(theme.foreground)
         }
     }
 
     @ViewBuilder
     private func pomodoroButton(_ title: String, icon: String, primary: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: 10))
-                Text(title).font(.system(size: 12, weight: .medium))
+            HStack(spacing: Spacing.space2) {
+                Image(systemName: icon).font(AppFont.text(FontSize.xs))
+                Text(title).font(AppFont.text(FontSize.base, .medium))
             }
             .foregroundStyle(primary ? theme.primaryForeground : theme.foreground)
-            .padding(.horizontal, 14).padding(.vertical, 7)
+            .padding(.horizontal, Spacing.space6).padding(.vertical, 7)
             .background(primary ? theme.primary : theme.secondary)
             .clipShape(RoundedRectangle(cornerRadius: 7))
         }

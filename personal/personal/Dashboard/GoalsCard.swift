@@ -18,23 +18,23 @@ struct GoalsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Goals")
-                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
+                .padding(.horizontal, Spacing.space7).padding(.top, Spacing.space6).padding(.bottom, Spacing.space4)
 
             if goalRows.isEmpty {
                 Text("No category goals set yet. Add goals in Settings → Categories.")
-                    .font(.system(size: 11))
+                    .font(AppFont.text(FontSize.sm))
                     .foregroundStyle(theme.mutedForeground)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 30)
             } else {
-                HStack(alignment: .top, spacing: 20) {
+                HStack(alignment: .top, spacing: Spacing.space8) {
                     ForEach(goalRows, id: \.0.id) { (cat, current) in
                         GoalRing(category: cat, currentSeconds: current)
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
+                .padding(.horizontal, Spacing.space7)
+                .padding(.bottom, Spacing.space6)
             }
         }
         .dashboardCard()
@@ -79,7 +79,7 @@ private struct GoalRing: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Spacing.space2) {
             ZStack {
                 Circle()
                     .stroke(theme.border.opacity(0.3), lineWidth: 6)
@@ -89,23 +89,23 @@ private struct GoalRing: View {
                     .rotationEffect(.degrees(-90))
                 VStack(spacing: 0) {
                     Text(fmt(currentSeconds))
-                        .font(.system(size: 11, weight: .bold).monospacedDigit())
+                        .font(AppFont.text(FontSize.sm, .bold).monospacedDigit())
                         .foregroundStyle(theme.foreground)
                     Text("/ \(fmt(category.dailyGoalSeconds))")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(AppFont.mono(FontSize.xs2))
                         .foregroundStyle(theme.mutedForeground)
                 }
             }
             .frame(width: 72, height: 72)
 
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.space1) {
                 Circle().fill(CategoryColors.color(for: category.name)).frame(width: 6, height: 6)
                 Text(category.name)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(AppFont.text(FontSize.sm, .medium))
                     .foregroundStyle(theme.foreground)
             }
             Text(statusText)
-                .font(.system(size: 9))
+                .font(AppFont.text(FontSize.xs2))
                 .foregroundStyle(theme.mutedForeground)
                 .lineLimit(1)
         }
