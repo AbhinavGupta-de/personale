@@ -15,6 +15,7 @@ struct SettingsPage: View {
 
                 generalSection
                 workDaySection
+                calendarSection
                 categoriesSection
                 trackingRulesSection
                 trackingSection
@@ -159,6 +160,32 @@ struct SettingsPage: View {
                         .font(AppFont.mono(FontSize.base))
                     Spacer()
                 }
+            }
+        }
+    }
+
+    // MARK: - Calendar
+
+    private var calendarSection: some View {
+        settingsCard(title: "Calendar") {
+            HStack {
+                VStack(alignment: .leading, spacing: Spacing.space2) {
+                    Text("Calendar Overlay")
+                        .font(AppFont.text(FontSize.md, .medium))
+                        .foregroundStyle(theme.foreground)
+                    Text("Show local calendar events on the day activity timeline")
+                        .font(AppFont.text(FontSize.sm))
+                        .foregroundStyle(theme.mutedForeground)
+                }
+                Spacer()
+                Toggle("", isOn: $settings.calendarOverlayEnabled)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .onChange(of: settings.calendarOverlayEnabled) { _, enabled in
+                        if enabled {
+                            Task { _ = await CalendarService.shared.requestAccess() }
+                        }
+                    }
             }
         }
     }

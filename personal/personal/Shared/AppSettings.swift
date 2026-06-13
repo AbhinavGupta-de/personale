@@ -91,6 +91,10 @@ class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(dailyRecapEnabled, forKey: "dailyRecapEnabled") }
     }
 
+    @Published var calendarOverlayEnabled: Bool {
+        didSet { UserDefaults.standard.set(calendarOverlayEnabled, forKey: "calendarOverlayEnabled") }
+    }
+
     // MARK: - Eye-strain (20-20-20 rule)
 
     @Published var eyeStrainNudgesEnabled: Bool {
@@ -179,6 +183,9 @@ class AppSettings: ObservableObject {
 
         self.dailyRecapEnabled =
             (UserDefaults.standard.object(forKey: "dailyRecapEnabled") as? Bool) ?? true
+
+        self.calendarOverlayEnabled =
+            (UserDefaults.standard.object(forKey: "calendarOverlayEnabled") as? Bool) ?? false
 
         self.eyeStrainNudgesEnabled =
             (UserDefaults.standard.object(forKey: "eyeStrainNudgesEnabled") as? Bool) ?? false

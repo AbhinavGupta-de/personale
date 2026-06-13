@@ -20,6 +20,7 @@ class ActivityViewModel: ObservableObject {
     @Published var reviewsByKey: [String: SessionReviewResponse] = [:]
     @Published var availableCategoryNames: [String] = []
     @Published var contextSwitches: [ContextSwitchHour] = []
+    @Published var calendarEvents: [CalendarEvent] = []
     /// Dates we've already triggered batch AI generation for in this session.
     /// generate-missing skips already-drafted blocks server-side, but we still
     /// debounce client-side to avoid burning a request per 30s refresh tick.
@@ -264,6 +265,7 @@ class ActivityViewModel: ObservableObject {
         let date = dateString
         activeFetchDate = date
         if cache[date] == nil { isLoading = true }
+        loadCalendarEvents(for: selectedDate)
 
         Task {
             guard let result = try? await api.fetchSessions(date: date),
@@ -331,6 +333,17 @@ class ActivityViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func loadCalendarEvents(for date: Date) {
+        guard AppSettings.shared.calendarOverlayEnabled,
+              CalendarService.shared.hasFullAccess
+        else {
+            calendarEvents = []
+            return
+        }
+
+        calendarEvents = CalendarService.shared.events(forDay: date, dayStartHour: dayStartHour)
     }
 
     // MARK: - Display sessions
