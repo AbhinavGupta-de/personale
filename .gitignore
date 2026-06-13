@@ -49,3 +49,8 @@ __pycache__/
 
 # property-test artifacts
 .jqwik-database
+
+# never commit API keys
+anthropic.key
+*.key
+.personale/
