@@ -7,6 +7,13 @@ cd "$SCRIPT_DIR"
 # Ensure homebrew binaries (docker, colima, java) are on PATH when run by launchd.
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
+# Load the BYOC Anthropic API key (AI insight features) from a gitignored file
+# OUTSIDE the repo. launchd does not load your shell profile, so the key must
+# live somewhere the agent can read it. The key value never enters the repo.
+if [ -f "$HOME/.personale/anthropic.key" ]; then
+    export ANTHROPIC_API_KEY="$(tr -d '\r\n' < "$HOME/.personale/anthropic.key")"
+fi
+
 # Wait up to 5 minutes for a Docker socket. At login, Docker Desktop / Colima
 # can take a while to come up; launchd starts us before either is ready.
 wait_for_docker() {

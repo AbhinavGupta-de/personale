@@ -8,62 +8,67 @@ struct ActivityDetailPage: View {
     @StateObject private var viewModel = ActivityViewModel()
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: AppMetrics.cardGap) {
-                DateNavigator(
-                    dateText: viewModel.displayPeriod,
-                    activeView: Binding(
-                        get: { viewModel.viewMode.rawValue },
-                        set: { viewModel.switchViewMode(ActivityViewModel.ViewMode(rawValue: $0) ?? .day) }
-                    ),
-                    isToday: viewModel.isCurrentPeriod,
-                    isLoading: viewModel.isLoading,
-                    onPrevious: { viewModel.goToPrevious() },
-                    onNext: { viewModel.goToNext() },
-                    onToday: { viewModel.goToCurrent() }
-                )
+        VStack(spacing: AppMetrics.cardGap) {
+            DateNavigator(
+                dateText: viewModel.displayPeriod,
+                activeView: Binding(
+                    get: { viewModel.viewMode.rawValue },
+                    set: { viewModel.switchViewMode(ActivityViewModel.ViewMode(rawValue: $0) ?? .day) }
+                ),
+                isToday: viewModel.isCurrentPeriod,
+                isLoading: viewModel.isLoading,
+                onPrevious: { viewModel.goToPrevious() },
+                onNext: { viewModel.goToNext() },
+                onToday: { viewModel.goToCurrent() }
+            )
 
-                if viewModel.viewMode == .day && viewModel.displaySessions.isEmpty && !viewModel.isLoading {
-                    emptyState
-                } else {
-                    HStack(alignment: .top, spacing: AppMetrics.cardGap) {
-                        if viewModel.viewMode == .day {
-                            DayTimelineCard(
-                                sessions: viewModel.displaySessions,
-                                dayStartHour: viewModel.dayStartHour,
-                                categoryColor: viewModel.categoryColor,
-                                parseTime: viewModel.parseTimeToHour,
-                                formatDuration: viewModel.formatDuration,
-                                labelFor: { viewModel.label(for: $0) },
-                                dateString: viewModel.dateString,
-                                reviewsByKey: viewModel.reviewsByKey,
-                                availableCategories: viewModel.availableCategoryNames,
-                                selectedSession: $viewModel.selectedSession
-                            )
-                            .frame(maxWidth: .infinity)
+            if viewModel.viewMode == .day && viewModel.displaySessions.isEmpty && !viewModel.isLoading {
+                emptyState
+                    .frame(maxHeight: .infinity)
+            } else {
+                HStack(alignment: .top, spacing: AppMetrics.cardGap) {
+                    if viewModel.viewMode == .day {
+                        DayTimelineCard(
+                            sessions: viewModel.displaySessions,
+                            calendarEvents: viewModel.calendarEvents,
+                            date: viewModel.selectedDate,
+                            dayStartHour: viewModel.dayStartHour,
+                            categoryColor: viewModel.categoryColor,
+                            parseTime: viewModel.parseTimeToHour,
+                            formatDuration: viewModel.formatDuration,
+                            labelFor: { viewModel.label(for: $0) },
+                            dateString: viewModel.dateString,
+                            reviewsByKey: viewModel.reviewsByKey,
+                            availableCategories: viewModel.availableCategoryNames,
+                            selectedSession: $viewModel.selectedSession
+                        )
+                        .frame(maxWidth: .infinity)
 
-                            DailySummaryCard(viewModel: viewModel)
-                                .frame(width: 360)
-                        } else {
-                            WeekTimelineCard(
-                                weekDates: viewModel.weekDates,
-                                sessionsForDate: { date in viewModel.weekDisplaySessions(for: date) },
-                                dayStartHour: viewModel.dayStartHour,
-                                categoryColor: viewModel.categoryColor,
-                                parseTime: viewModel.parseTimeToHour,
-                                formatDuration: viewModel.formatDuration,
-                                selectedSession: $viewModel.selectedSession
-                            )
-                            .frame(maxWidth: .infinity)
+                        DailySummaryCard(viewModel: viewModel)
+                            .frame(width: 360)
+                            .frame(maxHeight: .infinity, alignment: .top)
+                    } else {
+                        WeekTimelineCard(
+                            weekDates: viewModel.weekDates,
+                            sessionsForDate: { date in viewModel.weekDisplaySessions(for: date) },
+                            dayStartHour: viewModel.dayStartHour,
+                            categoryColor: viewModel.categoryColor,
+                            parseTime: viewModel.parseTimeToHour,
+                            formatDuration: viewModel.formatDuration,
+                            selectedSession: $viewModel.selectedSession
+                        )
+                        .frame(maxWidth: .infinity)
 
-                            WeeklySummaryCard(viewModel: viewModel)
-                                .frame(width: 360)
-                        }
+                        WeeklySummaryCard(viewModel: viewModel)
+                            .frame(width: 360)
+                            .frame(maxHeight: .infinity, alignment: .top)
                     }
                 }
+                .frame(maxHeight: .infinity)
             }
-            .padding(AppMetrics.contentPadding)
         }
+        .padding(AppMetrics.contentPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear { viewModel.load() }
     }
 
@@ -347,6 +352,8 @@ struct PlaceholderColumn: View {
 
 struct DayTimelineCard: View {
     let sessions: [FocusSessionResponse]
+    let calendarEvents: [CalendarEvent]
+    let date: Date
     let dayStartHour: Int
     let categoryColor: (String) -> Color
     let parseTime: (String) -> Double?
@@ -358,8 +365,9 @@ struct DayTimelineCard: View {
     @Binding var selectedSession: FocusSessionResponse?
 
     @Environment(\.theme) private var theme
+    @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var calendarService = CalendarService.shared
     private let hourHeight: CGFloat = 44
-    private let cardHeight: CGFloat = 620
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -409,13 +417,21 @@ struct DayTimelineCard: View {
                     .frame(maxWidth: .infinity)
                     PlaceholderColumn(title: "Tasks", icon: "checkmark.square", hourHeight: hourHeight)
                         .frame(maxWidth: .infinity)
-                    PlaceholderColumn(title: "Calendar", icon: "calendar", hourHeight: hourHeight)
+                    CalendarColumn(
+                        events: calendarEvents,
+                        date: date,
+                        dayStartHour: dayStartHour,
+                        hourHeight: hourHeight,
+                        isEnabled: settings.calendarOverlayEnabled,
+                        isAuthorized: calendarService.hasFullAccess,
+                        accessDenied: calendarService.isAccessDenied
+                    )
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, Spacing.space3)
             }
             .scrollIndicators(.hidden)
-            .frame(height: cardHeight)
+            .frame(maxHeight: .infinity)
         }
         .dashboardCard()
     }
@@ -449,7 +465,6 @@ struct WeekTimelineCard: View {
 
     @Environment(\.theme) private var theme
     private let hourHeight: CGFloat = 44
-    private let cardHeight: CGFloat = 620
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -479,7 +494,7 @@ struct WeekTimelineCard: View {
                 .padding(.vertical, Spacing.space5)
             }
             .scrollIndicators(.hidden)
-            .frame(height: cardHeight)
+            .frame(maxHeight: .infinity)
         }
         .dashboardCard()
     }
