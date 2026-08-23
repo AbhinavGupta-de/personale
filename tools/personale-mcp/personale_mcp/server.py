@@ -166,3 +166,59 @@ async def domains(date: str) -> dict[str, Any] | str:
         return await client.get("/api/stats/domains", date=date)
     except PersonaleUnavailableError:
         return _offline_message(client)
+
+
+@mcp.tool()
+async def anomaly_check(date: str, lookback_days: int = 14) -> dict[str, Any] | str:
+    """Check whether a given day (YYYY-MM-DD) was unusually fragmented or low-focus vs the user's recent baseline. Returns per-metric z-scores and severity (normal/elevated/high)."""
+    validate_date(date)
+    if lookback_days < 3:
+        raise ValueError(
+            f"lookback_days must be >= 3 to build a baseline, got {lookback_days}."
+        )
+
+    client = _get_client()
+    try:
+        return await client.get(
+            "/api/insights/anomalies",
+            date=date,
+            lookbackDays=lookback_days,
+        )
+    except PersonaleUnavailableError:
+        return _offline_message(client)
+
+
+@mcp.tool()
+async def weekly_review(from_date: str, to_date: str) -> dict[str, Any] | str:
+    """Pull everything needed to narrate a week in review: range totals + category mix, top interruptors, productivity overview (streaks/heatmap), and the anomaly check for the most recent day. Returns a single structured dict for Claude to synthesize into prose. Both dates must be YYYY-MM-DD."""
+    validate_date(from_date)
+    validate_date(to_date)
+
+    client = _get_client()
+    try:
+        range_summary = await client.get(
+            "/api/stats/range/summary",
+            **{"from": from_date, "to": to_date},
+        )
+        interruptors = await client.get(
+            "/api/stats/interruptors/range",
+            **{"from": from_date, "to": to_date},
+        )
+        overview = await client.get(
+            "/api/insights/overview",
+            **{"from": from_date, "to": to_date},
+        )
+        latest_day_anomalies = await client.get(
+            "/api/insights/anomalies",
+            date=to_date,
+            lookbackDays=14,
+        )
+    except PersonaleUnavailableError:
+        return _offline_message(client)
+
+    return {
+        "range": range_summary,
+        "interruptors": interruptors,
+        "overview": overview,
+        "latest_day_anomalies": latest_day_anomalies,
+    }

@@ -54,3 +54,7 @@ __pycache__/
 anthropic.key
 *.key
 .personale/
+
+# Local agent/orchestration state — never publish
+.codex-orchestration/
+data/

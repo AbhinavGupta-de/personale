@@ -58,4 +58,6 @@ for i in $(seq 1 30); do
 done
 
 echo "Starting Personale backend on port 8696..."
-exec ./gradlew --no-daemon bootRun
+# Invoke via `sh` explicitly: shebang-exec'd under launchd, the JVM can't open
+# the wrapper jar inside ~/Documents ("Unable to access jarfile").
+exec sh ./gradlew --no-daemon bootRun

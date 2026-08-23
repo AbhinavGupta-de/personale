@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from personale_mcp import server
+from personale_mcp.client import PersonaleUnavailableError
 from personale_mcp.config import Settings
 
 
@@ -25,6 +26,64 @@ class FakeClient:
             return {"categories": [{"category": "Development", "seconds": 120}]}
         if path == "/api/stats/sessions":
             return {"sessions": [{"app": "Editor", "seconds": 120}]}
+        return {"path": path, "params": params}
+
+
+SAMPLE_ANOMALIES = {
+    "date": "2026-06-12",
+    "lookbackDays": 14,
+    "baselineDaysWithData": 10,
+    "metrics": [
+        {
+            "name": "contextSwitches",
+            "value": 88,
+            "baselineMean": 40.0,
+            "baselineStdDev": 12.0,
+            "zScore": 4.0,
+            "severity": "high",
+            "message": "Way more context switches than usual.",
+        }
+    ],
+}
+
+
+class AnomalyClient(FakeClient):
+    async def get(self, path: str, **params: Any) -> Any:
+        self.calls.append((path, params))
+        if path == "/api/insights/anomalies":
+            return SAMPLE_ANOMALIES
+        return {"path": path, "params": params}
+
+
+class WeeklyReviewClient(FakeClient):
+    async def get(self, path: str, **params: Any) -> Any:
+        self.calls.append((path, params))
+        if path == "/api/stats/range/summary":
+            return {"endpoint": "range"}
+        if path == "/api/stats/interruptors/range":
+            return {"endpoint": "interruptors"}
+        if path == "/api/insights/overview":
+            return {"endpoint": "overview"}
+        if path == "/api/insights/anomalies":
+            return {"endpoint": "anomalies"}
+        return {"path": path, "params": params}
+
+
+class OfflineOnNthCallClient(FakeClient):
+    """Raises PersonaleUnavailableError on the Nth get() call (1-indexed).
+
+    Used to prove weekly_review's offline guard catches a *mid-sequence*
+    failure, not just one on the very first composed call.
+    """
+
+    def __init__(self, fail_on_call: int) -> None:
+        super().__init__()
+        self.fail_on_call = fail_on_call
+
+    async def get(self, path: str, **params: Any) -> Any:
+        self.calls.append((path, params))
+        if len(self.calls) == self.fail_on_call:
+            raise PersonaleUnavailableError("backend down")
         return {"path": path, "params": params}
 
 
@@ -139,3 +198,91 @@ async def test_interruptors_rejects_both_date_and_range() -> None:
             from_date="2026-06-01",
             to_date="2026-06-12",
         )
+
+
+@pytest.mark.asyncio
+async def test_anomaly_check_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = AnomalyClient()
+    monkeypatch.setattr(server, "_client", client)
+
+    result = await server.anomaly_check("2026-06-12")
+
+    assert result == SAMPLE_ANOMALIES
+    assert client.calls == [
+        ("/api/insights/anomalies", {"date": "2026-06-12", "lookbackDays": 14})
+    ]
+
+
+@pytest.mark.asyncio
+async def test_anomaly_check_custom_lookback(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = AnomalyClient()
+    monkeypatch.setattr(server, "_client", client)
+
+    await server.anomaly_check("2026-06-12", lookback_days=7)
+
+    assert client.calls == [
+        ("/api/insights/anomalies", {"date": "2026-06-12", "lookbackDays": 7})
+    ]
+
+
+@pytest.mark.asyncio
+async def test_anomaly_check_rejects_bad_date() -> None:
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        await server.anomaly_check("2026/06/12")
+
+
+@pytest.mark.asyncio
+async def test_anomaly_check_rejects_short_lookback() -> None:
+    with pytest.raises(ValueError, match="must be >= 3"):
+        await server.anomaly_check("2026-06-12", lookback_days=2)
+
+
+@pytest.mark.asyncio
+async def test_weekly_review_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = WeeklyReviewClient()
+    monkeypatch.setattr(server, "_client", client)
+
+    result = await server.weekly_review("2026-06-06", "2026-06-12")
+
+    assert result == {
+        "range": {"endpoint": "range"},
+        "interruptors": {"endpoint": "interruptors"},
+        "overview": {"endpoint": "overview"},
+        "latest_day_anomalies": {"endpoint": "anomalies"},
+    }
+    assert set(result.keys()) == {
+        "range",
+        "interruptors",
+        "overview",
+        "latest_day_anomalies",
+    }
+    assert client.calls == [
+        ("/api/stats/range/summary", {"from": "2026-06-06", "to": "2026-06-12"}),
+        ("/api/stats/interruptors/range", {"from": "2026-06-06", "to": "2026-06-12"}),
+        ("/api/insights/overview", {"from": "2026-06-06", "to": "2026-06-12"}),
+        ("/api/insights/anomalies", {"date": "2026-06-12", "lookbackDays": 14}),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_weekly_review_rejects_bad_date() -> None:
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        await server.weekly_review("2026-06-06", "2026/06/12")
+
+
+@pytest.mark.asyncio
+async def test_weekly_review_offline_midway_returns_offline_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The 3rd of the 4 composed GETs goes offline. The except block must still
+    # fire and return the offline message rather than a partial dict or a raised
+    # exception — this is the core risk of the multi-call composition.
+    client = OfflineOnNthCallClient(fail_on_call=3)
+    monkeypatch.setattr(server, "_client", client)
+
+    result = await server.weekly_review("2026-06-06", "2026-06-12")
+
+    assert isinstance(result, str)
+    assert "offline" in result.lower()
+    # Stopped at the failing 3rd call; the 4th was never attempted.
+    assert len(client.calls) == 3
